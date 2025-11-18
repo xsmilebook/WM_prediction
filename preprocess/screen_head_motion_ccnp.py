@@ -4,6 +4,8 @@ import re
 import sys
 from pathlib import Path
 
+# example:
+# python screen_head_motion_ccnp.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/datasets/CCNP/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/CCNP/table/rest_fd_summary.csv
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:
