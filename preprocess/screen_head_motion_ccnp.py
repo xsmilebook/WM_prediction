@@ -75,7 +75,7 @@ def load_age_map(age_csv: Path) -> dict[str, float]:
 
 
 def infer_run_idx(name: str) -> int | None:
-    m = re.search(r"run-([12])", name, flags=re.IGNORECASE)
+    m = re.search(r"run-0*([0-9]+)", name, flags=re.IGNORECASE)
     if m:
         return int(m.group(1))
     m = re.search(r"task-REST([12])", name, flags=re.IGNORECASE)
@@ -86,17 +86,17 @@ def infer_run_idx(name: str) -> int | None:
 
 def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, Path]]:
     d: dict[str, dict[int, Path]] = {}
-    for tsv in fmriprep_dir.rglob("*desc-confounds_timeseries.tsv"):
-        if "func" not in tsv.parts:
+    for subj_dir in fmriprep_dir.glob("sub-*"):
+        func_dir = subj_dir / "ses-01" / "func"
+        if not func_dir.exists():
             continue
-        if not re.search(r"task-REST|task-rest", tsv.name, flags=re.IGNORECASE):
-            continue
-        sid = find_subject_id(tsv)
-        idx = infer_run_idx(tsv.name)
-        if idx is None:
-            continue
-        m = d.setdefault(sid, {})
-        m[idx] = tsv
+        sid = subj_dir.name
+        for tsv in func_dir.glob(f"{sid}_ses-01_task-rest_run-*_desc-filtered_motion.tsv"):
+            idx = infer_run_idx(tsv.name)
+            if idx is None:
+                continue
+            m = d.setdefault(sid, {})
+            m[idx] = tsv
     return d
 
 
