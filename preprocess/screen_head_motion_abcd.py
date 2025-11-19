@@ -14,21 +14,31 @@ def find_subject_id(p: Path) -> str:
     return ""
 
 
-def summarize_fd(tsv_path: Path) -> tuple[int, str, int, str]:
+def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, str]:
     frame_count = 0
     total = 0.0
     valid = 0
     low = 0
     with tsv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t")
-        if "framewise_displacement" not in reader.fieldnames:
-            return 0, "NA", 0, "NA"
+        fields = reader.fieldnames or []
+        fd_col = None
+        if debug:
+            print(f"[DEBUG] reading file: {tsv_path}")
+            print(f"[DEBUG] header columns: {fields}")
+        if "framewise_displacement" in fields:
+            fd_col = "framewise_displacement"
+        if debug:
+            print(f"[DEBUG] selected fd_col: {fd_col}")
+        sample_vals: list[float] = []
         for row in reader:
             frame_count += 1
-            v = row.get("framewise_displacement")
+            if fd_col is None:
+                continue
+            v = row.get(fd_col)
             if v is None:
                 continue
-            s = v.strip()
+            s = str(v).strip()
             if not s or s.lower() == "n/a":
                 continue
             try:
@@ -39,9 +49,16 @@ def summarize_fd(tsv_path: Path) -> tuple[int, str, int, str]:
             valid += 1
             if x < 0.2:
                 low += 1
+            if len(sample_vals) < 5:
+                sample_vals.append(x)
     if valid == 0:
+        if debug:
+            print(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean=NA, na_or_invalid={(frame_count - valid)}")
         return frame_count, "NA", 0, "NA"
-    return frame_count, f"{total / valid:.6f}", valid, f"{low / valid:.6f}"
+    mean = total / valid
+    if debug:
+        print(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean={mean:.6f}, na_or_invalid={(frame_count - valid)}, samples={sample_vals}")
+    return frame_count, f"{mean:.6f}", valid, f"{low / valid:.6f}"
 
 
 def infer_run_idx(name: str) -> int | None:
@@ -80,6 +97,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fmriprep-dir", "--fmriprep_dir", required=True, dest="fmriprep_dir")
     parser.add_argument("--out", "--out_csv", default="rest_fd_summary.csv", dest="out")
+    parser.add_argument("--debug", action="store_true", dest="debug")
     args = parser.parse_args()
     fdir = Path(args.fmriprep_dir)
     if not fdir.exists():
@@ -93,10 +111,10 @@ def main() -> None:
         r1_fc = r1_fd = r1_low = None
         r2_fc = r2_fd = r2_low = None
         if 1 in run_files:
-            a, b, c, d = summarize_fd(run_files[1])
+            a, b, c, d = summarize_fd(run_files[1], args.debug)
             r1_fc, r1_fd, r1_valid_cnt, r1_low = a, b, c, d
         if 2 in run_files:
-            a, b, c, d = summarize_fd(run_files[2])
+            a, b, c, d = summarize_fd(run_files[2], args.debug)
             r2_fc, r2_fd, r2_valid_cnt, r2_low = a, b, c, d
         r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc == 383 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
         r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc == 383 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
