@@ -111,9 +111,11 @@ def main() -> None:
                 "subid": sid,
                 "rest1_frame": str(r1_fc),
                 "rest1_fd": r1_fd,
+                "rest1_low_ratio": r1_low,
                 "rest1_valid": r1_valid,
                 "rest2_frame": str(r2_fc),
                 "rest2_fd": r2_fd,
+                "rest2_low_ratio": r2_low,
                 "rest2_valid": r2_valid,
                 "valid_num": str(valid_num),
                 "valid_subject": valid_subject,
@@ -122,8 +124,8 @@ def main() -> None:
     rows.sort(key=lambda r: r["subid"])
     headers = [
         "subid",
-        "rest1_frame", "rest1_fd", "rest1_valid",
-        "rest2_frame", "rest2_fd", "rest2_valid",
+        "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
+        "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
         "valid_num", "valid_subject",
     ]
     outp = Path(args.out)

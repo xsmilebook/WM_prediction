@@ -79,6 +79,7 @@ def collect_rows(fmriprep_dir: Path) -> list[dict]:
         runs[run_idx] = {
             "frame": str(frame_num),
             "fd": mean_fd,
+            "low_ratio": low_ratio,
             "valid": "1" if is_valid else "0",
         }
     rows = []
@@ -92,12 +93,14 @@ def collect_rows(fmriprep_dir: Path) -> list[dict]:
                 row[f"rest{i}_frame"] = r["frame"]
                 row[f"rest{i}_fd"] = r["fd"]
                 row[f"rest{i}_valid"] = r["valid"]
+                row[f"rest{i}_low_ratio"] = r.get("low_ratio", "NA")
                 if r["valid"] == "1":
                     valid_num += 1
             else:
                 row[f"rest{i}_frame"] = "NA"
                 row[f"rest{i}_fd"] = "NA"
                 row[f"rest{i}_valid"] = "0"
+                row[f"rest{i}_low_ratio"] = "NA"
         row["valid_num"] = str(valid_num)
         row["valid_subject"] = "1" if valid_num >= 2 else "0"
         rows.append(row)
@@ -109,10 +112,10 @@ def write_csv(rows: list[dict], out_path: Path) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     headers = [
         "subid",
-        "rest1_frame", "rest1_fd", "rest1_valid",
-        "rest2_frame", "rest2_fd", "rest2_valid",
-        "rest3_frame", "rest3_fd", "rest3_valid",
-        "rest4_frame", "rest4_fd", "rest4_valid",
+        "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
+        "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
+        "rest3_frame", "rest3_fd", "rest3_low_ratio", "rest3_valid",
+        "rest4_frame", "rest4_fd", "rest4_low_ratio", "rest4_valid",
         "valid_num", "valid_subject",
     ]
     with out_path.open("w", encoding="utf-8", newline="") as f:
