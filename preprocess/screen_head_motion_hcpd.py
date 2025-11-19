@@ -14,7 +14,7 @@ def find_subject_id(p: Path) -> str:
     return ""
 
 
-def summarize_fd(tsv_path: Path) -> tuple[int, str, int, str]:
+def summarize_fd(tsv_path: Path) -> tuple[int, float, int, int]:
     frame_count = 0
     total = 0.0
     valid = 0
@@ -22,7 +22,7 @@ def summarize_fd(tsv_path: Path) -> tuple[int, str, int, str]:
     with tsv_path.open("r", encoding="utf-8") as f:
         reader = csv.DictReader(f, delimiter="\t")
         if "framewise_displacement" not in reader.fieldnames:
-            return 0, "NA", 0, "NA"
+            return 0, 0.0, 0, 0
         for row in reader:
             frame_count += 1
             v = row.get("framewise_displacement")
@@ -39,9 +39,23 @@ def summarize_fd(tsv_path: Path) -> tuple[int, str, int, str]:
             valid += 1
             if x < 0.2:
                 low += 1
+    return frame_count, total, valid, low
+
+
+def summarize_fd_list(paths: list[Path]) -> tuple[int, str, int, str]:
+    frame = 0
+    total = 0.0
+    valid = 0
+    low = 0
+    for p in paths:
+        f, t, v, l = summarize_fd(p)
+        frame += f
+        total += t
+        valid += v
+        low += l
     if valid == 0:
-        return frame_count, "NA", 0, "NA"
-    return frame_count, f"{total / valid:.6f}", valid, f"{low / valid:.6f}"
+        return frame, "NA", 0, "NA"
+    return frame, f"{total / valid:.6f}", valid, f"{low / valid:.6f}"
 
 
 def infer_run_idx(name: str) -> int | None:
@@ -54,9 +68,9 @@ def infer_run_idx(name: str) -> int | None:
     return None
 
 
-def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, Path]]:
-    d: dict[str, dict[int, Path]] = {}
-    for tsv in fmriprep_dir.rglob("*desc-confounds_timeseries.tsv"):
+def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, list[Path]]]:
+    d: dict[str, dict[int, list[Path]]] = {}
+    for tsv in fmriprep_dir.rglob("*desc-filtered_motion.tsv"):
         if "func" not in tsv.parts:
             continue
         if not re.search(r"task-REST", tsv.name, flags=re.IGNORECASE):
@@ -66,7 +80,8 @@ def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, Path]]:
         if idx is None or idx not in (1, 2):
             continue
         m = d.setdefault(sid, {})
-        m[idx] = tsv
+        lst = m.setdefault(idx, [])
+        lst.append(tsv)
     return d
 
 
@@ -88,24 +103,16 @@ def main() -> None:
         if not has_both:
             excluded += 1
             continue
-        r1_fc, r1_fd, r1_valid_cnt, r1_low = summarize_fd(run_files[1])
-        r2_fc, r2_fd, r2_valid_cnt, r2_low = summarize_fd(run_files[2])
-        r1_valid = "1" if (r1_fd != "NA" and r1_low != "NA" and r1_fc == 180 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd != "NA" and r2_low != "NA" and r2_fc == 180 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
+        r1_fc, r1_fd, r1_valid_cnt, r1_low = summarize_fd_list(run_files[1])
+        r2_fc, r2_fd, r2_valid_cnt, r2_low = summarize_fd_list(run_files[2])
+        r1_valid = "1" if (r1_fd != "NA" and r1_low != "NA" and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
+        r2_valid = "1" if (r2_fd != "NA" and r2_low != "NA" and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
         valid_subject = "1" if valid_num >= 2 else "0"
-        bad_motion = False
-        for fd, low in ((r1_fd, r1_low), (r2_fd, r2_low)):
-            if fd == "NA" or low == "NA":
-                bad_motion = True
-                break
-            if float(fd) > 0.5 or float(low) < 0.4:
-                bad_motion = True
-                break
-        if bad_motion:
-            excluded += 1
-        else:
+        if valid_subject == "1":
             eligible += 1
+        else:
+            excluded += 1
         rows.append(
             {
                 "subid": sid,
