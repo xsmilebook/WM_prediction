@@ -68,8 +68,17 @@ def infer_run_idx(name: str) -> int | None:
     return None
 
 
-def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, list[Path]]]:
-    d: dict[str, dict[int, list[Path]]] = {}
+def parse_acq(name: str) -> str | None:
+    m = re.search(r"acq-([A-Za-z]+)", name)
+    if m:
+        v = m.group(1).upper()
+        if v in ("AP", "PA"):
+            return v
+    return None
+
+
+def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[str, Path]]:
+    d: dict[str, dict[str, Path]] = {}
     for tsv in fmriprep_dir.rglob("*desc-filtered_motion.tsv"):
         if "func" not in tsv.parts:
             continue
@@ -77,11 +86,12 @@ def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[int, list[Path]]]
             continue
         sid = find_subject_id(tsv)
         idx = infer_run_idx(tsv.name)
-        if idx is None or idx not in (1, 2):
+        acq = parse_acq(tsv.name)
+        if idx is None or idx not in (1, 2) or acq is None:
             continue
         m = d.setdefault(sid, {})
-        lst = m.setdefault(idx, [])
-        lst.append(tsv)
+        key = f"{idx}_{acq}"
+        m[key] = tsv
     return d
 
 
@@ -99,16 +109,25 @@ def main() -> None:
     excluded = 0
     eligible = 0
     for sid, run_files in runs_map.items():
-        has_both = (1 in run_files) and (2 in run_files)
-        if not has_both:
+        needed = ["1_AP", "1_PA", "2_AP", "2_PA"]
+        if any(k not in run_files for k in needed):
             excluded += 1
             continue
-        r1_fc, r1_fd, r1_valid_cnt, r1_low = summarize_fd_list(run_files[1])
-        r2_fc, r2_fd, r2_valid_cnt, r2_low = summarize_fd_list(run_files[2])
-        r1_valid = "1" if (r1_fd != "NA" and r1_low != "NA" and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd != "NA" and r2_low != "NA" and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
-        valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if valid_num >= 2 else "0"
+        def compute(path: Path) -> tuple[int, str, str]:
+            fc, tot, v, low = summarize_fd(path)
+            if v == 0:
+                return fc, "NA", "NA"
+            return fc, f"{tot / v:.6f}", f"{low / v:.6f}"
+        r1_ap_fc, r1_ap_fd, r1_ap_low = compute(run_files["1_AP"])
+        r1_pa_fc, r1_pa_fd, r1_pa_low = compute(run_files["1_PA"])
+        r2_ap_fc, r2_ap_fd, r2_ap_low = compute(run_files["2_AP"])
+        r2_pa_fc, r2_pa_fd, r2_pa_low = compute(run_files["2_PA"])
+        r1_ap_valid = "1" if (r1_ap_fd != "NA" and r1_ap_low != "NA" and float(r1_ap_fd) <= 0.5 and float(r1_ap_low) > 0.4) else "0"
+        r1_pa_valid = "1" if (r1_pa_fd != "NA" and r1_pa_low != "NA" and float(r1_pa_fd) <= 0.5 and float(r1_pa_low) > 0.4) else "0"
+        r2_ap_valid = "1" if (r2_ap_fd != "NA" and r2_ap_low != "NA" and float(r2_ap_fd) <= 0.5 and float(r2_ap_low) > 0.4) else "0"
+        r2_pa_valid = "1" if (r2_pa_fd != "NA" and r2_pa_low != "NA" and float(r2_pa_fd) <= 0.5 and float(r2_pa_low) > 0.4) else "0"
+        valid_num = sum(1 for s in (r1_ap_valid, r1_pa_valid, r2_ap_valid, r2_pa_valid) if s == "1")
+        valid_subject = "1" if valid_num == 4 else "0"
         if valid_subject == "1":
             eligible += 1
         else:
@@ -116,14 +135,22 @@ def main() -> None:
         rows.append(
             {
                 "subid": sid,
-                "rest1_frame": str(r1_fc),
-                "rest1_fd": r1_fd,
-                "rest1_low_ratio": r1_low,
-                "rest1_valid": r1_valid,
-                "rest2_frame": str(r2_fc),
-                "rest2_fd": r2_fd,
-                "rest2_low_ratio": r2_low,
-                "rest2_valid": r2_valid,
+                "rest1_AP_frame": str(r1_ap_fc),
+                "rest1_AP_fd": r1_ap_fd,
+                "rest1_AP_low_ratio": r1_ap_low,
+                "rest1_AP_valid": r1_ap_valid,
+                "rest1_PA_frame": str(r1_pa_fc),
+                "rest1_PA_fd": r1_pa_fd,
+                "rest1_PA_low_ratio": r1_pa_low,
+                "rest1_PA_valid": r1_pa_valid,
+                "rest2_AP_frame": str(r2_ap_fc),
+                "rest2_AP_fd": r2_ap_fd,
+                "rest2_AP_low_ratio": r2_ap_low,
+                "rest2_AP_valid": r2_ap_valid,
+                "rest2_PA_frame": str(r2_pa_fc),
+                "rest2_PA_fd": r2_pa_fd,
+                "rest2_PA_low_ratio": r2_pa_low,
+                "rest2_PA_valid": r2_pa_valid,
                 "valid_num": str(valid_num),
                 "valid_subject": valid_subject,
             }
@@ -131,8 +158,10 @@ def main() -> None:
     rows.sort(key=lambda r: r["subid"])
     headers = [
         "subid",
-        "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
-        "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
+        "rest1_AP_frame", "rest1_AP_fd", "rest1_AP_low_ratio", "rest1_AP_valid",
+        "rest1_PA_frame", "rest1_PA_fd", "rest1_PA_low_ratio", "rest1_PA_valid",
+        "rest2_AP_frame", "rest2_AP_fd", "rest2_AP_low_ratio", "rest2_AP_valid",
+        "rest2_PA_frame", "rest2_PA_fd", "rest2_PA_low_ratio", "rest2_PA_valid",
         "valid_num", "valid_subject",
     ]
     outp = Path(args.out)
