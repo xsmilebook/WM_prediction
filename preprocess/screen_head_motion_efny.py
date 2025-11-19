@@ -136,6 +136,10 @@ def main() -> None:
         return
     rows = collect_rows(fdir)
     write_csv(rows, Path(args.out))
+    eligible = sum(1 for r in rows if r.get("valid_subject") == "1")
+    excluded = len(rows) - eligible
+    print(f"excluded={excluded}")
+    print(f"eligible={eligible}")
 
 
 if __name__ == "__main__":
