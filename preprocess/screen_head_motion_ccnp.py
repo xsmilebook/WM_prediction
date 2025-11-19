@@ -135,18 +135,10 @@ def main() -> None:
         r2_valid = "1" if (r2_fd != "NA" and r2_low != "NA" and r2_fc == 180 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
         valid_subject = "1" if valid_num >= 2 else "0"
-        bad_motion = False
-        for fd, low in ((r1_fd, r1_low), (r2_fd, r2_low)):
-            if fd == "NA" or low == "NA":
-                bad_motion = True
-                break
-            if float(fd) > 0.5 or float(low) < 0.4:
-                bad_motion = True
-                break
-        if bad_motion:
-            excluded += 1
-        else:
+        if valid_subject == "1":
             eligible += 1
+        else:
+            excluded += 1
         rows.append(
             {
                 "subid": sid,
