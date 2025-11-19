@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # example:
-# python screen_head_motion_hcpd.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/zhaoshaoling/MSC_data/HCPD/code_xcpd0.7.1rc5_hcpMiniPrepData/final2025/data/xcpd0.7.1rc5/step_2nd_24PcsfGlobal --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/table/rest_fd_summary.csv
+# python screen_head_motion_hcpd.py --fmriprep-dir /GPFS/cuizaixu_lab_permanent/congjing/hcp_hcpd/results/hcpd_stable_xcpd/xcpd_rest_cifti --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/table/rest_fd_summary.csv
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:
@@ -79,19 +79,19 @@ def parse_acq(name: str) -> str | None:
 
 def collect_subject_runs(fmriprep_dir: Path) -> dict[str, dict[str, Path]]:
     d: dict[str, dict[str, Path]] = {}
-    for tsv in fmriprep_dir.rglob("*desc-filtered_motion.tsv"):
-        if "func" not in tsv.parts:
+    for subj_dir in fmriprep_dir.glob("sub-*"):
+        func_dir = subj_dir / "xcp_d" / subj_dir.name / "func"
+        if not func_dir.exists():
             continue
-        if not re.search(r"task-REST", tsv.name, flags=re.IGNORECASE):
-            continue
-        sid = find_subject_id(tsv)
-        idx = infer_run_idx(tsv.name)
-        acq = parse_acq(tsv.name)
-        if idx is None or idx not in (1, 2) or acq is None:
-            continue
-        m = d.setdefault(sid, {})
-        key = f"{idx}_{acq}"
-        m[key] = tsv
+        sid = subj_dir.name
+        for tsv in func_dir.glob(f"{sid}_task-REST*_acq-*_motion.tsv"):
+            idx = infer_run_idx(tsv.name)
+            acq = parse_acq(tsv.name)
+            if idx is None or acq is None:
+                continue
+            m = d.setdefault(sid, {})
+            key = f"{idx}_{acq}"
+            m[key] = tsv
     return d
 
 
