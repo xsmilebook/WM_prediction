@@ -20,37 +20,73 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
     valid = 0
     low = 0
     with tsv_path.open("r", encoding="utf-8") as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        fields = reader.fieldnames or []
-        fd_col = None
-        if debug:
-            print(f"[DEBUG] reading file: {tsv_path}")
-            print(f"[DEBUG] header columns: {fields}")
-        if "framewise_displacement" in fields:
-            fd_col = "framewise_displacement"
-        if debug:
-            print(f"[DEBUG] selected fd_col: {fd_col}")
+        first = f.readline()
+        delim = "\t" if "\t" in first else ("," if "," in first else None)
         sample_vals: list[float] = []
-        for row in reader:
-            frame_count += 1
-            if fd_col is None:
-                continue
-            v = row.get(fd_col)
-            if v is None:
-                continue
-            s = str(v).strip()
-            if not s or s.lower() == "n/a":
-                continue
-            try:
-                x = float(s)
-            except ValueError:
-                continue
-            total += x
-            valid += 1
-            if x < 0.2:
-                low += 1
-            if len(sample_vals) < 5:
-                sample_vals.append(x)
+        if delim is not None:
+            f.seek(0)
+            reader = csv.DictReader(f, delimiter=delim)
+            fields = reader.fieldnames or []
+            fd_col = None
+            if debug:
+                print(f"[DEBUG] reading file: {tsv_path}")
+                print(f"[DEBUG] header columns: {fields}")
+            if "framewise_displacement" in fields:
+                fd_col = "framewise_displacement"
+            if debug:
+                print(f"[DEBUG] selected fd_col: {fd_col}")
+            for row in reader:
+                frame_count += 1
+                if fd_col is None:
+                    continue
+                v = row.get(fd_col)
+                if v is None:
+                    continue
+                s = str(v).strip()
+                if not s or s.lower() == "n/a":
+                    continue
+                try:
+                    x = float(s)
+                except ValueError:
+                    continue
+                total += x
+                valid += 1
+                if x < 0.2:
+                    low += 1
+                if len(sample_vals) < 5:
+                    sample_vals.append(x)
+        else:
+            header_fields = re.split(r"\s+", first.strip()) if first.strip() else []
+            if debug:
+                print(f"[DEBUG] reading file: {tsv_path}")
+                print(f"[DEBUG] header columns: {header_fields}")
+            fd_idx = None
+            for i, col in enumerate(header_fields):
+                if col == "framewise_displacement":
+                    fd_idx = i
+                    break
+            if debug:
+                print(f"[DEBUG] selected fd_col index: {fd_idx}")
+            for line in f:
+                if not line.strip():
+                    continue
+                parts = re.split(r"\s+", line.strip())
+                frame_count += 1
+                if fd_idx is None or fd_idx >= len(parts):
+                    continue
+                s = parts[fd_idx].strip()
+                if not s or s.lower() == "n/a":
+                    continue
+                try:
+                    x = float(s)
+                except ValueError:
+                    continue
+                total += x
+                valid += 1
+                if x < 0.2:
+                    low += 1
+                if len(sample_vals) < 5:
+                    sample_vals.append(x)
     if valid == 0:
         if debug:
             print(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean=NA, na_or_invalid={(frame_count - valid)}")
@@ -116,8 +152,13 @@ def main() -> None:
         if 2 in run_files:
             a, b, c, d = summarize_fd(run_files[2], args.debug)
             r2_fc, r2_fd, r2_valid_cnt, r2_low = a, b, c, d
-        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc == 383 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc == 383 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
+        if ((1 in run_files and r1_fc is not None and r1_fc < 200) or (2 in run_files and r2_fc is not None and r2_fc < 200)):
+            excluded += 1
+            if args.debug:
+                print(f"[DEBUG] excluded due to frame<200: subid={sid}, ses={ses}, r1_frame={r1_fc}, r2_frame={r2_fc}")
+            continue
+        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc is not None and r1_fc >= 200 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
+        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc is not None and r2_fc >= 200 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
         valid_subject = "1" if valid_num >= 2 else "0"
         if valid_subject == "1":
