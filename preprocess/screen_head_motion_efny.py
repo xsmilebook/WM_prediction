@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # example:
-# python aggregate_rest_fd.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/EFNY/results/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary.csv
+# python screen_head_motion_efny.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/EFNY/results/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary.csv
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:
