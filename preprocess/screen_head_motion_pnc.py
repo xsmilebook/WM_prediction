@@ -4,15 +4,6 @@ import re
 import sys
 from pathlib import Path
 
-# command:
-# python screen_head_motion_abcd.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/ABCD/data/bids --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/rest_fd_summary.csv --debug --log /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/log/preprocess/screen_head_motion_abcd.log
-
-def find_subject_id(p: Path) -> str:
-    for part in p.parts:
-        if part.startswith("sub-"):
-            return part
-    return ""
-
 
 LOG_FH = None
 
@@ -23,6 +14,20 @@ def log(msg: str) -> None:
     else:
         LOG_FH.write(msg + "\n")
         LOG_FH.flush()
+
+
+def find_subject_id(p: Path) -> str:
+    for part in p.parts:
+        if part.startswith("sub-"):
+            return part
+    return ""
+
+
+def parse_ses(name: str) -> str:
+    m = re.search(r"ses-([A-Za-z0-9]+)", name)
+    if m:
+        return m.group(1)
+    return ""
 
 
 def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, str]:
@@ -108,35 +113,26 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
     return frame_count, f"{mean:.6f}", valid, f"{low / valid:.6f}"
 
 
-def infer_run_idx(name: str) -> int | None:
-    m = re.search(r"run-0*([0-9]+)", name, flags=re.IGNORECASE)
-    if m:
-        return int(m.group(1))
-    return None
-
-
-def parse_ses(name: str) -> str:
-    m = re.search(r"ses-([A-Za-z0-9]+)", name)
-    if m:
-        return m.group(1)
-    return ""
-
-
-def collect_subject_runs(fmriprep_dir: Path) -> dict[tuple[str, str], dict[int, Path]]:
-    d: dict[tuple[str, str], dict[int, Path]] = {}
+def collect_subject_sessions(fmriprep_dir: Path, debug: bool = False) -> dict[tuple[str, str], Path]:
+    d: dict[tuple[str, str], Path] = {}
     for subj_dir in fmriprep_dir.glob("sub-*"):
-        func_dir = subj_dir / "func"
-        if not func_dir.exists():
-            continue
         sid = subj_dir.name
-        for tsv in func_dir.glob(f"{sid}_ses-*_task-rest_run-*_desc-includingFD_motion.tsv"):
-            ses = parse_ses(tsv.name)
-            idx = infer_run_idx(tsv.name)
-            if not ses or idx is None:
+        if debug:
+            log(f"[DEBUG] scanning subject: {sid}")
+        for ses_dir in subj_dir.glob("ses-*"):
+            func_dir = ses_dir / "func"
+            if not func_dir.exists():
                 continue
-            key = (sid, ses)
-            m = d.setdefault(key, {})
-            m[idx] = tsv
+            ses = ses_dir.name.split("ses-")[-1]
+            if debug:
+                log(f"[DEBUG] func directory: {func_dir}")
+            for tsv in func_dir.glob(f"{sid}_ses-{ses}_task-rest*_desc-confounds_timeseries.tsv"):
+                if debug:
+                    log(f"[DEBUG] found confounds file: {tsv}")
+                d[(sid, ses)] = tsv
+                break
+    if debug:
+        log(f"[DEBUG] subject-session pairs collected: {len(d)}")
     return d
 
 
@@ -156,34 +152,19 @@ def main() -> None:
         lp = Path(args.log)
         lp.parent.mkdir(parents=True, exist_ok=True)
         LOG_FH = lp.open("w", encoding="utf-8")
-    runs_map = collect_subject_runs(fdir)
+    sessions = collect_subject_sessions(fdir, args.debug)
     rows = []
     excluded = 0
     eligible = 0
-    for (sid, ses), run_files in runs_map.items():
-        r1_fc = r1_fd = r1_low = None
-        r2_fc = r2_fd = r2_low = None
-        if 1 in run_files:
-            a, b, c, d = summarize_fd(run_files[1], args.debug)
-            r1_fc, r1_fd, r1_valid_cnt, r1_low = a, b, c, d
-        if 2 in run_files:
-            a, b, c, d = summarize_fd(run_files[2], args.debug)
-            r2_fc, r2_fd, r2_valid_cnt, r2_low = a, b, c, d
-        frame_issue = ((1 in run_files and r1_fc is not None and r1_fc < 100) or (2 in run_files and r2_fc is not None and r2_fc < 100))
-        if args.debug and frame_issue:
-            log(f"[DEBUG] frame<100: subid={sid}, ses={ses}, r1_frame={r1_fc}, r2_frame={r2_fc}")
-        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc is not None and r1_fc >= 100 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc is not None and r2_fc >= 100 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
-        valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if (valid_num >= 2 and not frame_issue) else "0"
-        invalid_reason = ""
-        if frame_issue:
-            reasons = []
-            if r1_fc is not None and r1_fc < 100:
-                reasons.append("rest1_frame_lt_100")
-            if r2_fc is not None and r2_fc < 100:
-                reasons.append("rest2_frame_lt_100")
-            invalid_reason = ";".join(reasons) if reasons else "frame_lt_100"
+    for (sid, ses), path in sessions.items():
+        fc, fd, vcnt, low = summarize_fd(path, args.debug)
+        if fc < 60:
+            excluded += 1
+            if args.debug:
+                log(f"[DEBUG] excluded due to frame<60: subid={sid}, ses={ses}, frame={fc}")
+            continue
+        valid = "1" if (fd != "NA" and low != "NA" and fc >= 60 and float(fd) <= 0.5 and float(low) > 0.4) else "0"
+        valid_subject = valid
         if valid_subject == "1":
             eligible += 1
         else:
@@ -192,25 +173,18 @@ def main() -> None:
             {
                 "subid": sid,
                 "ses": ses,
-                "rest1_frame": str(r1_fc) if r1_fc is not None else "NA",
-                "rest1_fd": r1_fd if r1_fd is not None else "NA",
-                "rest1_low_ratio": r1_low if r1_low is not None else "NA",
-                "rest1_valid": r1_valid,
-                "rest2_frame": str(r2_fc) if r2_fc is not None else "NA",
-                "rest2_fd": r2_fd if r2_fd is not None else "NA",
-                "rest2_low_ratio": r2_low if r2_low is not None else "NA",
-                "rest2_valid": r2_valid,
-                "valid_num": str(valid_num),
+                "rest_frame": str(fc),
+                "rest_fd": fd,
+                "rest_low_ratio": low,
+                "rest_valid": valid,
                 "valid_subject": valid_subject,
-                "invalid_reason": invalid_reason,
             }
         )
     rows.sort(key=lambda r: (r["subid"], r["ses"]))
     headers = [
         "subid", "ses",
-        "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
-        "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
-        "valid_num", "valid_subject", "invalid_reason",
+        "rest_frame", "rest_fd", "rest_low_ratio", "rest_valid",
+        "valid_subject",
     ]
     outp = Path(args.out)
     outp.parent.mkdir(parents=True, exist_ok=True)
