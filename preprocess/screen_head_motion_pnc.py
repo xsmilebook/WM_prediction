@@ -4,6 +4,8 @@ import re
 import sys
 from pathlib import Path
 
+# command:
+# python screen_head_motion_pnc.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/datasets/PNC/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/PNC/table/rest_fd_summary.csv --debug --log /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/log/preprocess/screen_head_motion_pnc.log
 
 LOG_FH = None
 
@@ -126,7 +128,7 @@ def collect_subject_sessions(fmriprep_dir: Path, debug: bool = False) -> dict[tu
             ses = ses_dir.name.split("ses-")[-1]
             if debug:
                 log(f"[DEBUG] func directory: {func_dir}")
-            for tsv in func_dir.glob(f"{sid}_ses-{ses}_task-rest*_desc-confounds_timeseries.tsv"):
+            for tsv in func_dir.glob(f"{sid}_ses-{ses}_task-rest_acq-singleband_desc-confounds_timeseries.tsv"):
                 if debug:
                     log(f"[DEBUG] found confounds file: {tsv}")
                 d[(sid, ses)] = tsv
