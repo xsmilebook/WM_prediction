@@ -160,12 +160,12 @@ def main() -> None:
     eligible = 0
     for (sid, ses), path in sessions.items():
         fc, fd, vcnt, low = summarize_fd(path, args.debug)
-        if fc < 60:
+        if fc != 124:
             excluded += 1
             if args.debug:
-                log(f"[DEBUG] excluded due to frame<60: subid={sid}, ses={ses}, frame={fc}")
+                log(f"[DEBUG] excluded due to frame!=124: subid={sid}, ses={ses}, frame={fc}")
             continue
-        valid = "1" if (fd != "NA" and low != "NA" and fc >= 60 and float(fd) <= 0.5 and float(low) > 0.4) else "0"
+        valid = "1" if (fd != "NA" and low != "NA" and fc == 124 and float(fd) <= 0.5 and float(low) > 0.4) else "0"
         valid_subject = valid
         if valid_subject == "1":
             eligible += 1
