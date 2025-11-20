@@ -5,13 +5,24 @@ import sys
 from pathlib import Path
 
 # command:
-# python screen_head_motion_abcd.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/ABCD/data/bids --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/rest_fd_summary.csv
+# python screen_head_motion_abcd.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/ABCD/data/bids --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/rest_fd_summary.csv --debug --log /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/log/preprocess/screen_head_motion_abcd.log
 
 def find_subject_id(p: Path) -> str:
     for part in p.parts:
         if part.startswith("sub-"):
             return part
     return ""
+
+
+LOG_FH = None
+
+def log(msg: str) -> None:
+    global LOG_FH
+    if LOG_FH is None:
+        print(msg)
+    else:
+        LOG_FH.write(msg + "\n")
+        LOG_FH.flush()
 
 
 def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, str]:
@@ -29,12 +40,12 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
             fields = reader.fieldnames or []
             fd_col = None
             if debug:
-                print(f"[DEBUG] reading file: {tsv_path}")
-                print(f"[DEBUG] header columns: {fields}")
+                log(f"[DEBUG] reading file: {tsv_path}")
+                log(f"[DEBUG] header columns: {fields}")
             if "framewise_displacement" in fields:
                 fd_col = "framewise_displacement"
             if debug:
-                print(f"[DEBUG] selected fd_col: {fd_col}")
+                log(f"[DEBUG] selected fd_col: {fd_col}")
             for row in reader:
                 frame_count += 1
                 if fd_col is None:
@@ -58,15 +69,15 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
         else:
             header_fields = re.split(r"\s+", first.strip()) if first.strip() else []
             if debug:
-                print(f"[DEBUG] reading file: {tsv_path}")
-                print(f"[DEBUG] header columns: {header_fields}")
+                log(f"[DEBUG] reading file: {tsv_path}")
+                log(f"[DEBUG] header columns: {header_fields}")
             fd_idx = None
             for i, col in enumerate(header_fields):
                 if col == "framewise_displacement":
                     fd_idx = i
                     break
             if debug:
-                print(f"[DEBUG] selected fd_col index: {fd_idx}")
+                log(f"[DEBUG] selected fd_col index: {fd_idx}")
             for line in f:
                 if not line.strip():
                     continue
@@ -89,11 +100,11 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
                     sample_vals.append(x)
     if valid == 0:
         if debug:
-            print(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean=NA, na_or_invalid={(frame_count - valid)}")
+            log(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean=NA, na_or_invalid={(frame_count - valid)}")
         return frame_count, "NA", 0, "NA"
     mean = total / valid
     if debug:
-        print(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean={mean:.6f}, na_or_invalid={(frame_count - valid)}, samples={sample_vals}")
+        log(f"[DEBUG] frames={frame_count}, valid={valid}, low={low}, mean={mean:.6f}, na_or_invalid={(frame_count - valid)}, samples={sample_vals}")
     return frame_count, f"{mean:.6f}", valid, f"{low / valid:.6f}"
 
 
@@ -134,11 +145,17 @@ def main() -> None:
     parser.add_argument("--fmriprep-dir", "--fmriprep_dir", required=True, dest="fmriprep_dir")
     parser.add_argument("--out", "--out_csv", default="rest_fd_summary.csv", dest="out")
     parser.add_argument("--debug", action="store_true", dest="debug")
+    parser.add_argument("--log", dest="log")
     args = parser.parse_args()
     fdir = Path(args.fmriprep_dir)
     if not fdir.exists():
         print(f"Input directory not found: {fdir}", file=sys.stderr)
         return
+    global LOG_FH
+    if args.log:
+        lp = Path(args.log)
+        lp.parent.mkdir(parents=True, exist_ok=True)
+        LOG_FH = lp.open("w", encoding="utf-8")
     runs_map = collect_subject_runs(fdir)
     rows = []
     excluded = 0
@@ -155,7 +172,7 @@ def main() -> None:
         if ((1 in run_files and r1_fc is not None and r1_fc < 200) or (2 in run_files and r2_fc is not None and r2_fc < 200)):
             excluded += 1
             if args.debug:
-                print(f"[DEBUG] excluded due to frame<200: subid={sid}, ses={ses}, r1_frame={r1_fc}, r2_frame={r2_fc}")
+                log(f"[DEBUG] excluded due to frame<200: subid={sid}, ses={ses}, r1_frame={r1_fc}, r2_frame={r2_fc}")
             continue
         r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc is not None and r1_fc >= 200 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
         r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc is not None and r2_fc >= 200 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
@@ -195,8 +212,10 @@ def main() -> None:
         w.writeheader()
         for r in rows:
             w.writerow(r)
-    print(f"excluded={excluded}")
-    print(f"eligible={eligible}")
+    log(f"excluded={excluded}")
+    log(f"eligible={eligible}")
+    if LOG_FH is not None:
+        LOG_FH.close()
 
 
 if __name__ == "__main__":
