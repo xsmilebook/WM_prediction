@@ -129,7 +129,7 @@ def collect_subject_runs(fmriprep_dir: Path) -> dict[tuple[str, str], dict[int, 
         if not func_dir.exists():
             continue
         sid = subj_dir.name
-        for tsv in func_dir.glob(f"{sid}_ses-*_task-rest_run-*_desc-includingFD_motion.tsv"):
+        for tsv in func_dir.glob(f"{sid}_ses-*_task-rest_run-*_desc-confounds_timeseries.tsv"):
             ses = parse_ses(tsv.name)
             idx = infer_run_idx(tsv.name)
             if not ses or idx is None:
