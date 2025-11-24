@@ -115,24 +115,32 @@ def summarize_fd(tsv_path: Path, debug: bool = False) -> tuple[int, str, int, st
     return frame_count, f"{mean:.6f}", valid, f"{low / valid:.6f}"
 
 
-def collect_subject_sessions(fmriprep_dir: Path, debug: bool = False) -> dict[tuple[str, str], Path]:
+def collect_subject_sessions(fmriprep_dirs: list[Path], debug: bool = False) -> dict[tuple[str, str], Path]:
     d: dict[tuple[str, str], Path] = {}
-    for subj_dir in fmriprep_dir.glob("sub-*"):
-        sid = subj_dir.name
+    for root in fmriprep_dirs:
         if debug:
-            log(f"[DEBUG] scanning subject: {sid}")
-        for ses_dir in subj_dir.glob("ses-*"):
-            func_dir = ses_dir / "func"
-            if not func_dir.exists():
-                continue
-            ses = ses_dir.name.split("ses-")[-1]
+            log(f"[DEBUG] scanning root: {root}")
+        for subj_dir in root.glob("sub-*"):
+            sid = subj_dir.name
             if debug:
-                log(f"[DEBUG] func directory: {func_dir}")
-            for tsv in func_dir.glob(f"{sid}_ses-{ses}_task-rest_acq-singleband_desc-confounds_timeseries.tsv"):
+                log(f"[DEBUG] scanning subject: {sid}")
+            for ses_dir in subj_dir.glob("ses-*"):
+                func_dir = ses_dir / "func"
+                if not func_dir.exists():
+                    continue
+                ses = ses_dir.name.split("ses-")[-1]
                 if debug:
-                    log(f"[DEBUG] found confounds file: {tsv}")
-                d[(sid, ses)] = tsv
-                break
+                    log(f"[DEBUG] func directory: {func_dir}")
+                for tsv in func_dir.glob(f"{sid}_ses-{ses}_task-rest_acq-singleband_desc-confounds_timeseries.tsv"):
+                    key = (sid, ses)
+                    if key in d:
+                        if debug:
+                            log(f"[DEBUG] duplicate pair skipped (already collected): {key} from {tsv}")
+                        break
+                    if debug:
+                        log(f"[DEBUG] found confounds file: {tsv}")
+                    d[key] = tsv
+                    break
     if debug:
         log(f"[DEBUG] subject-session pairs collected: {len(d)}")
     return d
@@ -141,20 +149,29 @@ def collect_subject_sessions(fmriprep_dir: Path, debug: bool = False) -> dict[tu
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fmriprep-dir", "--fmriprep_dir", required=True, dest="fmriprep_dir")
+    parser.add_argument("--fmriprep-dir2", "--fmriprep_dir2", dest="fmriprep_dir2")
     parser.add_argument("--out", "--out_csv", default="rest_fd_summary.csv", dest="out")
     parser.add_argument("--debug", action="store_true", dest="debug")
     parser.add_argument("--log", dest="log")
     args = parser.parse_args()
-    fdir = Path(args.fmriprep_dir)
-    if not fdir.exists():
-        print(f"Input directory not found: {fdir}", file=sys.stderr)
+    fdir1 = Path(args.fmriprep_dir)
+    if not fdir1.exists():
+        print(f"Input directory not found: {fdir1}", file=sys.stderr)
         return
     global LOG_FH
     if args.log:
         lp = Path(args.log)
         lp.parent.mkdir(parents=True, exist_ok=True)
         LOG_FH = lp.open("w", encoding="utf-8")
-    sessions = collect_subject_sessions(fdir, args.debug)
+    roots: list[Path] = [fdir1]
+    if args.fmriprep_dir2:
+        fdir2 = Path(args.fmriprep_dir2)
+        if fdir2.exists():
+            roots.append(fdir2)
+        else:
+            if args.debug:
+                log(f"[DEBUG] second root not found: {fdir2}")
+    sessions = collect_subject_sessions(roots, args.debug)
     rows = []
     excluded = 0
     eligible = 0
