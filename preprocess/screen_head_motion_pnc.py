@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # command:
-# python screen_head_motion_pnc.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/datasets/PNC/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/PNC/table/rest_fd_summary.csv --debug --log /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/log/preprocess/screen_head_motion_pnc.log
+# python screen_head_motion_pnc.py --fmriprep-dir /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/datasets/PNC/fmriprep --fmriprep-dir2 /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/PNC/results/fmriprep --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/PNC/table/rest_fd_summary.csv --log /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/log/preprocess/screen_head_motion_pnc.log
 
 LOG_FH = None
 

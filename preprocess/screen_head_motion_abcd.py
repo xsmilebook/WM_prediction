@@ -122,6 +122,14 @@ def parse_ses(name: str) -> str:
     return ""
 
 
+def has_t1w_anat(fmriprep_dir: Path, sid: str) -> bool:
+    anat_dir = fmriprep_dir / sid / "anat"
+    if not anat_dir.exists():
+        return False
+    for f in anat_dir.glob("*preproc_T1w.nii.gz"):
+        return True
+    return False
+
 def collect_subject_runs(fmriprep_dir: Path) -> dict[tuple[str, str], dict[int, Path]]:
     d: dict[tuple[str, str], dict[int, Path]] = {}
     for subj_dir in fmriprep_dir.glob("sub-*"):
@@ -163,6 +171,9 @@ def main() -> None:
     for (sid, ses), run_files in runs_map.items():
         r1_fc = r1_fd = r1_low = None
         r2_fc = r2_fd = r2_low = None
+        t1w_valid = "1" if has_t1w_anat(fdir, sid) else "0"
+        if args.debug:
+            log(f"[DEBUG] T1w_valid={t1w_valid} for {sid}")
         if 1 in run_files:
             a, b, c, d = summarize_fd(run_files[1], args.debug)
             r1_fc, r1_fd, r1_valid_cnt, r1_low = a, b, c, d
@@ -175,7 +186,7 @@ def main() -> None:
         r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc is not None and r1_fc >= 100 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
         r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc is not None and r2_fc >= 100 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if (valid_num >= 2 and not frame_issue) else "0"
+        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1" and not frame_issue) else "0"
         invalid_reason = ""
         if frame_issue:
             reasons = []
@@ -201,6 +212,7 @@ def main() -> None:
                 "rest2_low_ratio": r2_low if r2_low is not None else "NA",
                 "rest2_valid": r2_valid,
                 "valid_num": str(valid_num),
+                "T1w_valid": t1w_valid,
                 "valid_subject": valid_subject,
                 "invalid_reason": invalid_reason,
             }
@@ -210,7 +222,7 @@ def main() -> None:
         "subid", "ses",
         "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
         "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
-        "valid_num", "valid_subject", "invalid_reason",
+        "valid_num", "T1w_valid", "valid_subject", "invalid_reason",
     ]
     outp = Path(args.out)
     outp.parent.mkdir(parents=True, exist_ok=True)
