@@ -130,6 +130,17 @@ def has_t1w_anat(fmriprep_dir: Path, sid: str) -> bool:
         return True
     return False
 
+def clean_id_text(s: str) -> str:
+    s = s.strip()
+    if not s:
+        return ""
+    s = s.strip("[]").strip()
+    if (s.startswith("'") and s.endswith("'")) or (s.startswith('"') and s.endswith('"')):
+        s = s[1:-1].strip()
+    s = s.replace("'", "").replace('"', "")
+    s = s.replace(",", "").replace(" ", "")
+    return s
+
 def load_mat_ids(mat_path: Path, debug: bool = False) -> set[str]:
     ids: set[str] = set()
     if not mat_path.exists():
@@ -146,7 +157,7 @@ def load_mat_ids(mat_path: Path, debug: bool = False) -> set[str]:
                 # object or string arrays
                 if isinstance(v, (list, tuple)):
                     for item in v:
-                        s = str(item).strip()
+                        s = clean_id_text(str(item).strip())
                         if s:
                             ids.add(s)
                 else:
@@ -155,7 +166,7 @@ def load_mat_ids(mat_path: Path, debug: bool = False) -> set[str]:
                     if arr.dtype.kind in ("U", "S", "O"):
                         flat = arr.flatten()
                         for item in flat:
-                            s = str(item).strip()
+                            s = clean_id_text(str(item).strip())
                             if s:
                                 ids.add(s)
             except Exception:
@@ -176,11 +187,11 @@ def load_mat_ids(mat_path: Path, debug: bool = False) -> set[str]:
                     else:
                         v = obj[()]
                         if isinstance(v, bytes):
-                            s = v.decode(errors="ignore").strip()
+                            s = clean_id_text(v.decode(errors="ignore").strip())
                             if s:
                                 ids.add(s)
                         elif isinstance(v, str):
-                            s = v.strip()
+                            s = clean_id_text(v.strip())
                             if s:
                                 ids.add(s)
                 except Exception:
@@ -273,8 +284,7 @@ def main() -> None:
     mat1_ids = load_mat_ids(Path(args.mat1), args.debug)
     mat2_ids = load_mat_ids(Path(args.mat2), args.debug)
     sublist = mat1_ids.intersection(mat2_ids)
-    with open("sublist.txt", "w") as f:
-        f.write("\n".join(sublist))
+
     prefixed_sublist = {"sub-" + s for s in sublist}
     if args.debug:
         log(f"[DEBUG] mat1={len(mat1_ids)}, mat2={len(mat2_ids)}, intersection={len(sublist)}")
