@@ -273,6 +273,8 @@ def main() -> None:
     mat1_ids = load_mat_ids(Path(args.mat1), args.debug)
     mat2_ids = load_mat_ids(Path(args.mat2), args.debug)
     sublist = mat1_ids.intersection(mat2_ids)
+    with open("sublist.txt", "w") as f:
+        f.write("\n".join(sublist))
     prefixed_sublist = {"sub-" + s for s in sublist}
     if args.debug:
         log(f"[DEBUG] mat1={len(mat1_ids)}, mat2={len(mat2_ids)}, intersection={len(sublist)}")
