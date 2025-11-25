@@ -130,6 +130,70 @@ def has_t1w_anat(fmriprep_dir: Path, sid: str) -> bool:
         return True
     return False
 
+def load_mat_ids(mat_path: Path, debug: bool = False) -> set[str]:
+    ids: set[str] = set()
+    if not mat_path.exists():
+        if debug:
+            log(f"[DEBUG] mat file not found: {mat_path}")
+        return ids
+    try:
+        import scipy.io as sio  # type: ignore
+        data = sio.loadmat(str(mat_path))
+        for k, v in data.items():
+            if k.startswith("__"):
+                continue
+            try:
+                # object or string arrays
+                if isinstance(v, (list, tuple)):
+                    for item in v:
+                        s = str(item).strip()
+                        if s:
+                            ids.add(s)
+                else:
+                    import numpy as np  # type: ignore
+                    arr = np.array(v)
+                    if arr.dtype.kind in ("U", "S", "O"):
+                        flat = arr.flatten()
+                        for item in flat:
+                            s = str(item).strip()
+                            if s:
+                                ids.add(s)
+            except Exception:
+                continue
+        if debug:
+            log(f"[DEBUG] loaded {len(ids)} ids from {mat_path} via scipy.io")
+        return ids
+    except Exception:
+        pass
+    try:
+        import h5py  # type: ignore
+        with h5py.File(str(mat_path), "r") as f:
+            def collect(obj):
+                try:
+                    if hasattr(obj, "keys"):
+                        for name in obj.keys():
+                            collect(obj[name])
+                    else:
+                        v = obj[()]
+                        if isinstance(v, bytes):
+                            s = v.decode(errors="ignore").strip()
+                            if s:
+                                ids.add(s)
+                        elif isinstance(v, str):
+                            s = v.strip()
+                            if s:
+                                ids.add(s)
+                except Exception:
+                    return
+            collect(f)
+        if debug:
+            log(f"[DEBUG] loaded {len(ids)} ids from {mat_path} via h5py")
+        return ids
+    except Exception:
+        if debug:
+            log(f"[DEBUG] failed to parse mat file: {mat_path}")
+        return ids
+
 def load_qc_map(qc_csv: Path, debug: bool = False) -> dict[str, str]:
     m: dict[str, str] = {}
     if not qc_csv.exists():
@@ -177,7 +241,7 @@ def collect_subject_runs(fmriprep_dir: Path) -> dict[tuple[str, str], dict[int, 
         if not func_dir.exists():
             continue
         sid = subj_dir.name
-        for tsv in func_dir.glob(f"{sid}_ses-*_task-rest_run-*_desc-confounds_timeseries.tsv"):
+        for tsv in func_dir.glob(f"{sid}_ses-*_task-rest_run-*_desc-includingFD_motion.tsv"):
             ses = parse_ses(tsv.name)
             idx = infer_run_idx(tsv.name)
             if not ses or idx is None:
@@ -194,7 +258,8 @@ def main() -> None:
     parser.add_argument("--out", "--out_csv", default="rest_fd_summary.csv", dest="out")
     parser.add_argument("--debug", action="store_true", dest="debug")
     parser.add_argument("--log", dest="log")
-    parser.add_argument("--qc-csv", "--qc_csv", dest="qc_csv", default="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/mri_y_qc_raw_rsfmr.csv")
+    parser.add_argument("--mat1", dest="mat1", default="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/subID_QCpassed_inABCC.mat")
+    parser.add_argument("--mat2", dest="mat2", default="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/subID_QSIprep.mat")
     args = parser.parse_args()
     fdir = Path(args.fmriprep_dir)
     if not fdir.exists():
@@ -205,7 +270,12 @@ def main() -> None:
         lp = Path(args.log)
         lp.parent.mkdir(parents=True, exist_ok=True)
         LOG_FH = lp.open("w", encoding="utf-8")
-    qc_map = load_qc_map(Path(args.qc_csv), args.debug)
+    mat1_ids = load_mat_ids(Path(args.mat1), args.debug)
+    mat2_ids = load_mat_ids(Path(args.mat2), args.debug)
+    sublist = mat1_ids.intersection(mat2_ids)
+    prefixed_sublist = {"sub-" + s for s in sublist}
+    if args.debug:
+        log(f"[DEBUG] mat1={len(mat1_ids)}, mat2={len(mat2_ids)}, intersection={len(sublist)}")
     runs_map = collect_subject_runs(fdir)
     rows = []
     excluded = 0
@@ -216,24 +286,16 @@ def main() -> None:
         t1w_valid = "1" if has_t1w_anat(fdir, sid) else "0"
         if args.debug:
             log(f"[DEBUG] T1w_valid={t1w_valid} for {sid}")
-        iqc_val = qc_map.get(sid, "NA")
-        if args.debug:
-            log(f"[DEBUG] iqc_rsfmri_ok_ser for {sid}: {iqc_val}")
         if 1 in run_files:
             a, b, c, d = summarize_fd(run_files[1], args.debug)
             r1_fc, r1_fd, r1_valid_cnt, r1_low = a, b, c, d
         if 2 in run_files:
             a, b, c, d = summarize_fd(run_files[2], args.debug)
             r2_fc, r2_fd, r2_valid_cnt, r2_low = a, b, c, d
-        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
+        r1_valid = "1" if (r1_fc is not None and r1_fc >= 192 and r1_fd not in (None, "NA") and r1_low not in (None, "NA") and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
+        r2_valid = "1" if (r2_fc is not None and r2_fc >= 192 and r2_fd not in (None, "NA") and r2_low not in (None, "NA") and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        iqc_ok = False
-        try:
-            iqc_ok = (iqc_val != "NA" and float(iqc_val) > 0)
-        except ValueError:
-            iqc_ok = False
-        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1" and iqc_ok) else "0"
+        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1") else "0"
         invalid_reason = ""
         if valid_subject == "1":
             eligible += 1
@@ -251,19 +313,20 @@ def main() -> None:
                 "rest2_fd": r2_fd if r2_fd is not None else "NA",
                 "rest2_low_ratio": r2_low if r2_low is not None else "NA",
                 "rest2_valid": r2_valid,
-                "iqc_rsfmri_ok_ser": iqc_val,
                 "valid_num": str(valid_num),
                 "T1w_valid": t1w_valid,
                 "valid_subject": valid_subject,
                 "invalid_reason": invalid_reason,
             }
         )
+    # Filter rows to only keep subjects in intersection (with 'sub-' prefix)
+    rows = [r for r in rows if r.get("subid") in prefixed_sublist]
     rows.sort(key=lambda r: (r["subid"], r["ses"]))
     headers = [
         "subid", "ses",
         "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
         "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
-        "iqc_rsfmri_ok_ser", "valid_num", "T1w_valid", "valid_subject", "invalid_reason",
+        "valid_num", "T1w_valid", "valid_subject", "invalid_reason",
     ]
     outp = Path(args.out)
     outp.parent.mkdir(parents=True, exist_ok=True)
@@ -272,6 +335,9 @@ def main() -> None:
         w.writeheader()
         for r in rows:
             w.writerow(r)
+    # Recompute counts after filtering
+    eligible = sum(1 for r in rows if r.get("valid_subject") == "1")
+    excluded = len(rows) - eligible
     log(f"excluded={excluded}")
     log(f"eligible={eligible}")
     if LOG_FH is not None:
