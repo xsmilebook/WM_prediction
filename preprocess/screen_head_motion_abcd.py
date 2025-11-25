@@ -130,6 +130,46 @@ def has_t1w_anat(fmriprep_dir: Path, sid: str) -> bool:
         return True
     return False
 
+def load_qc_map(qc_csv: Path, debug: bool = False) -> dict[str, str]:
+    m: dict[str, str] = {}
+    if not qc_csv.exists():
+        if debug:
+            log(f"[DEBUG] qc csv not found: {qc_csv}")
+        return m
+    with qc_csv.open("r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fields = reader.fieldnames or []
+        subj_field = None
+        event_field = None
+        iqc_field = None
+        for col in fields:
+            lc = col.strip().lower()
+            if subj_field is None and (lc == "src_subject_id" or "src_subject_id" in lc):
+                subj_field = col
+            if event_field is None and (lc == "eventname" or "eventname" in lc):
+                event_field = col
+            if iqc_field is None and (lc == "iqc_rsfmri_ok_ser" or "iqc_rsfmri_ok_ser" in lc):
+                iqc_field = col
+        if debug:
+            log(f"[DEBUG] qc fields: subj={subj_field}, event={event_field}, iqc={iqc_field}")
+        if subj_field is None or event_field is None or iqc_field is None:
+            return m
+        for row in reader:
+            ev = str(row.get(event_field, "")).strip()
+            if ev != "baseline_year_1_arm_1":
+                continue
+            raw_id = str(row.get(subj_field, "")).strip()
+            if not raw_id:
+                continue
+            sid = "sub-" + raw_id.replace("_", "")
+            v = row.get(iqc_field)
+            val = str(v).strip() if v is not None else "NA"
+            m[sid] = val
+    if debug:
+        log(f"[DEBUG] qc rows loaded: {len(m)}")
+    return m
+
+
 def collect_subject_runs(fmriprep_dir: Path) -> dict[tuple[str, str], dict[int, Path]]:
     d: dict[tuple[str, str], dict[int, Path]] = {}
     for subj_dir in fmriprep_dir.glob("sub-*"):
@@ -154,6 +194,7 @@ def main() -> None:
     parser.add_argument("--out", "--out_csv", default="rest_fd_summary.csv", dest="out")
     parser.add_argument("--debug", action="store_true", dest="debug")
     parser.add_argument("--log", dest="log")
+    parser.add_argument("--qc-csv", "--qc_csv", dest="qc_csv", default="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/table/mri_y_qc_raw_rsfmr.csv")
     args = parser.parse_args()
     fdir = Path(args.fmriprep_dir)
     if not fdir.exists():
@@ -164,6 +205,7 @@ def main() -> None:
         lp = Path(args.log)
         lp.parent.mkdir(parents=True, exist_ok=True)
         LOG_FH = lp.open("w", encoding="utf-8")
+    qc_map = load_qc_map(Path(args.qc_csv), args.debug)
     runs_map = collect_subject_runs(fdir)
     rows = []
     excluded = 0
@@ -174,6 +216,9 @@ def main() -> None:
         t1w_valid = "1" if has_t1w_anat(fdir, sid) else "0"
         if args.debug:
             log(f"[DEBUG] T1w_valid={t1w_valid} for {sid}")
+        iqc_val = qc_map.get(sid, "NA")
+        if args.debug:
+            log(f"[DEBUG] iqc_rsfmri_ok_ser for {sid}: {iqc_val}")
         if 1 in run_files:
             a, b, c, d = summarize_fd(run_files[1], args.debug)
             r1_fc, r1_fd, r1_valid_cnt, r1_low = a, b, c, d
@@ -183,7 +228,12 @@ def main() -> None:
         r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
         r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1") else "0"
+        iqc_ok = False
+        try:
+            iqc_ok = (iqc_val != "NA" and float(iqc_val) > 0)
+        except ValueError:
+            iqc_ok = False
+        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1" and iqc_ok) else "0"
         invalid_reason = ""
         if valid_subject == "1":
             eligible += 1
@@ -201,6 +251,7 @@ def main() -> None:
                 "rest2_fd": r2_fd if r2_fd is not None else "NA",
                 "rest2_low_ratio": r2_low if r2_low is not None else "NA",
                 "rest2_valid": r2_valid,
+                "iqc_rsfmri_ok_ser": iqc_val,
                 "valid_num": str(valid_num),
                 "T1w_valid": t1w_valid,
                 "valid_subject": valid_subject,
@@ -212,7 +263,7 @@ def main() -> None:
         "subid", "ses",
         "rest1_frame", "rest1_fd", "rest1_low_ratio", "rest1_valid",
         "rest2_frame", "rest2_fd", "rest2_low_ratio", "rest2_valid",
-        "valid_num", "T1w_valid", "valid_subject", "invalid_reason",
+        "iqc_rsfmri_ok_ser", "valid_num", "T1w_valid", "valid_subject", "invalid_reason",
     ]
     outp = Path(args.out)
     outp.parent.mkdir(parents=True, exist_ok=True)
