@@ -180,21 +180,11 @@ def main() -> None:
         if 2 in run_files:
             a, b, c, d = summarize_fd(run_files[2], args.debug)
             r2_fc, r2_fd, r2_valid_cnt, r2_low = a, b, c, d
-        frame_issue = ((1 in run_files and r1_fc is not None and r1_fc < 100) or (2 in run_files and r2_fc is not None and r2_fc < 100))
-        if args.debug and frame_issue:
-            log(f"[DEBUG] frame<100: subid={sid}, ses={ses}, r1_frame={r1_fc}, r2_frame={r2_fc}")
-        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and r1_fc is not None and r1_fc >= 100 and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
-        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and r2_fc is not None and r2_fc >= 100 and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
+        r1_valid = "1" if (r1_fd not in (None, "NA") and r1_low not in (None, "NA") and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
+        r2_valid = "1" if (r2_fd not in (None, "NA") and r2_low not in (None, "NA") and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1" and not frame_issue) else "0"
+        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1") else "0"
         invalid_reason = ""
-        if frame_issue:
-            reasons = []
-            if r1_fc is not None and r1_fc < 100:
-                reasons.append("rest1_frame_lt_100")
-            if r2_fc is not None and r2_fc < 100:
-                reasons.append("rest2_frame_lt_100")
-            invalid_reason = ";".join(reasons) if reasons else "frame_lt_100"
         if valid_subject == "1":
             eligible += 1
         else:
