@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat
-#SBATCH --array=1-5%5            # TODO: 修改 5 为实际被试数量 (根据 sublist.txt 行数)
+#SBATCH --array=1-4532%4532            # TODO: 修改 5 为实际被试数量 (根据 sublist.txt 行数)
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.err
 
