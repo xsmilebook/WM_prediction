@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
 import numpy as np
 import nibabel as nib
 from pathlib import Path
@@ -59,9 +58,9 @@ class MaskGenerator:
         dseg_img = nib.load(dseg_path)
         dseg_data = dseg_img.get_fdata()
         
-        # 2 = GM, 3 = WM (Based on typical FreeSurfer/BIDS dseg, ABCD dataset is different)
-        gm_mask = (dseg_data == 2).astype(np.float32)
-        wm_mask = (dseg_data == 3).astype(np.float32)
+        # 1 = GM, 2 = WM (Matching provided MATLAB logic)
+        gm_mask = (dseg_data == 1).astype(np.float32)
+        wm_mask = (dseg_data == 2).astype(np.float32)
         
         # Save masks
         anat_out_dir = self.output_dir / self.subject_id / 'anat'
@@ -129,7 +128,7 @@ class MaskGenerator:
         logger.info(f"Completed processing for {self.subject_id}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Tissue-specific spatial smoothing for fMRI data.")
+    parser = argparse.ArgumentParser(description="Extract GM/WM masked fMRI data (No smoothing).")
     
     parser.add_argument("--sub_id", required=True, help="Subject ID (e.g., sub-01)")
     parser.add_argument("--fmriprep_dir", required=True, help="Path to fMRIPrep/BIDS derivative directory containing anat/dseg")
