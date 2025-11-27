@@ -307,7 +307,7 @@ def main() -> None:
         r1_valid = "1" if (r1_fc is not None and r1_fc >= 192 and r1_fd not in (None, "NA") and r1_low not in (None, "NA") and float(r1_fd) <= 0.5 and float(r1_low) > 0.4) else "0"
         r2_valid = "1" if (r2_fc is not None and r2_fc >= 192 and r2_fd not in (None, "NA") and r2_low not in (None, "NA") and float(r2_fd) <= 0.5 and float(r2_low) > 0.4) else "0"
         valid_num = (1 if r1_valid == "1" else 0) + (1 if r2_valid == "1" else 0)
-        valid_subject = "1" if (valid_num >= 2 and t1w_valid == "1") else "0"
+        valid_subject = "1" if (valid_num >= 2) else "0"
         invalid_reason = ""
         if valid_subject == "1":
             eligible += 1
