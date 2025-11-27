@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=smooth_fmri
+#SBATCH --job-name=generate_mask
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
