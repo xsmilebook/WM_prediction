@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
 import numpy as np
 import nibabel as nib
 from pathlib import Path
@@ -12,14 +11,12 @@ def setup_logger():
 
 logger = setup_logger()
 
-class FMRISmoother:
-    def __init__(self, subject_id, fmriprep_dir, xcpd_dir, output_dir, wb_command, fwhm=4):
+class MaskGenerator:    
+    def __init__(self, subject_id, fmriprep_dir, xcpd_dir, output_dir):
         self.subject_id = subject_id
         self.fmriprep_dir = Path(fmriprep_dir)
         self.xcpd_dir = Path(xcpd_dir)
         self.output_dir = Path(output_dir)
-        self.wb_command = wb_command
-        self.fwhm = fwhm
 
     def _get_anat_files(self):
         """Finds the segmentation file for the subject."""
@@ -61,7 +58,7 @@ class FMRISmoother:
         dseg_img = nib.load(dseg_path)
         dseg_data = dseg_img.get_fdata()
         
-        # 1 = GM, 2 = WM (Based on typical FreeSurfer/BIDS dseg, and MATLAB code logic)
+        # 1 = GM, 2 = WM (Matching provided MATLAB logic)
         gm_mask = (dseg_data == 1).astype(np.float32)
         wm_mask = (dseg_data == 2).astype(np.float32)
         
@@ -79,7 +76,7 @@ class FMRISmoother:
         return gm_mask, wm_mask, gm_mask_path, wm_mask_path
 
     def process_run(self, func_path, gm_mask, wm_mask):
-        """Processes a single functional run: Mask -> Smooth -> Mask."""
+        """Processes a single functional run: Mask -> Save (No Smoothing)."""
         logger.info(f"Processing run: {func_path.name}")
         
         # Prepare output directory
@@ -92,71 +89,20 @@ class FMRISmoother:
         
         # --- Step 1: Masking (Vectorized) ---
         # Expand mask dimensions to match 4D functional data (x, y, z, t)
-        # mask is (x, y, z), data is (x, y, z, t)
-        # We use broadcasting: mask[..., np.newaxis] -> (x, y, z, 1)
         
         gm_masked_data = func_data * gm_mask[..., np.newaxis]
         wm_masked_data = func_data * wm_mask[..., np.newaxis]
         
-        # Define temp filenames
+        # Define output filenames
         prefix = func_path.name.replace('.nii.gz', '')
-        gm_temp_path = func_out_dir / f'{prefix}_GM.nii.gz'
-        wm_temp_path = func_out_dir / f'{prefix}_WM.nii.gz'
+        gm_out_path = func_out_dir / f'{prefix}_GM_masked.nii.gz'
+        wm_out_path = func_out_dir / f'{prefix}_WM_masked.nii.gz'
         
         # Save masked data
-        nib.save(nib.Nifti1Image(gm_masked_data, func_img.affine, func_img.header), gm_temp_path)
-        nib.save(nib.Nifti1Image(wm_masked_data, func_img.affine, func_img.header), wm_temp_path)
+        nib.save(nib.Nifti1Image(gm_masked_data, func_img.affine, func_img.header), gm_out_path)
+        nib.save(nib.Nifti1Image(wm_masked_data, func_img.affine, func_img.header), wm_out_path)
         
-        # --- Step 2: Smoothing (wb_command) ---
-        gm_smoothed_path = func_out_dir / f'{prefix}_GM_smoothed.nii.gz'
-        wm_smoothed_path = func_out_dir / f'{prefix}_WM_smoothed.nii.gz'
-        
-        self._run_wb_smoothing(gm_temp_path, gm_smoothed_path)
-        self._run_wb_smoothing(wm_temp_path, wm_smoothed_path)
-        
-        # --- Step 3: Masking again ---
-        # Load smoothed data
-        gm_smooth_img = nib.load(gm_smoothed_path)
-        gm_smooth_data = gm_smooth_img.get_fdata()
-        
-        wm_smooth_img = nib.load(wm_smoothed_path)
-        wm_smooth_data = wm_smooth_img.get_fdata()
-        
-        # Apply mask again
-        gm_final_data = gm_smooth_data * gm_mask[..., np.newaxis]
-        wm_final_data = wm_smooth_data * wm_mask[..., np.newaxis]
-        
-        # Save final output
-        gm_final_path = func_out_dir / f'{prefix}_GM_smoothMaksed.nii.gz'
-        wm_final_path = func_out_dir / f'{prefix}_WM_smoothMaksed.nii.gz'
-        
-        nib.save(nib.Nifti1Image(gm_final_data, gm_smooth_img.affine, gm_smooth_img.header), gm_final_path)
-        nib.save(nib.Nifti1Image(wm_final_data, wm_smooth_img.affine, wm_smooth_img.header), wm_final_path)
-        
-        logger.info(f"Saved final outputs: {gm_final_path.name}, {wm_final_path.name}")
-        
-        # Cleanup temp files (optional, but good for disk space)
-        # os.remove(gm_temp_path)
-        # os.remove(wm_temp_path)
-        # os.remove(gm_smoothed_path)
-        # os.remove(wm_smoothed_path)
-
-    def _run_wb_smoothing(self, input_path, output_path):
-        """Calls wb_command -volume-smoothing."""
-        cmd = [
-            str(self.wb_command),
-            '-volume-smoothing',
-            str(input_path),
-            str(self.fwhm),
-            str(output_path),
-            '-fwhm'
-        ]
-        logger.debug(f"Running command: {' '.join(cmd)}")
-        try:
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"wb_command failed: {e.stderr.decode()}")
-            raise
+        logger.info(f"Saved masked outputs: {gm_out_path.name}, {wm_out_path.name}")
 
     def run(self):
         """Main execution flow."""
@@ -182,28 +128,23 @@ class FMRISmoother:
         logger.info(f"Completed processing for {self.subject_id}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Tissue-specific spatial smoothing for fMRI data.")
+    parser = argparse.ArgumentParser(description="Extract GM/WM masked fMRI data (No smoothing).")
     
     parser.add_argument("--sub_id", required=True, help="Subject ID (e.g., sub-01)")
     parser.add_argument("--fmriprep_dir", required=True, help="Path to fMRIPrep/BIDS derivative directory containing anat/dseg")
     parser.add_argument("--xcpd_dir", required=True, help="Path to XCP-D or functional derivative directory")
     parser.add_argument("--output_dir", required=True, help="Directory to save outputs")
-    parser.add_argument("--wb_command", default='/usr/nzx-cluster/apps/connectome-workbench/1.5.0/workbench/bin_rh_linux64/wb_command', 
-                        help="Path to wb_command executable")
-    parser.add_argument("--fwhm", type=float, default=4.0, help="Smoothing kernel FWHM in mm")
     
     args = parser.parse_args()
     
-    smoother = FMRISmoother(
+    generator = MaskGenerator(
         subject_id=args.sub_id,
         fmriprep_dir=args.fmriprep_dir,
         xcpd_dir=args.xcpd_dir,
-        output_dir=args.output_dir,
-        wb_command=args.wb_command,
-        fwhm=args.fwhm
+        output_dir=args.output_dir
     )
     
-    smoother.run()
+    generator.run()
 
 if __name__ == "__main__":
     main()

@@ -5,8 +5,13 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat
 #SBATCH --array=1-4532%4532            # TODO: 修改 5 为实际被试数量 (根据 sublist.txt 行数)
+<<<<<<< HEAD:conn_matrix/batch_run_smooth_fmri.sh
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.err
+=======
+#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/generate_mask/generate_mask_%A_%a.out
+#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/generate_mask/generate_mask_%A_%a.err
+>>>>>>> a4cc07601f34ead8ba2d97a66de157bc72ee9a18:conn_matrix/batch_run_generate_mask.sh
 
 # ================= 配置区域 =================
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
@@ -15,7 +20,7 @@ PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
 SUBJ_LIST="${PROJECT_ROOT}/data/ABCD/table/sublist.txt"
 
 # 2. 设置 Python 脚本路径
-PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/smooth_fmri.py"
+PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/generate_mask.py"
 
 # 3. 设置数据路径 (ABCD 路径)
 # Anat/Dseg 所在路径
@@ -24,9 +29,6 @@ FMRIPREP_DIR="/ibmgpfs/cuizaixu_lab/congjing/WM_prediction/ABCD/data/bids"
 XCPD_DIR="/ibmgpfs/cuizaixu_lab/congjing/WM_prediction/ABCD/data/step_2nd_24PcsfGlobal"
 # 输出路径
 OUTPUT_DIR="${PROJECT_ROOT}/data/ABCD/mri_data/wm_postproc"
-
-# Workbench 命令路径
-WB_COMMAND="/usr/nzx-cluster/apps/connectome-workbench/1.5.0/workbench/bin_rh_linux64/wb_command"
 
 # ================= 环境加载 =================
 # 加载包含 nibabel 和 numpy 的 Python 环境
@@ -57,8 +59,6 @@ python3 ${PYTHON_SCRIPT} \
     --sub_id ${subj} \
     --fmriprep_dir ${FMRIPREP_DIR} \
     --xcpd_dir ${XCPD_DIR} \
-    --output_dir ${OUTPUT_DIR} \
-    --wb_command ${WB_COMMAND} \
-    --fwhm 4.0
+    --output_dir ${OUTPUT_DIR}
 
 echo "Finished subject: $subj"
