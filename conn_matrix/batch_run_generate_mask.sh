@@ -2,16 +2,11 @@
 #SBATCH --job-name=smooth_fmri
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --partition=q_fat
+#SBATCH --cpus-per-task=2
+#SBATCH --partition=q_cn
 #SBATCH --array=1-4532%4532            # TODO: 修改 5 为实际被试数量 (根据 sublist.txt 行数)
-<<<<<<< HEAD:conn_matrix/batch_run_smooth_fmri.sh
-#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.out
-#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/smooth_fmri/smooth_%A_%a.err
-=======
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/generate_mask/generate_mask_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/generate_mask/generate_mask_%A_%a.err
->>>>>>> a4cc07601f34ead8ba2d97a66de157bc72ee9a18:conn_matrix/batch_run_generate_mask.sh
 
 # ================= 配置区域 =================
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
