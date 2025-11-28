@@ -2,9 +2,9 @@
 #SBATCH --job-name=compute_fc
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
-#SBATCH --array=1-4532%100
+#SBATCH --cpus-per-task=2
+#SBATCH --partition=q_cn
+#SBATCH --array=1-5%600
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/compute_fc/compute_fc_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/compute_fc/compute_fc_%A_%a.err
 
@@ -22,7 +22,7 @@ PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/compute_individual_fc.py"
 INPUT_DIR="${PROJECT_ROOT}/data/ABCD/mri_data/wm_postproc"
 
 # 图谱路径 (使用本地 reslice_atlases.py 生成的文件)
-ATLAS_DIR="${PROJECT_ROOT}/data/atlas/resliced"
+ATLAS_DIR="${PROJECT_ROOT}/data/atlas/resliced_abcd"
 GM_ATLAS="${ATLAS_DIR}/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz"
 WM_ATLAS="${ATLAS_DIR}/rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz"
 
