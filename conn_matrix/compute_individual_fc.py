@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
 import nibabel as nib
-import scipy.io
 from pathlib import Path
 import logging
 import sys
@@ -109,13 +108,18 @@ def compute_fc(subject_id, input_dir, gm_atlas_path, wm_atlas_path, output_dir):
     logger.info(f"Final WM Timeseries shape: {final_wm_ts.shape}")
     
     # Compute Correlations
+    # Handle division by zero/invalid values warning
+    np.seterr(invalid='ignore')
+    
     # 1. GM-GM (GG)
     logger.info("Computing GM-GM FC...")
     gg_fc = np.corrcoef(final_gm_ts)
+    gg_fc = np.nan_to_num(gg_fc) # Replace NaNs with 0
     
     # 2. WM-WM (WW)
     logger.info("Computing WM-WM FC...")
     ww_fc = np.corrcoef(final_wm_ts)
+    ww_fc = np.nan_to_num(ww_fc) # Replace NaNs with 0
     
     # 3. GM-WM (GW)
     # corr(A, B) returns a matrix [[corr(A,A), corr(A,B)], [corr(B,A), corr(B,B)]]
@@ -125,18 +129,22 @@ def compute_fc(subject_id, input_dir, gm_atlas_path, wm_atlas_path, output_dir):
     logger.info("Computing GM-WM FC...")
     combined_ts = np.vstack([final_gm_ts, final_wm_ts])
     combined_fc = np.corrcoef(combined_ts)
+    combined_fc = np.nan_to_num(combined_fc) # Replace NaNs with 0
     n_gm = len(gm_labels)
     gw_fc = combined_fc[:n_gm, n_gm:] # Top-right block
     
-    # Save Results (.mat)
+    # Save Results (.npy)
     # Save timeseries
-    scipy.io.savemat(subj_out_dir / f'{subject_id}_GM_timeseries.mat', {'gm_timeseries': final_gm_ts})
-    scipy.io.savemat(subj_out_dir / f'{subject_id}_WM_timeseries.mat', {'wm_timeseries': final_wm_ts})
+    np.save(subj_out_dir / f'{subject_id}_GM_timeseries.npy', final_gm_ts)
+    np.save(subj_out_dir / f'{subject_id}_WM_timeseries.npy', final_wm_ts)
     
     # Save FC matrices
-    scipy.io.savemat(subj_out_dir / f'{subject_id}_GG_FC.mat', {'GG_FC': gg_fc})
-    scipy.io.savemat(subj_out_dir / f'{subject_id}_WW_FC.mat', {'WW_FC': ww_fc})
-    scipy.io.savemat(subj_out_dir / f'{subject_id}_GW_FC.mat', {'GW_FC': gw_fc})
+    np.save(subj_out_dir / f'{subject_id}_GG_FC.npy', gg_fc)
+    np.save(subj_out_dir / f'{subject_id}_WW_FC.npy', ww_fc)
+    np.save(subj_out_dir / f'{subject_id}_GW_FC.npy', gw_fc)
+    
+    # Also save as CSV for readability if needed (optional, but requested "npy or csv")
+    # np.savetxt(subj_out_dir / f'{subject_id}_GG_FC.csv', gg_fc, delimiter=',')
     
     logger.info("All files saved.")
 

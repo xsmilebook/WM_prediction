@@ -1,6 +1,5 @@
 import argparse
 import numpy as np
-import scipy.io
 from pathlib import Path
 import logging
 import sys
@@ -37,9 +36,9 @@ def process_subject(subject_id, input_dir, output_dir):
     subj_out_dir.mkdir(parents=True, exist_ok=True)
     
     files_to_process = [
-        (f'{subject_id}_GG_FC.mat', 'GG_FC'),
-        (f'{subject_id}_WW_FC.mat', 'WW_FC'),
-        (f'{subject_id}_GW_FC.mat', 'GW_FC')
+        (f'{subject_id}_GG_FC.npy', 'GG_FC'),
+        (f'{subject_id}_WW_FC.npy', 'WW_FC'),
+        (f'{subject_id}_GW_FC.npy', 'GW_FC')
     ]
     
     for filename, var_name in files_to_process:
@@ -50,29 +49,17 @@ def process_subject(subject_id, input_dir, output_dir):
             
         logger.info(f"Loading {filename}...")
         try:
-            mat_data = scipy.io.loadmat(file_path)
-            if var_name not in mat_data:
-                # Try finding the variable by inspecting keys (ignoring __header__, etc.)
-                keys = [k for k in mat_data.keys() if not k.startswith('__')]
-                if len(keys) == 1:
-                    var_name = keys[0]
-                    logger.info(f"Variable name mismatch. Using '{var_name}' instead.")
-                else:
-                    logger.error(f"Cannot find variable '{var_name}' in {filename}. Available: {keys}")
-                    continue
-            
-            fc_matrix = mat_data[var_name]
+            fc_matrix = np.load(file_path)
             
             # Apply Fisher Z
             logger.info("Applying Fisher Z transform...")
             z_matrix = fisher_z_transform(fc_matrix)
             
             # Save
-            out_filename = filename.replace('.mat', '_Z.mat')
-            out_var_name = var_name + '_Z'
+            out_filename = filename.replace('.npy', '_Z.npy')
             out_path = subj_out_dir / out_filename
             
-            scipy.io.savemat(out_path, {out_var_name: z_matrix})
+            np.save(out_path, z_matrix)
             logger.info(f"Saved {out_filename}")
             
         except Exception as e:

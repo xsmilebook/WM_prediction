@@ -19,10 +19,10 @@ SUBJ_LIST="${PROJECT_ROOT}/data/ABCD/table/sublist.txt"
 PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/apply_fisher_z.py"
 
 # 3. 设置输入输出路径
-# 输入路径：compute_individual_fc.py 的输出路径
+# 输入路径：compute_individual_fc.py 的输出路径 (包含 .npy 文件)
 INPUT_DIR="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual"
 
-# 输出路径
+# 输出路径 (输出为 .npy 格式)
 OUTPUT_DIR="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual_z"
 
 # ================= 核心逻辑 =================

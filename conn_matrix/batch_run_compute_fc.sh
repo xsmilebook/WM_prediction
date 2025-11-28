@@ -26,7 +26,7 @@ ATLAS_DIR="${PROJECT_ROOT}/data/atlas/resliced_abcd"
 GM_ATLAS="${ATLAS_DIR}/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz"
 WM_ATLAS="${ATLAS_DIR}/rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz"
 
-# 输出路径
+# 输出路径 (输出为 .npy 格式)
 OUTPUT_DIR="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual"
 
 # ================= 核心逻辑 =================
