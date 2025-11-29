@@ -76,9 +76,12 @@ def compare_matrices(mat1, mat2, name1, name2):
         logger.error("没有有效数据可比较")
         return None
     
-    # 检查是否完全相同
-    if np.allclose(mat1, mat2, equal_nan=True):
-        logger.info("结果: 矩阵完全相同！")
+    # 检查是否完全相同 - 使用过滤后的数据进行一致性检查
+    tolerance = 1e-6  # 设置合理的容差（针对浮点精度差异）
+    
+    # 检查过滤后的数据是否完全相同
+    if np.allclose(flat1, flat2, rtol=tolerance, atol=tolerance):
+        logger.info(f"结果: 矩阵在容差 {tolerance} 下完全相同！")
         return {"identical": True, "correlation": 1.0, "mae": 0.0}
     else:
         logger.info("结果: 矩阵不同")
@@ -89,11 +92,11 @@ def compare_matrices(mat1, mat2, name1, name2):
         
         # 计算平均绝对误差
         mae = np.mean(np.abs(flat1 - flat2))
-        logger.info(f"平均绝对误差: {mae:.6f}")
+        logger.info(f"平均绝对误差: {mae:.2e}")
         
         # 计算最大差异
         max_diff = np.max(np.abs(flat1 - flat2))
-        logger.info(f"最大差异: {max_diff:.6f}")
+        logger.info(f"最大差异: {max_diff:.2e}")
         
         # 计算相对误差
         mean_val = np.mean(np.abs(flat1))
@@ -137,8 +140,40 @@ def find_matching_files(contrast_dir, individual_dir, subject_id):
         individual_matches = [f for f in individual_matrices if individual_type in f.name and 'FC' in f.name]
         
         if contrast_matches and individual_matches:
-            # 取第一个匹配的文件
-            matches.append((contrast_matches[0], individual_matches[0], contrast_type, individual_type))
+            # 尝试找到形状匹配的文件对
+            best_match = None
+            best_score = -1
+            
+            for contrast_file in contrast_matches:
+                for individual_file in individual_matches:
+                    # 先加载检查形状
+                    contrast_mat = load_matrix(contrast_file)
+                    individual_mat = load_matrix(individual_file)
+                    
+                    if contrast_mat is not None and individual_mat is not None:
+                        # 检查形状兼容性
+                        if contrast_mat.shape == individual_mat.shape:
+                            # 完全匹配
+                            best_match = (contrast_file, individual_file, contrast_type, individual_type)
+                            best_score = 100
+                            break
+                        elif contrast_mat.shape == individual_mat.T.shape:
+                            # 转置匹配
+                            score = 90
+                            if score > best_score:
+                                best_match = (contrast_file, individual_file, contrast_type, individual_type)
+                                best_score = score
+                    else:
+                        logger.warning(f"无法加载文件: {contrast_file.name} 或 {individual_file.name}")
+            
+            if best_match:
+                matches.append(best_match)
+                logger.info(f"找到最佳匹配: {best_match[0].name} vs {best_match[1].name}")
+            else:
+                logger.warning(f"未找到形状兼容的匹配: {contrast_type} vs {individual_type}")
+                # 如果没有形状匹配，仍然添加第一个文件对，让后续处理报错
+                if contrast_matches and individual_matches:
+                    matches.append((contrast_matches[0], individual_matches[0], contrast_type, individual_type))
     
     return matches
 
