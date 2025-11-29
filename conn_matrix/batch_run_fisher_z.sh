@@ -3,9 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
-#SBATCH --time=0:30:00
-#SBATCH --array=1-4532%100
+#SBATCH --array=1-4532%4532
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/fisher_z/fisher_z_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/fisher_z/fisher_z_%A_%a.err
 
