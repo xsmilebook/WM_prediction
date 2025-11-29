@@ -58,9 +58,9 @@ class MaskGenerator:
         dseg_img = nib.load(dseg_path)
         dseg_data = dseg_img.get_fdata()
         
-        # 1 = GM, 2 = WM (Matching provided MATLAB logic)
-        gm_mask = (dseg_data == 1).astype(np.float32)
-        wm_mask = (dseg_data == 2).astype(np.float32)
+        # 2 = GM, 3 = WM (Matching provided MATLAB logic)
+        gm_mask = (dseg_data == 2).astype(np.float32)
+        wm_mask = (dseg_data == 3).astype(np.float32)
         
         # Save masks
         anat_out_dir = self.output_dir / self.subject_id / 'anat'
