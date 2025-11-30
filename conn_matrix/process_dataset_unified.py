@@ -54,11 +54,14 @@ class DatasetProcessor:
         }
     }
     
-    def __init__(self, dataset_name: str, subject_id: str, dataset_path: str, output_dir: str):
+    def __init__(self, dataset_name: str, subject_id: str, dataset_path: str, 
+                 mask_output_dir: str, fc_output_dir: str, z_output_dir: str):
         self.dataset_name = dataset_name.upper()
         self.subject_id = subject_id
         self.dataset_path = Path(dataset_path)
-        self.output_dir = Path(output_dir)
+        self.mask_output_dir = Path(mask_output_dir)
+        self.fc_output_dir = Path(fc_output_dir)
+        self.z_output_dir = Path(z_output_dir)
         
         if self.dataset_name not in self.DATASET_CONFIGS:
             raise ValueError(f"Unsupported dataset: {dataset_name}. Supported: {list(self.DATASET_CONFIGS.keys())}")
@@ -433,7 +436,7 @@ class DatasetProcessor:
             wm_masked = func_data * wm_mask[..., np.newaxis]
         
         # Save masked data
-        output_dir = self.output_dir / self.subject_id / 'func'
+        output_dir = self.mask_output_dir / self.subject_id / 'func'
         output_dir.mkdir(parents=True, exist_ok=True)
         
         prefix = func_file.name.replace('.nii.gz', '')
@@ -544,23 +547,29 @@ class DatasetProcessor:
     
     def save_results(self, gm_timeseries: np.ndarray, wm_timeseries: np.ndarray, 
                     fc_matrices: Dict[str, np.ndarray], z_matrices: Dict[str, np.ndarray]):
-        """Save all results to output directory."""
-        output_subj_dir = self.output_dir / self.subject_id
-        output_subj_dir.mkdir(parents=True, exist_ok=True)
+        """Save all results to appropriate output directories."""
+        # Create subject directories in each output location
+        mask_subj_dir = self.mask_output_dir / self.subject_id
+        fc_subj_dir = self.fc_output_dir / self.subject_id
+        z_subj_dir = self.z_output_dir / self.subject_id
         
-        # Save timeseries
-        np.save(output_subj_dir / f'{self.subject_id}_GM_timeseries.npy', gm_timeseries)
-        np.save(output_subj_dir / f'{self.subject_id}_WM_timeseries.npy', wm_timeseries)
+        mask_subj_dir.mkdir(parents=True, exist_ok=True)
+        fc_subj_dir.mkdir(parents=True, exist_ok=True)
+        z_subj_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save timeseries to mask output directory (along with masked functional files)
+        np.save(mask_subj_dir / f'{self.subject_id}_GM_timeseries.npy', gm_timeseries)
+        np.save(mask_subj_dir / f'{self.subject_id}_WM_timeseries.npy', wm_timeseries)
         logger.info("Saved timeseries")
         
-        # Save FC matrices
+        # Save FC matrices to FC output directory
         for name, matrix in fc_matrices.items():
-            np.save(output_subj_dir / f'{self.subject_id}_{name}.npy', matrix)
+            np.save(fc_subj_dir / f'{self.subject_id}_{name}.npy', matrix)
         logger.info("Saved FC matrices")
         
-        # Save Z-transformed matrices
+        # Save Z-transformed matrices to Z output directory
         for name, matrix in z_matrices.items():
-            np.save(output_subj_dir / f'{self.subject_id}_{name}.npy', matrix)
+            np.save(z_subj_dir / f'{self.subject_id}_{name}.npy', matrix)
         logger.info("Saved Z-transformed matrices")
     
     def process_subject(self, gm_atlas_path: str, wm_atlas_path: str):
@@ -631,8 +640,12 @@ def main():
                        help="Subject ID (e.g., sub-01)")
     parser.add_argument("--dataset_path", type=str, required=True,
                        help="Path to dataset directory")
-    parser.add_argument("--output_dir", type=str, required=True,
-                       help="Output directory for results")
+    parser.add_argument("--mask_output_dir", type=str, required=True,
+                       help="Output directory for mask files (mri_data/wm_postproc)")
+    parser.add_argument("--fc_output_dir", type=str, required=True,
+                       help="Output directory for FC matrices (fc_matrix/individual)")
+    parser.add_argument("--z_output_dir", type=str, required=True,
+                       help="Output directory for Z-transformed matrices (fc_matrix/individual_z)")
     parser.add_argument("--gm_atlas", type=str, required=True,
                        help="Path to GM atlas (resliced for this dataset)")
     parser.add_argument("--wm_atlas", type=str, required=True,
@@ -645,7 +658,9 @@ def main():
         dataset_name=args.dataset_name,
         subject_id=args.subject_id,
         dataset_path=args.dataset_path,
-        output_dir=args.output_dir
+        mask_output_dir=args.mask_output_dir,
+        fc_output_dir=args.fc_output_dir,
+        z_output_dir=args.z_output_dir
     )
     
     success = processor.process_subject(args.gm_atlas, args.wm_atlas)

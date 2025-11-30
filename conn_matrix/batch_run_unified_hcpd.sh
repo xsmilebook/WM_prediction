@@ -19,7 +19,9 @@ PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/process_dataset_unified.py"
 
 # 3. 设置数据路径 (HCPD 路径)
 DATASET_PATH="${PROJECT_ROOT}/data/HCPD"
-OUTPUT_DIR="${PROJECT_ROOT}/data/HCPD/fc_matrix/individual_z"
+MASK_OUTPUT_DIR="${PROJECT_ROOT}/data/HCPD/mri_data/wm_postproc"
+FC_OUTPUT_DIR="${PROJECT_ROOT}/data/HCPD/fc_matrix/individual"
+Z_OUTPUT_DIR="${PROJECT_ROOT}/data/HCPD/fc_matrix/individual_z"
 
 # 图谱路径 (使用本地 reslice_atlases.py 生成的文件)
 ATLAS_DIR="${PROJECT_ROOT}/data/atlas/resliced_hcpd"
@@ -55,7 +57,9 @@ python3 ${PYTHON_SCRIPT} \
     --dataset_name HCPD \
     --subject_id ${subj} \
     --dataset_path ${DATASET_PATH} \
-    --output_dir ${OUTPUT_DIR} \
+    --mask_output_dir ${MASK_OUTPUT_DIR} \
+    --fc_output_dir ${FC_OUTPUT_DIR} \
+    --z_output_dir ${Z_OUTPUT_DIR} \
     --gm_atlas ${GM_ATLAS} \
     --wm_atlas ${WM_ATLAS}
 
