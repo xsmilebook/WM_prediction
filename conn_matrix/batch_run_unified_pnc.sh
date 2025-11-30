@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=q_cn
-#SBATCH --array=1-100%100            # TODO: 修改 100 为实际被试数量 (根据 sublist.txt 行数)
+#SBATCH --array=1-1124%1124            # TODO: 修改 100 为实际被试数量 (根据 sublist.txt 行数)
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/unified_pnc/unified_pnc_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/unified_pnc/unified_pnc_%A_%a.err
 
