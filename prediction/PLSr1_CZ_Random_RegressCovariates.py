@@ -260,7 +260,9 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
 
             Weight = clf.coef_ / np.sqrt(np.sum(clf.coef_ **2))
             ################# this is the added#############################
-            Weight_Haufe = np.dot(np.cov(np.transpose(Subjects_Data_train_List[conn_index])), clf.coef_);
+            # Fix shape alignment: ensure clf.coef_ is 1D for matrix multiplication
+            coef_vector = clf.coef_.flatten() if clf.coef_.ndim > 1 else clf.coef_
+            Weight_Haufe = np.dot(np.cov(np.transpose(Subjects_Data_train_List[conn_index])), coef_vector);
             Weight_Haufe = Weight_Haufe / np.sqrt(np.sum(Weight_Haufe ** 2));
             ############################################################
             Fold_J_result = {'Index':Fold_J_Index, 'Test_Score':Subjects_Score_test, 'Predict_Score':Fold_J_Score, 'Corr':Fold_J_Corr, 'MAE':Fold_J_MAE, 'ComponentNumber':Optimal_ComponentNumber_List[conn_index], 'Inner_Corr':Inner_Corr_List[conn_index], 'Inner_MAE_inv':Inner_MAE_inv_List[conn_index], 'w_Brain':Weight, 'w_Brain_Haufe': Weight_Haufe}
