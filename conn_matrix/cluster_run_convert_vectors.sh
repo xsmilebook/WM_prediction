@@ -11,9 +11,9 @@ source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
 
 # Set up paths (adjust these based on your cluster environment)
-PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction"
-INPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual"
-SUBLIST_FILE="${PROJECT_ROOT}/data/ABCD/sublist.txt"
+PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
+INPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual_z"
+SUBLIST_FILE="${PROJECT_ROOT}/data/ABCD/table/sublist.txt"
 OUTPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_vector"
 DATASET_NAME="ABCD"
 

@@ -132,9 +132,9 @@ class MatrixToVectorConverter:
         
         # Look for matrix files
         matrix_patterns = {
-            'GG': f"{subject_id}_GG_FC.npy",
-            'GW': f"{subject_id}_GW_FC.npy", 
-            'WW': f"{subject_id}_WW_FC.npy"
+            'GG': f"{subject_id}_GG_FC_Z.npy",
+            'GW': f"{subject_id}_GW_FC_Z.npy", 
+            'WW': f"{subject_id}_WW_FC_Z.npy"
         }
         
         for matrix_type, pattern in matrix_patterns.items():
