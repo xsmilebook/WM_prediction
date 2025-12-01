@@ -18,7 +18,7 @@ targetStr = 'age'
 # 基础路径配置
 base_path = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}'
 outFolder = f'{base_path}/prediction/{targetStr}'
-
+os.makedirs(outFolder, exist_ok=True)
 # Import data
 # 1. atlas loading
 GG_datapath = f'{base_path}/fc_vector/{dataset}_GG_vectors.npy'
