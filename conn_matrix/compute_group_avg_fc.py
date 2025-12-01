@@ -9,9 +9,9 @@ visualizations.
 Usage:
     python compute_group_avg_fc.py --input_path /path/to/individual_z --dataset_name ABCD
 Example:
-    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/data/ABCD/fc_matrix/individual_z --dataset_name ABCD
-    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/data/CCNP/fc_matrix/individual_z --dataset_name CCNP
-    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/WM_prediction/data/HCPD/fc_matrix/individual_z --dataset_name HCPD
+    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/fc_matrix/individual_z --dataset_name ABCD
+    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/CCNP/fc_matrix/individual_z --dataset_name CCNP
+    python compute_group_avg_fc.py --input_path /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/fc_matrix/individual_z --dataset_name HCPD
 """
 
 import argparse
@@ -73,7 +73,7 @@ class GroupAverageFC:
             # Look for all matrix types
             for matrix_type in ['GG', 'GW', 'WW']:
                 # Search for matrix files with this type
-                pattern = f"{subject_id}_{matrix_type}_FC_Z.npy"
+                pattern = f"{subject_id}_{matrix_type}_FC.npy"
                 matrix_files = list(subject_dir.glob(pattern))
                 
                 if matrix_files:
@@ -130,7 +130,7 @@ class GroupAverageFC:
             group_averages: Dictionary of group average matrices
         """
         for matrix_type, group_avg in group_averages.items():
-            output_file = self.group_avg_dir / f"group_avg_{matrix_type}_FC_Z.npy"
+            output_file = self.group_avg_dir / f"group_avg_{matrix_type}_FC.npy"
             try:
                 np.save(output_file, group_avg)
                 logger.info(f"Saved group average {matrix_type} to {output_file}")
