@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Simplified visualization of FC matrix comparison
+command:
+python  .\\src\\compare_results\\visualize_fc_simple.py  --contrast_dir .\\data\\ABCD\\fc_matrix\\individual --individual_dir .\\data\\ABCD\\fc_matrix\\contrast --subject_id sub-NDARINV00HEV6HB --output_dir .\\data\\ABCD\\fc_compare
 """
 
 import argparse
@@ -127,7 +129,7 @@ def main():
                        help='Individual version directory path')
     parser.add_argument('--subject_id', required=True,
                        help='Subject ID')
-    parser.add_argument('--output_dir', default='./fc_visualization_simple',
+    parser.add_argument('--output_dir', default='./data/ABCD/fc_compare',
                        help='Output directory for figures')
     
     args = parser.parse_args()
@@ -147,9 +149,16 @@ def main():
         print(f"Error: Individual directory not found: {individual_dir}")
         return 1
     
-    # Find matrix files
-    contrast_files = list(contrast_dir.glob("*.npy"))
-    individual_files = list(individual_dir.glob("*.npy"))
+    # Find matrix files - look in subject subdirectory if it exists
+    subject_contrast_dir = contrast_dir / args.subject_id
+    subject_individual_dir = individual_dir / args.subject_id
+    
+    # Use subject-specific directories if they exist, otherwise use main directories
+    contrast_search_dir = subject_contrast_dir if subject_contrast_dir.exists() else contrast_dir
+    individual_search_dir = subject_individual_dir if subject_individual_dir.exists() else individual_dir
+    
+    contrast_files = list(contrast_search_dir.glob("*.npy"))
+    individual_files = list(individual_search_dir.glob("*.npy"))
     
     # Filter out timeseries files
     contrast_matrices = [f for f in contrast_files if 'timeseries' not in f.name]
@@ -158,20 +167,35 @@ def main():
     print(f"\nFound {len(contrast_matrices)} contrast matrix files")
     print(f"Found {len(individual_matrices)} individual matrix files")
     
-    # Match matrix pairs
-    matches = []
-    matrix_types = [
-        ('GM', 'GG'),
-        ('WM', 'WW'), 
-        ('GM_WM', 'GW')
-    ]
+    # Debug: Show what files were found
+    print("\nContrast matrix files found:")
+    for f in contrast_matrices:
+        print(f"  {f.name}")
+    print("\nIndividual matrix files found:")
+    for f in individual_matrices:
+        print(f"  {f.name}")
     
-    for contrast_type, individual_type in matrix_types:
-        contrast_matches = [f for f in contrast_matrices if contrast_type in f.name and 'FC' in f.name]
-        individual_matches = [f for f in individual_matrices if individual_type in f.name and 'FC' in f.name]
+    # Match matrix pairs - find files with same names in both directories
+    matches = []
+    
+    # For each file in contrast directory, find matching file in individual directory
+    for contrast_file in contrast_matrices:
+        # Look for file with same name in individual directory
+        matching_individual = [f for f in individual_matrices if f.name == contrast_file.name]
         
-        if contrast_matches and individual_matches:
-            matches.append((contrast_matches[0], individual_matches[0], contrast_type, individual_type))
+        if matching_individual:
+            # Extract matrix type from filename (GG, GW, or WW)
+            if 'GG' in contrast_file.name:
+                matrix_type = 'GG'
+            elif 'GW' in contrast_file.name:
+                matrix_type = 'GW'
+            elif 'WW' in contrast_file.name:
+                matrix_type = 'WW'
+            else:
+                continue
+                
+            matches.append((contrast_file, matching_individual[0], matrix_type, matrix_type))
+            print(f"Matched pair: {contrast_file.name} vs {matching_individual[0].name} (type: {matrix_type})")
     
     if not matches:
         print("Error: No matching matrix pairs found")
