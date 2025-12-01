@@ -130,24 +130,29 @@ class MatrixToVectorConverter:
             logger.warning(f"Subject directory not found: {subject_dir}")
             return matrices
         
-        # Look for matrix files
+        # Look for matrix files (support both _FC_Z.npy and _FC.npy patterns)
         matrix_patterns = {
-            'GG': f"{subject_id}_GG_FC_Z.npy",
-            'GW': f"{subject_id}_GW_FC_Z.npy", 
-            'WW': f"{subject_id}_WW_FC_Z.npy"
+            'GG': [f"{subject_id}_GG_FC_Z.npy", f"{subject_id}_GG_FC.npy"],
+            'GW': [f"{subject_id}_GW_FC_Z.npy", f"{subject_id}_GW_FC.npy"], 
+            'WW': [f"{subject_id}_WW_FC_Z.npy", f"{subject_id}_WW_FC.npy"]
         }
         
-        for matrix_type, pattern in matrix_patterns.items():
-            matrix_files = list(subject_dir.glob(pattern))
-            if matrix_files:
-                try:
-                    matrix = np.load(matrix_files[0])
-                    matrices[matrix_type] = matrix
-                    logger.debug(f"Loaded {matrix_type} matrix for {subject_id}: {matrix.shape}")
-                except Exception as e:
-                    logger.warning(f"Failed to load {matrix_type} matrix for {subject_id}: {e}")
-            else:
-                logger.warning(f"No {matrix_type} matrix found for {subject_id} (pattern: {pattern})")
+        for matrix_type, patterns in matrix_patterns.items():
+            matrix_found = False
+            for pattern in patterns:
+                matrix_files = list(subject_dir.glob(pattern))
+                if matrix_files:
+                    try:
+                        matrix = np.load(matrix_files[0])
+                        matrices[matrix_type] = matrix
+                        logger.debug(f"Loaded {matrix_type} matrix for {subject_id}: {matrix.shape} (pattern: {pattern})")
+                        matrix_found = True
+                        break
+                    except Exception as e:
+                        logger.warning(f"Failed to load {matrix_type} matrix for {subject_id} with pattern {pattern}: {e}")
+            
+            if not matrix_found:
+                logger.warning(f"No {matrix_type} matrix found for {subject_id} (tried patterns: {patterns})")
         
         return matrices
     
@@ -198,7 +203,7 @@ class MatrixToVectorConverter:
         logger.debug(f"Concatenated vectors: {concatenated.shape}")
         return concatenated
     
-    def process_all_subjects(self, subjects: List[str]) -> Dict[str, np.ndarray]:
+    def process_all_subjects(self, subjects: List[str]) -> tuple:
         """
         Process all subjects and create feature matrix.
         
@@ -206,10 +211,16 @@ class MatrixToVectorConverter:
             subjects: List of subject IDs in order
             
         Returns:
-            Dictionary with subject IDs as keys and feature vectors as values
+            Tuple containing:
+            - Dictionary with subject IDs as keys and feature vectors as values
+            - List of valid subject IDs
+            - Dictionary with subject IDs as keys and individual vectors as values
+            - List of subjects missing any FC matrix
         """
         subject_features = {}
         valid_subjects = []
+        subject_vectors = {}  # Store individual vectors for each subject
+        missing_subjects = []  # Track subjects missing any FC matrix
         
         for i, subject_id in enumerate(subjects):
             logger.info(f"Processing subject {i+1}/{len(subjects)}: {subject_id}")
@@ -218,14 +229,27 @@ class MatrixToVectorConverter:
             matrices = self.load_subject_matrices(subject_id)
             if not matrices:
                 logger.warning(f"Skipping subject {subject_id}: no matrices found")
+                missing_subjects.append(subject_id)
+                continue
+            
+            # Check if subject has all required matrix types
+            required_types = ['GG', 'GW', 'WW']
+            missing_types = [mt for mt in required_types if mt not in matrices]
+            if missing_types:
+                logger.warning(f"Subject {subject_id} missing matrices: {missing_types}")
+                missing_subjects.append(subject_id)
                 continue
             
             # Convert to vectors
             try:
                 vectors = self.convert_matrices_to_vectors(matrices)
-                if not vectors:
-                    logger.warning(f"Skipping subject {subject_id}: could not convert matrices to vectors")
+                if not vectors or len(vectors) < 3:  # Must have all three vector types
+                    logger.warning(f"Skipping subject {subject_id}: incomplete vector conversion")
+                    missing_subjects.append(subject_id)
                     continue
+                
+                # Store individual vectors for this subject
+                subject_vectors[subject_id] = vectors
                 
                 # Concatenate vectors
                 feature_vector = self.concatenate_vectors(vectors)
@@ -236,10 +260,12 @@ class MatrixToVectorConverter:
                 
             except Exception as e:
                 logger.error(f"Error processing subject {subject_id}: {e}")
+                missing_subjects.append(subject_id)
                 continue
         
         logger.info(f"Successfully processed {len(valid_subjects)} out of {len(subjects)} subjects")
-        return subject_features, valid_subjects
+        logger.info(f"Found {len(missing_subjects)} subjects missing FC matrices")
+        return subject_features, valid_subjects, subject_vectors, missing_subjects
     
     def create_feature_matrix(self, subject_features: Dict[str, np.ndarray], subjects: List[str]) -> np.ndarray:
         """
@@ -271,16 +297,88 @@ class MatrixToVectorConverter:
         logger.info(f"Created feature matrix: {feature_matrix.shape} (subjects × features)")
         return feature_matrix, valid_subjects
     
-    def save_results(self, feature_matrix: np.ndarray, subjects: List[str], output_prefix: str = "fc_vectors"):
+    def save_individual_vectors(self, subject_vectors: Dict[str, Dict[str, np.ndarray]], subjects: List[str]):
         """
-        Save the feature matrix and subject list.
+        Save GG, GW, WW vectors as separate npy files.
+        
+        Args:
+            subject_vectors: Dictionary with subject IDs as keys and individual vectors as values
+            subjects: Ordered list of subject IDs
+        """
+        # Create matrices for each vector type
+        vector_types = ['GG', 'GW', 'WW']
+        vector_matrices = {}
+        
+        # Initialize matrices with first valid subject
+        valid_subjects = [s for s in subjects if s in subject_vectors]
+        if not valid_subjects:
+            logger.warning("No subjects with valid vectors found")
+            return
+        
+        # Get dimensions from first valid subject
+        first_subject = valid_subjects[0]
+        for vector_type in vector_types:
+            if vector_type in subject_vectors[first_subject]:
+                vector_dim = subject_vectors[first_subject][vector_type].shape[0]
+                vector_matrices[vector_type] = np.zeros((len(valid_subjects), vector_dim))
+        
+        # Fill matrices
+        for i, subject_id in enumerate(valid_subjects):
+            for vector_type in vector_types:
+                if vector_type in subject_vectors[subject_id]:
+                    vector_matrices[vector_type][i, :] = subject_vectors[subject_id][vector_type]
+        
+        # Save each vector type as separate npy file
+        for vector_type, matrix in vector_matrices.items():
+            output_file = self.output_path / f"{self.dataset_name}_{vector_type}_vectors.npy"
+            np.save(output_file, matrix)
+            logger.info(f"Saved {vector_type} vectors to {output_file} (shape: {matrix.shape})")
+        
+        # Save subject list for vector matrices
+        subjects_file = self.output_path / f"{self.dataset_name}_vector_subjects.txt"
+        with open(subjects_file, 'w') as f:
+            for subject_id in valid_subjects:
+                f.write(f"{subject_id}\n")
+        logger.info(f"Saved vector subjects list to {subjects_file}")
+    
+    def save_missing_subjects(self, missing_subjects: List[str]):
+        """
+        Save list of subjects missing any FC matrix to data/ABCD/table/sublist_wo_fc.txt.
+        
+        Args:
+            missing_subjects: List of subject IDs missing FC matrices
+        """
+        # Save to the specified location in data/ABCD/table
+        missing_subjects_file = Path("d:/code/WM_prediction/data/ABCD/table/sublist_wo_fc.txt")
+        
+        # Create directory if it doesn't exist
+        missing_subjects_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(missing_subjects_file, 'w') as f:
+            for subject_id in missing_subjects:
+                f.write(f"{subject_id}\n")
+        
+        logger.info(f"Saved {len(missing_subjects)} missing subjects to {missing_subjects_file}")
+    
+    def save_results(self, feature_matrix: np.ndarray, subjects: List[str], subject_vectors: Dict[str, Dict[str, np.ndarray]], missing_subjects: List[str], output_prefix: str = "fc_vectors"):
+        """
+        Save the feature matrix, individual vectors, and subject list.
         
         Args:
             feature_matrix: Subject × features matrix
             subjects: Ordered list of subject IDs
+            subject_vectors: Dictionary with subject IDs as keys and individual vectors as values
+            missing_subjects: List of subjects missing any FC matrix
             output_prefix: Prefix for output files
         """
-        # Save feature matrix
+        # Save individual GG, GW, WW vectors as separate npy files
+        self.save_individual_vectors(subject_vectors, subjects)
+        
+        # Save missing subjects list
+        if missing_subjects:
+            self.save_missing_subjects(missing_subjects)
+        
+        # Save concatenated feature matrix (original functionality)
         matrix_file = self.output_path / f"{output_prefix}.npy"
         np.save(matrix_file, feature_matrix)
         logger.info(f"Saved feature matrix to {matrix_file}")
@@ -300,6 +398,7 @@ class MatrixToVectorConverter:
             f.write(f"Number of subjects: {len(subjects)}\n")
             f.write(f"Number of features: {feature_matrix.shape[1]}\n")
             f.write(f"Feature types: GG (lower triangle), GW (flattened), WW (lower triangle)\n")
+            f.write(f"Missing subjects: {len(missing_subjects)}\n")
         logger.info(f"Saved feature info to {info_file}")
         
         # Also save as CSV for easy inspection
@@ -316,7 +415,7 @@ class MatrixToVectorConverter:
         subjects = self.load_subject_list()
         
         # Process all subjects
-        subject_features, valid_subjects = self.process_all_subjects(subjects)
+        subject_features, valid_subjects, subject_vectors, missing_subjects = self.process_all_subjects(subjects)
         
         if not subject_features:
             logger.error("No subjects with valid features found")
@@ -326,7 +425,7 @@ class MatrixToVectorConverter:
         feature_matrix, final_subjects = self.create_feature_matrix(subject_features, valid_subjects)
         
         # Save results
-        self.save_results(feature_matrix, final_subjects, f"{self.dataset_name}_fc_vectors")
+        self.save_results(feature_matrix, final_subjects, subject_vectors, missing_subjects, f"{self.dataset_name}_fc_vectors")
         
         logger.info("Matrix-to-vector conversion completed successfully")
 
