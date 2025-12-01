@@ -349,7 +349,7 @@ class MatrixToVectorConverter:
             missing_subjects: List of subject IDs missing FC matrices
         """
         # Save to the specified location in data/ABCD/table
-        missing_subjects_file = Path("d:/code/WM_prediction/data/ABCD/table/sublist_wo_fc.txt")
+        missing_subjects_file = self.output_path / f"sublist_wo_fc.txt"
         
         # Create directory if it doesn't exist
         missing_subjects_file.parent.mkdir(parents=True, exist_ok=True)

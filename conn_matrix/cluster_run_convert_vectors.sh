@@ -12,10 +12,10 @@ conda activate ML
 
 # Set up paths (adjust these based on your cluster environment)
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
-INPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual_z"
-SUBLIST_FILE="${PROJECT_ROOT}/data/ABCD/table/sublist.txt"
-OUTPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_vector"
-DATASET_NAME="ABCD"
+INPUT_PATH="${PROJECT_ROOT}/data/EFNY/fc_matrix/individual_z"
+SUBLIST_FILE="${PROJECT_ROOT}/data/EFNY/table/sublist.txt"
+OUTPUT_PATH="${PROJECT_ROOT}/data/EFNY/fc_vector"
+DATASET_NAME="EFNY"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_PATH}"
