@@ -13,6 +13,7 @@ import PLSr1_CZ_Random_RegressCovariates
 
 dataset = 'ABCD'  # 可以修改为 'ABCD' 或其他数据集
 targetStr_list = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
+sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}/table/cognition_sublist.txt'
 
 for targetStr in targetStr_list:
     # 基础路径配置
@@ -42,8 +43,12 @@ for targetStr in targetStr_list:
     SubjectsData.append(GW_data_files_all)
     SubjectsData.append(WW_data_files_all)
 
+    # 读取sublist以确保数据顺序一致
+    with open(sublist_file, 'r') as f:
+        target_subids = [line.strip() for line in f if line.strip()]
+    
     # 2. subject label: prediction score
-    labelpath = f'{base_path}/table/subid_meanFD_age_sex.csv'
+    labelpath = f'{base_path}/table/nc_y_nihtb_baseline.csv'
 
     # 检查标签文件是否存在
     if not os.path.exists(labelpath):
@@ -51,15 +56,39 @@ for targetStr in targetStr_list:
         # 可以在这里添加替代逻辑或抛出异常
 
     label_files_all = pd.read_csv(labelpath)
+    
+    # 根据sublist筛选和排序数据
+    # 确保subid列存在
+    if 'subid' not in label_files_all.columns:
+        print(f"警告: 标签文件中缺少subid列")
+        print(f"可用列: {list(label_files_all.columns)}")
+        # 尝试从src_subject_id生成subid
+        if 'src_subject_id' in label_files_all.columns:
+            label_files_all['subid'] = label_files_all['src_subject_id'].apply(lambda x: f"sub-{x.replace('_', '')}")
+        else:
+            print(f"错误: 标签文件中既无subid列也无src_subject_id列")
+            sys.exit(1)
+    
+    # 只保留sublist中的subjects并按sublist顺序排序
+    label_files_filtered = label_files_all[label_files_all['subid'].isin(target_subids)].copy()
+    label_files_filtered['sort_order'] = label_files_filtered['subid'].map({subid: i for i, subid in enumerate(target_subids)})
+    label_files_filtered = label_files_filtered.sort_values('sort_order').drop('sort_order', axis=1)
+    
+    # 检查是否有缺失的subjects
+    missing_subjects = set(target_subids) - set(label_files_filtered['subid'])
+    if missing_subjects:
+        print(f"警告: 以下subjects在标签文件中缺失: {missing_subjects}")
+        print(f"将使用可用的{len(label_files_filtered)}个subjects进行预测")
+    
     dimention = targetStr 
 
     # 检查目标列是否存在
-    if dimention not in label_files_all.columns:
+    if dimention not in label_files_filtered.columns:
         print(f"警告: 目标列 '{dimention}' 不存在于标签文件中")
-        print(f"可用列: {list(label_files_all.columns)}")
+        print(f"可用列: {list(label_files_filtered.columns)}")
         # 可以在这里添加替代逻辑或抛出异常
 
-    label = label_files_all[dimention]
+    label = label_files_filtered[dimention]
     y_label = np.array(label)
     OverallPsyFactor = y_label
 
@@ -71,20 +100,37 @@ for targetStr in targetStr_list:
         print(f"警告: 协变量文件不存在: {covariatespath}")
         # 可以在这里添加替代逻辑或抛出异常
 
-    Covariates = pd.read_csv(covariatespath, header=0)
-    Covariates = Covariates.values
-
+    Covariates_all = pd.read_csv(covariatespath, header=0)
+    
+    # 根据sublist筛选和排序协变量数据
+    # 确保subid列存在
+    if 'subid' not in Covariates_all.columns:
+        print(f"警告: 协变量文件中缺少subid列")
+        print(f"可用列: {list(Covariates_all.columns)}")
+        sys.exit(1)
+    
+    # 只保留sublist中的subjects并按sublist顺序排序
+    Covariates_filtered = Covariates_all[Covariates_all['subid'].isin(target_subids)].copy()
+    Covariates_filtered['sort_order'] = Covariates_filtered['subid'].map({subid: i for i, subid in enumerate(target_subids)})
+    Covariates_filtered = Covariates_filtered.sort_values('sort_order').drop('sort_order', axis=1)
+    
+    # 检查是否有缺失的subjects
+    missing_covariates = set(target_subids) - set(Covariates_filtered['subid'])
+    if missing_covariates:
+        print(f"警告: 以下subjects在协变量文件中缺失: {missing_covariates}")
+        print(f"将使用可用的{len(Covariates_filtered)}个subjects进行预测")
+    
     # 检查是否有足够的列用于协变量
-    if Covariates.shape[1] < 4:
-        print(f"警告: 协变量文件列数不足。期望至少4列，实际有 {Covariates.shape[1]} 列")
+    if Covariates_filtered.shape[1] < 4:
+        print(f"警告: 协变量文件列数不足。期望至少4列，实际有 {Covariates_filtered.shape[1]} 列")
         print(f"将使用可用的列进行协变量处理")
         # 根据实际可用的列调整协变量选择
-        if Covariates.shape[1] >= 2:
-            Covariates = Covariates[:, [0, 1]].astype(float)  # 使用前两列
+        if Covariates_filtered.shape[1] >= 2:
+            Covariates = Covariates_filtered.iloc[:, [0, 1]].astype(float).values  # 使用前两列
         else:
-            Covariates = Covariates.astype(float)  # 使用所有列
+            Covariates = Covariates_filtered.astype(float).values  # 使用所有列
     else:
-        Covariates = Covariates[:, [2, 1, 3]].astype(float)  # sex, age, motion (sex作为第0列以被识别为分类变量)
+        Covariates = Covariates_filtered.iloc[:, [2, 1, 3]].astype(float).values  # sex, age, motion (sex作为第0列以被识别为分类变量)
 
     # subID,age,sex,meanFD
     # Range of parameters
