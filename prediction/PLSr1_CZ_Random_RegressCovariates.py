@@ -222,11 +222,19 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
                 
                 df['Covariate_'+str(k)] = covariate_data
                 df_test['Covariate_'+str(k)] = covariate_test_data
-            # 清理分类变量的唯一值
-            all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).str.strip().unique())
+            # 清理分类变量的唯一值 - 根据数据类型处理
+            covariate_0_series = pd.Series(Covariates[:, 0])
+            if covariate_0_series.dtype == 'object':  # 字符串类型
+                all_Covariate_0 = sorted(covariate_0_series.str.strip().unique())
+            else:  # 数值类型
+                all_Covariate_0 = sorted(covariate_0_series.unique())
             
             if Covariates_Quantity > 2:
-                all_Covariate_2 = sorted(pd.Series(Covariates[:, 2]).str.strip().unique())
+                covariate_2_series = pd.Series(Covariates[:, 2])
+                if covariate_2_series.dtype == 'object':  # 字符串类型
+                    all_Covariate_2 = sorted(covariate_2_series.str.strip().unique())
+                else:  # 数值类型
+                    all_Covariate_2 = sorted(covariate_2_series.unique())
             
             # Construct formula - 修复逻辑错误
             Formula = 'Data ~ C(Covariate_0, levels=all_Covariate_0)'  # sex 是分类变量
