@@ -203,25 +203,39 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             df = {}
             df_test = {}
             for k in np.arange(Covariates_Quantity):
-                df['Covariate_'+str(k)] = Covariates_train[:,k]
-                df_test['Covariate_'+str(k)] = Covariates_test[:,k]
-            # 获取分类变量的唯一值（现在数据已经是正确的格式）
-            all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).unique())
+                # 清理字符串数据并转换为适当的数据类型
+                covariate_data = Covariates_train[:,k]
+                covariate_test_data = Covariates_test[:,k]
+                
+                # 如果是字符串类型，先清理空白字符
+                if covariate_data.dtype.kind in ['U', 'S']:  # Unicode或字节字符串
+                    covariate_data = np.char.strip(covariate_data.astype(str))
+                    covariate_test_data = np.char.strip(covariate_test_data.astype(str))
+                    
+                    # 尝试转换为数值类型（对于应该是数值的协变量）
+                    if k == 1 or k == 3:  # meanFD/motion 应该是连续数值
+                        try:
+                            covariate_data = covariate_data.astype(float)
+                            covariate_test_data = covariate_test_data.astype(float)
+                        except (ValueError, TypeError):
+                            pass  # 如果转换失败，保持字符串格式
+                
+                df['Covariate_'+str(k)] = covariate_data
+                df_test['Covariate_'+str(k)] = covariate_test_data
+            # 清理分类变量的唯一值
+            all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).str.strip().unique())
             
             if Covariates_Quantity > 2:
-                all_Corvariate_2 = sorted(pd.Series(Covariates[:, 2]).unique())
-                # 注意变量名一致性：公式中使用的是 all_Covariate_2
-                all_Covariate_2 = all_Corvariate_2  # 保持兼容性
+                all_Covariate_2 = sorted(pd.Series(Covariates[:, 2]).str.strip().unique())
             
-            # Construct formula
-            Formula = 'Data ~ Covariate_0'
-
-            # 修改判断逻辑
-            for k in np.arange(Covariates_Quantity - 1) + 1:
-                if k==0 or k==2:  # 0是sex，2是site
-                    Formula = Formula + ' + C(Covariate_' + str(k) + ', levels=all_Covariate_' + str(k) + ')'
-                else:
-                    Formula = Formula + ' + Covariate_' + str(k)
+            # Construct formula - 修复逻辑错误
+            Formula = 'Data ~ C(Covariate_0, levels=all_Covariate_0)'  # sex 是分类变量
+            
+            if Covariates_Quantity > 1:
+                Formula += ' + Covariate_1'  # meanFD 是连续变量
+                
+            if Covariates_Quantity > 2:
+                Formula += ' + C(Covariate_2, levels=all_Covariate_2)'  # site 是分类变量
             
             for k in np.arange(Features_Quantity_List[conn_index]):
                 df['Data'] = Subjects_Data_train_List[conn_index][:,k]
