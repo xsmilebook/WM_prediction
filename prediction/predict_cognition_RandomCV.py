@@ -126,11 +126,18 @@ for targetStr in targetStr_list:
         print(f"将使用可用的列进行协变量处理")
         # 根据实际可用的列调整协变量选择
         if Covariates_filtered.shape[1] >= 2:
-            Covariates = Covariates_filtered.iloc[:, [0, 1]].astype(float).values  # 使用前两列
+            Covariates = Covariates_filtered.iloc[:, [0, 1]].values  # 使用前两列，保持原始数据类型
         else:
-            Covariates = Covariates_filtered.astype(float).values  # 使用所有列
+            Covariates = Covariates_filtered.values  # 使用所有列，保持原始数据类型
     else:
-        Covariates = Covariates_filtered.iloc[:, [2, 3, 4, 1]].astype(float).values  # sex, motion, site, age (sex作为第0列以被识别为分类变量)
+        if dataset == 'ABCD':
+            # ABCD: 选择sex, motion, site列，保持原始数据类型（site是分类变量）
+            Covariates = Covariates_filtered.iloc[:, [2, 3, 4]].values  # sex, motion, site
+            print(f"ABCD协变量形状: {Covariates.shape}")
+            print(f"样本数据类型: {[type(Covariates[i, 0]) for i in range(min(3, len(Covariates)))]}")
+            print(f"样本值: {[Covariates[i, 2] for i in range(min(3, len(Covariates)))]}")  # 显示site值
+        else:
+            Covariates = Covariates_filtered.iloc[:, [2, 3, 4, 1]].astype(float).values  # sex, motion, site, age (sex作为第0列以被识别为分类变量)
 
     # subID,age,sex,meanFD
     # Range of parameters
