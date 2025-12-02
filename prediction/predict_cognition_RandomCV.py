@@ -130,7 +130,7 @@ for targetStr in targetStr_list:
         else:
             Covariates = Covariates_filtered.astype(float).values  # 使用所有列
     else:
-        Covariates = Covariates_filtered.iloc[:, [2, 1, 3]].astype(float).values  # sex, age, motion (sex作为第0列以被识别为分类变量)
+        Covariates = Covariates_filtered.iloc[:, [2, 1, 3, 4]].astype(float).values  # sex, age, motion (sex作为第0列以被识别为分类变量)
 
     # subID,age,sex,meanFD
     # Range of parameters
