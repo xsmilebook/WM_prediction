@@ -205,27 +205,12 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             for k in np.arange(Covariates_Quantity):
                 df['Covariate_'+str(k)] = Covariates_train[:,k]
                 df_test['Covariate_'+str(k)] = Covariates_test[:,k]
-            # 修复：正确处理包含字符串的numpy数组
-            # 使用pandas的unique函数来处理混合数据类型
-            try:
-                # Covariate 0 (sex) - 应该是数值型
-                covariate_0_series = pd.Series(Covariates[:, 0])
-                all_Covariate_0 = sorted(covariate_0_series.unique())
-            except Exception as e:
-                print(f"警告: 处理Covariate_0时出错: {e}")
-                all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).astype(str).unique())
+            # 获取分类变量的唯一值（现在数据已经是正确的格式）
+            all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).unique())
             
             if Covariates_Quantity > 2:
-                try:
-                    # Covariate 2 (site) - 可能是字符串
-                    covariate_2_series = pd.Series(Covariates[:, 2])
-                    all_Corvariate_2 = sorted(covariate_2_series.unique())
-                except Exception as e:
-                    print(f"警告: 处理Covariate_2 (site)时出错: {e}")
-                    all_Corvariate_2 = sorted(pd.Series(Covariates[:, 2]).astype(str).unique())
-                
+                all_Corvariate_2 = sorted(pd.Series(Covariates[:, 2]).unique())
                 # 注意变量名一致性：公式中使用的是 all_Covariate_2
-                # 修复变量名拼写错误，确保公式中引用的变量名正确
                 all_Covariate_2 = all_Corvariate_2  # 保持兼容性
             
             # Construct formula

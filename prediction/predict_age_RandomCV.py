@@ -155,15 +155,33 @@ if Covariates.shape[1] < 4:
     else:
         Covariates = Covariates.astype(float)  # 使用所有列
 elif dataset == "HCPD":
-    # HCPD: 选择sex, motion, site列，保持原始数据类型以支持字符串site
+    # HCPD: 选择sex, motion, site列，处理嵌套的numpy数组
     Covariates_selected = Covariates[:, [2, 3, 4]]  # sex, motion, site
     
-    # 分别处理每一列，确保正确的数据类型
-    sex_col = Covariates_selected[:, 0].astype(float)  # sex应该是数值型
-    motion_col = Covariates_selected[:, 1].astype(float)  # motion应该是数值型
+    print(f"原始协变量形状: {Covariates_selected.shape}")
+    print(f"样本数据类型: {[type(Covariates_selected[i, 0]) for i in range(min(3, len(Covariates_selected)))]}")
     
-    # site列保持原始类型（可能是字符串）
-    site_col = Covariates_selected[:, 2]
+    # 处理嵌套的numpy数组 - 展平每一列
+    def flatten_column(col_data):
+        """展平嵌套的numpy数组"""
+        flattened = []
+        for item in col_data:
+            if isinstance(item, np.ndarray):
+                # 如果是numpy数组，展平并取第一个值
+                flat_item = item.flatten()
+                if len(flat_item) > 0:
+                    flattened.append(flat_item[0])
+                else:
+                    flattened.append(np.nan)
+            else:
+                # 如果不是数组，直接使用
+                flattened.append(item)
+        return np.array(flattened)
+    
+    # 分别处理每一列
+    sex_col = flatten_column(Covariates_selected[:, 0]).astype(float)  # sex应该是数值型
+    motion_col = flatten_column(Covariates_selected[:, 1]).astype(float)  # motion应该是数值型
+    site_col = flatten_column(Covariates_selected[:, 2])  # site可能是字符串
     
     # 重新组合成数组，每列保持适当类型
     Covariates = np.column_stack([sex_col, motion_col, site_col])
@@ -172,6 +190,7 @@ elif dataset == "HCPD":
     unique_sites = np.unique(site_col)
     print(f"Site信息: 发现 {len(unique_sites)} 个唯一site值")
     print(f"Site值: {unique_sites}")
+    print(f"Site数据类型: {site_col.dtype}")
     
     # 检查数据类型和质量
     if site_col.dtype == 'object' or site_col.dtype.kind == 'U':
