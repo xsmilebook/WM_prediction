@@ -55,7 +55,7 @@ for targetStr in targetStr_list:
         print(f"警告: 标签文件不存在: {labelpath}")
         # 可以在这里添加替代逻辑或抛出异常
 
-    label_files_all = pd.read_csv(labelpath)
+    label_files_all = pd.read_csv(labelpath, low_memory=False)
     
     # 根据sublist筛选和排序数据
     # 确保subid列存在
@@ -120,18 +120,25 @@ for targetStr in targetStr_list:
         print(f"警告: 以下subjects在协变量文件中缺失: {missing_covariates}")
         print(f"将使用可用的{len(Covariates_filtered)}个subjects进行预测")
     
+    # 调试信息：显示实际列数和列名
+    print(f"协变量文件列数: {Covariates_filtered.shape[1]}")
+    print(f"可用列: {list(Covariates_filtered.columns)}")
+    
     # 检查是否有足够的列用于协变量
-    if Covariates_filtered.shape[1] < 4:
-        print(f"警告: 协变量文件列数不足。期望至少4列，实际有 {Covariates_filtered.shape[1]} 列")
+    if Covariates_filtered.shape[1] < 5:  # ABCD需要5列：subid,age,sex,meanFD,site
+        print(f"警告: 协变量文件列数不足。期望至少5列，实际有 {Covariates_filtered.shape[1]} 列")
         print(f"将使用可用的列进行协变量处理")
         # 根据实际可用的列调整协变量选择
-        if Covariates_filtered.shape[1] >= 2:
+        if Covariates_filtered.shape[1] >= 3:
+            Covariates = Covariates_filtered.iloc[:, [1, 2]].values  # age, sex (保持原始数据类型)
+        elif Covariates_filtered.shape[1] >= 2:
             Covariates = Covariates_filtered.iloc[:, [0, 1]].values  # 使用前两列，保持原始数据类型
         else:
             Covariates = Covariates_filtered.values  # 使用所有列，保持原始数据类型
     else:
         if dataset == 'ABCD':
             # ABCD: 选择sex, motion, site列，保持原始数据类型（site是分类变量）
+            # 列索引: [subid, age, sex, meanFD, site] -> 选择 [2, 3, 4] = [sex, meanFD, site]
             Covariates = Covariates_filtered.iloc[:, [2, 3, 4]].values  # sex, motion, site
             print(f"ABCD协变量形状: {Covariates.shape}")
             print(f"样本数据类型: {[type(Covariates[i, 0]) for i in range(min(3, len(Covariates)))]}")
