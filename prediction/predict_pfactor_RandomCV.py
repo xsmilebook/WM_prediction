@@ -21,9 +21,9 @@ for targetStr in targetStr_list:
     os.makedirs(outFolder, exist_ok=True)
     # Import data
     # 1. atlas loading
-    GG_datapath = f'{base_path}/fc_vector/{dataset}_GG_vectors.npy'
-    GW_datapath = f'{base_path}/fc_vector/{dataset}_GW_vectors.npy'
-    WW_datapath = f'{base_path}/fc_vector/{dataset}_WW_vectors.npy'
+    GG_datapath = f'{base_path}/pfactor_fc_vector/{dataset}_GG_vectors.npy'
+    GW_datapath = f'{base_path}/pfactor_fc_vector/{dataset}_GW_vectors.npy'
+    WW_datapath = f'{base_path}/pfactor_fc_vector/{dataset}_WW_vectors.npy'
 
     # 检查数据文件是否存在
     for filepath, name in [(GG_datapath, 'GG'), (GW_datapath, 'GW'), (WW_datapath, 'WW')]:

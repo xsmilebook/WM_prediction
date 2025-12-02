@@ -12,7 +12,7 @@ sys.path.append(script_dir)
 import PLSr1_CZ_Random_RegressCovariates
 
 # 配置参数 - 可以轻松修改为其他数据集
-dataset = 'EFNY'  # 可以修改为 'ABCD' 或其他数据集
+dataset = 'PNC'  # 可以修改为 'ABCD' 或其他数据集
 targetStr = 'age'
 
 # 基础路径配置
