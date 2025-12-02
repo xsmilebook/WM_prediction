@@ -49,7 +49,7 @@ def filter_data_by_sublist(data_df, sublist, subid_col='subid'):
     return filtered_data
 
 # 配置参数 - 可以轻松修改为其他数据集
-dataset = 'CCNP'  # 可以修改为 'ABCD' 或其他数据集
+dataset = 'HCPD'
 targetStr = 'age'
 
 # 基础路径配置
@@ -58,7 +58,7 @@ outFolder = f'{base_path}/prediction/{targetStr}'
 os.makedirs(outFolder, exist_ok=True)
 
 # 添加sublist路径配置
-sublist_path = f'{base_path}/table/{dataset}_age_sublist.txt'  # 假设sublist文件名为age_sublist.txt
+sublist_path = f'{base_path}/table/sublist.txt'  # 假设sublist文件名为age_sublist.txt
 
 # Import data
 # 1. atlas loading - 向量文件已根据sublist生成，直接使用
@@ -84,7 +84,7 @@ SubjectsData.append(GW_data_files)
 SubjectsData.append(WW_data_files)
 
 # 2. subject label: prediction score - 需要根据sublist过滤
-labelpath = f'{base_path}/table/subid_meanFD_age_sex.csv'
+labelpath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
 
 # 检查标签文件是否存在
 if not os.path.exists(labelpath):
@@ -113,7 +113,7 @@ y_label = np.array(label)
 OverallPsyFactor = y_label
 
 # 3. covariates - 需要根据sublist过滤  
-covariatespath = f'{base_path}/table/subid_meanFD_age_sex.csv'
+covariatespath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
 
 # 检查协变量文件是否存在
 if not os.path.exists(covariatespath):
@@ -154,6 +154,8 @@ if Covariates.shape[1] < 4:
         Covariates = Covariates[:, [0, 1]].astype(float)  # 使用前两列
     else:
         Covariates = Covariates.astype(float)  # 使用所有列
+elif dataset == "HCPD":
+    Covariates = Covariates[:, [2, 3, 4]]  # sex, motion, site
 else:
     Covariates = Covariates[:, [2, 3]].astype(float)  # sex, motion
 

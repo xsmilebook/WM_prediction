@@ -207,7 +207,7 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
 
             # 修改判断逻辑
             for k in np.arange(Covariates_Quantity - 1) + 1:
-                if k==0 or k==3:  # 0是sex，3是site
+                if k==0 or k==2:  # 0是sex，2是site
                     Formula = Formula + ' + C(Covariate_' + str(k) + ', levels=all_Covariate_' + str(k) + ')'
                 else:
                     Formula = Formula + ' + Covariate_' + str(k)
