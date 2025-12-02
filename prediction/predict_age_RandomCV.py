@@ -155,7 +155,34 @@ if Covariates.shape[1] < 4:
     else:
         Covariates = Covariates.astype(float)  # 使用所有列
 elif dataset == "HCPD":
-    Covariates = Covariates[:, [2, 3, 4]]  # sex, motion, site
+    # HCPD: 选择sex, motion, site列，保持原始数据类型以支持字符串site
+    Covariates_selected = Covariates[:, [2, 3, 4]]  # sex, motion, site
+    
+    # 分别处理每一列，确保正确的数据类型
+    sex_col = Covariates_selected[:, 0].astype(float)  # sex应该是数值型
+    motion_col = Covariates_selected[:, 1].astype(float)  # motion应该是数值型
+    
+    # site列保持原始类型（可能是字符串）
+    site_col = Covariates_selected[:, 2]
+    
+    # 重新组合成数组，每列保持适当类型
+    Covariates = np.column_stack([sex_col, motion_col, site_col])
+    
+    # 数据验证：检查site列的数据类型
+    unique_sites = np.unique(site_col)
+    print(f"Site信息: 发现 {len(unique_sites)} 个唯一site值")
+    print(f"Site值: {unique_sites}")
+    
+    # 检查数据类型和质量
+    if site_col.dtype == 'object' or site_col.dtype.kind == 'U':
+        print(f"Site数据类型: 字符串，样本值: {unique_sites[:3]}")
+        # 检查空值
+        empty_sites = pd.isna(site_col) | (site_col == '')
+        if empty_sites.any():
+            print(f"警告: 发现 {empty_sites.sum()} 个空site值")
+            site_col[empty_sites] = 'Unknown'
+    else:
+        print(f"Site数据类型: {site_col.dtype}，范围: {unique_sites}")
 else:
     Covariates = Covariates[:, [2, 3]].astype(float)  # sex, motion
 

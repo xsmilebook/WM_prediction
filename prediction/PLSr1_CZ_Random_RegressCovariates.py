@@ -194,14 +194,39 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             #     for k in range(1, Covariates_Quantity):
             #         Formula += f' + Covariate_{k}'
             Covariates_Quantity = np.shape(Covariates)[1]
+            
+            # 调试信息：检查协变量数据类型
+            print(f"协变量数量: {Covariates_Quantity}")
+            for k in range(Covariates_Quantity):
+                print(f"协变量 {k} 数据类型: {Covariates[:, k].dtype}, 样本值: {Covariates[:3, k]}")
+            
             df = {}
             df_test = {}
             for k in np.arange(Covariates_Quantity):
                 df['Covariate_'+str(k)] = Covariates_train[:,k]
                 df_test['Covariate_'+str(k)] = Covariates_test[:,k]
-            all_Covariate_0 =  sorted(set(Covariates[:, 0]).union(set(Covariates[:, 0])))
+            # 修复：正确处理包含字符串的numpy数组
+            # 使用pandas的unique函数来处理混合数据类型
+            try:
+                # Covariate 0 (sex) - 应该是数值型
+                covariate_0_series = pd.Series(Covariates[:, 0])
+                all_Covariate_0 = sorted(covariate_0_series.unique())
+            except Exception as e:
+                print(f"警告: 处理Covariate_0时出错: {e}")
+                all_Covariate_0 = sorted(pd.Series(Covariates[:, 0]).astype(str).unique())
+            
             if Covariates_Quantity > 2:
-                all_Covariate_2 =  sorted(set(Covariates[:, 2]).union(set(Covariates[:, 2])))
+                try:
+                    # Covariate 2 (site) - 可能是字符串
+                    covariate_2_series = pd.Series(Covariates[:, 2])
+                    all_Corvariate_2 = sorted(covariate_2_series.unique())
+                except Exception as e:
+                    print(f"警告: 处理Covariate_2 (site)时出错: {e}")
+                    all_Corvariate_2 = sorted(pd.Series(Covariates[:, 2]).astype(str).unique())
+                
+                # 注意变量名一致性：公式中使用的是 all_Covariate_2
+                # 修复变量名拼写错误，确保公式中引用的变量名正确
+                all_Covariate_2 = all_Corvariate_2  # 保持兼容性
             
             # Construct formula
             Formula = 'Data ~ Covariate_0'
