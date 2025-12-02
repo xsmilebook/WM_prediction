@@ -11,8 +11,8 @@ sys.path.append(script_dir)
 
 import PLSr1_CZ_Random_RegressCovariates
 
-dataset = 'ABCD'  # 可以修改为 'ABCD' 或其他数据集
-targetStr_list = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
+dataset = 'ABCD'
+targetStr_list = ['General','Ext','ADHD','Int']
 
 for targetStr in targetStr_list:
     # 基础路径配置
