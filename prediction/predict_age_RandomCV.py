@@ -151,6 +151,13 @@ OverallPsyFactor = y_label
 
 Covariates = covariates_filtered.values
 
+# 添加调试信息来检查数据质量
+print(f"标签数据范围: min={np.min(y_label)}, max={np.max(y_label)}, mean={np.mean(y_label):.2f}, std={np.std(y_label):.2f}")
+if dataset == "HCPD":
+    print(f"协变量维度: {Covariates.shape}")
+    print(f"站点信息: {sorted(set(Covariates[:, 2])) if Covariates.shape[1] > 2 else 'No site info'}")
+    print(f"性别分布: {np.unique(Covariates[:, 1] if Covariates.shape[1] > 1 else 'No sex info')}")
+
 # 检查是否有足够的列用于协变量
 if Covariates.shape[1] <= 4:
     Covariates = Covariates[:, [2, 3]].astype(float)  # 使用前两列

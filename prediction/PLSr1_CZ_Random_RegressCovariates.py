@@ -180,14 +180,14 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             for k in np.arange(Covariates_Quantity):
                 df['Covariate_'+str(k)] = Covariates_train[:,k]
                 df_test['Covariate_'+str(k)] = Covariates_test[:,k]
-            all_Corvariate_1 =  sorted(set(Covariates[:, 1]).union(set(Covariates[:, 1])))
+            all_Corvariate_0 =  sorted(set(Covariates[:, 0]).union(set(Covariates[:, 0])))
             if Covariates_Quantity > 3:
-                all_Corvariate_3 =  sorted(set(Covariates[:, 3]).union(set(Covariates[:, 3])))
+                all_Corvariate_2 =  sorted(set(Covariates[:, 2]).union(set(Covariates[:, 2])))
             # Construct formula
             Formula = 'Data ~ Covariate_0'
 
             for k in np.arange(Covariates_Quantity - 1) + 1:
-                if k==1 or k==3: #1 is sex, 3 is the site
+                if k==0 or k==2: #0 is sex, 2 is the site
                     Formula = Formula + ' + C(Covariate_' + str(k)  + ', levels=all_Corvariate_' + str(k) + ')'
                 else:
                     Formula = Formula + ' + Covariate_' + str(k)
