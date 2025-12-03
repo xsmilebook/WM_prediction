@@ -49,7 +49,7 @@ def filter_data_by_sublist(data_df, sublist, subid_col='subid'):
     return filtered_data
 
 # 配置参数 - 可以轻松修改为其他数据集
-dataset = 'HCPD'
+dataset = 'PNC'
 targetStr = 'age'
 
 # 基础路径配置
@@ -58,7 +58,7 @@ outFolder = f'{base_path}/prediction/{targetStr}'
 os.makedirs(outFolder, exist_ok=True)
 
 # 添加sublist路径配置
-sublist_path = f'{base_path}/table/sublist.txt'  # 假设sublist文件名为age_sublist.txt
+sublist_path = f'{base_path}/table/sublist.txt'  # 假设sublist文件名为sublist.txt
 
 # Import data
 # 1. atlas loading - 向量文件已根据sublist生成，直接使用
@@ -84,7 +84,10 @@ SubjectsData.append(GW_data_files)
 SubjectsData.append(WW_data_files)
 
 # 2. subject label: prediction score - 需要根据sublist过滤
-labelpath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
+if dataset == "HCPD":
+    labelpath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
+else:
+    labelpath = f'{base_path}/table/subid_meanFD_age_sex.csv'
 
 # 检查标签文件是否存在
 if not os.path.exists(labelpath):
@@ -113,7 +116,10 @@ y_label = np.array(label)
 OverallPsyFactor = y_label
 
 # 3. covariates - 需要根据sublist过滤  
-covariatespath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
+if dataset == "HCPD":
+    covariatespath = f'{base_path}/table/subid_meanFD_age_sex_site.csv'
+else:
+    covariatespath = f'{base_path}/table/subid_meanFD_age_sex.csv'
 
 # 检查协变量文件是否存在
 if not os.path.exists(covariatespath):
