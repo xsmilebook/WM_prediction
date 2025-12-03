@@ -174,76 +174,23 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             Covariates_train = np.delete(Covariates, Fold_J_Index, axis=0)
             # MARK: 回归协变量：在数据集上划分数据集，在训练集上回归协变量，然后应用到测试集上
             # Regress covariates with formula
-            # Covariates_Quantity = Covariates.shape[1]
-            # df = {}
-            # df_test = {}
-            # for k in range(Covariates_Quantity):
-            #     df[f'Covariate_{k}'] = Covariates_train[:, k]
-            #     df_test[f'Covariate_{k}'] = Covariates_test[:, k]
-
-            # df = pd.DataFrame(df)
-            # df_test = pd.DataFrame(df_test)
-
-            # # sex 的所有水平（这里就是 [1,2]）
-            # all_Corvariate_0 = sorted(set(Covariates[:, 0]))
-
-            # # 把 sex 作为分类变量，motion 作为连续变量
-            # Formula = 'Data ~ C(Covariate_0, levels=all_Corvariate_0)'
-
-            # if Covariates_Quantity > 1:
-            #     for k in range(1, Covariates_Quantity):
-            #         Formula += f' + Covariate_{k}'
             Covariates_Quantity = np.shape(Covariates)[1]
-            
-            # 调试信息：检查协变量数据类型
-            print(f"协变量数量: {Covariates_Quantity}")
-            for k in range(Covariates_Quantity):
-                print(f"协变量 {k} 数据类型: {Covariates[:, k].dtype}, 样本值: {Covariates[:3, k]}")
-            
             df = {}
             df_test = {}
             for k in np.arange(Covariates_Quantity):
-                # 清理字符串数据并转换为适当的数据类型
-                covariate_data = Covariates_train[:,k]
-                covariate_test_data = Covariates_test[:,k]
-                
-                # 如果是字符串类型，先清理空白字符
-                if covariate_data.dtype.kind in ['U', 'S']:  # Unicode或字节字符串
-                    covariate_data = np.char.strip(covariate_data.astype(str))
-                    covariate_test_data = np.char.strip(covariate_test_data.astype(str))
-                    
-                    # 尝试转换为数值类型（对于应该是数值的协变量）
-                    if k == 1 or k == 3:  # meanFD/motion 应该是连续数值
-                        try:
-                            covariate_data = covariate_data.astype(float)
-                            covariate_test_data = covariate_test_data.astype(float)
-                        except (ValueError, TypeError):
-                            pass  # 如果转换失败，保持字符串格式
-                
-                df['Covariate_'+str(k)] = covariate_data
-                df_test['Covariate_'+str(k)] = covariate_test_data
-            # 清理分类变量的唯一值 - 根据数据类型处理
-            covariate_0_series = pd.Series(Covariates[:, 0])
-            if covariate_0_series.dtype == 'object':  # 字符串类型
-                all_Covariate_0 = sorted(covariate_0_series.str.strip().unique())
-            else:  # 数值类型
-                all_Covariate_0 = sorted(covariate_0_series.unique())
-            
-            if Covariates_Quantity > 2:
-                covariate_2_series = pd.Series(Covariates[:, 2])
-                if covariate_2_series.dtype == 'object':  # 字符串类型
-                    all_Covariate_2 = sorted(covariate_2_series.str.strip().unique())
-                else:  # 数值类型
-                    all_Covariate_2 = sorted(covariate_2_series.unique())
-            
-            # Construct formula - 修复逻辑错误
-            Formula = 'Data ~ C(Covariate_0, levels=all_Covariate_0)'  # sex 是分类变量
-            
-            if Covariates_Quantity > 1:
-                Formula += ' + Covariate_1'  # meanFD 是连续变量
-                
-            if Covariates_Quantity > 2:
-                Formula += ' + C(Covariate_2, levels=all_Covariate_2)'  # site 是分类变量
+                df['Covariate_'+str(k)] = Covariates_train[:,k]
+                df_test['Covariate_'+str(k)] = Covariates_test[:,k]
+            all_Corvariate_1 =  sorted(set(Covariates[:, 1]).union(set(Covariates[:, 1])))
+            if Covariates_Quantity > 3:
+                all_Corvariate_3 =  sorted(set(Covariates[:, 3]).union(set(Covariates[:, 3])))
+            # Construct formula
+            Formula = 'Data ~ Covariate_0'
+
+            for k in np.arange(Covariates_Quantity - 1) + 1:
+                if k==1 or k==3: #1 is sex, 3 is the site
+                    Formula = Formula + ' + C(Covariate_' + str(k)  + ', levels=all_Corvariate_' + str(k) + ')'
+                else:
+                    Formula = Formula + ' + Covariate_' + str(k)
             
             for k in np.arange(Features_Quantity_List[conn_index]):
                 df['Data'] = Subjects_Data_train_List[conn_index][:,k]

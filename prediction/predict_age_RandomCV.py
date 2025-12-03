@@ -146,62 +146,15 @@ OverallPsyFactor = y_label
 Covariates = covariates_filtered.values
 
 # 检查是否有足够的列用于协变量
-if Covariates.shape[1] < 4:
-    print(f"警告: 协变量文件列数不足。期望至少4列，实际有 {Covariates.shape[1]} 列")
-    print(f"将使用可用的列进行协变量处理")
-    # 根据实际可用的列调整协变量选择
-    if Covariates.shape[1] >= 2:
-        Covariates = Covariates[:, [0, 1]].astype(float)  # 使用前两列
-    else:
-        Covariates = Covariates.astype(float)  # 使用所有列
+if Covariates.shape[1] <= 4:
+    Covariates = Covariates[:, [2, 3]].astype(float)  # 使用前两列
 elif dataset == "HCPD":
     # HCPD: 选择sex, motion, site列，处理嵌套的numpy数组
     Covariates_selected = Covariates[:, [2, 3, 4]]  # sex, motion, site
-    
-    print(f"原始协变量形状: {Covariates_selected.shape}")
-    print(f"样本数据类型: {[type(Covariates_selected[i, 0]) for i in range(min(3, len(Covariates_selected)))]}")
-    
-    # 处理嵌套的numpy数组 - 展平每一列
-    def flatten_column(col_data):
-        """展平嵌套的numpy数组"""
-        flattened = []
-        for item in col_data:
-            if isinstance(item, np.ndarray):
-                # 如果是numpy数组，展平并取第一个值
-                flat_item = item.flatten()
-                if len(flat_item) > 0:
-                    flattened.append(flat_item[0])
-                else:
-                    flattened.append(np.nan)
-            else:
-                # 如果不是数组，直接使用
-                flattened.append(item)
-        return np.array(flattened)
-    
-    # 分别处理每一列
-    sex_col = flatten_column(Covariates_selected[:, 0]).astype(float)  # sex应该是数值型
-    motion_col = flatten_column(Covariates_selected[:, 1]).astype(float)  # motion应该是数值型
-    site_col = flatten_column(Covariates_selected[:, 2])  # site可能是字符串
-    
-    # 重新组合成数组，每列保持适当类型
-    Covariates = np.column_stack([sex_col, motion_col, site_col])
-    
-    # 数据验证：检查site列的数据类型
-    unique_sites = np.unique(site_col)
-    print(f"Site信息: 发现 {len(unique_sites)} 个唯一site值")
-    print(f"Site值: {unique_sites}")
-    print(f"Site数据类型: {site_col.dtype}")
-    
-    # 检查数据类型和质量
-    if site_col.dtype == 'object' or site_col.dtype.kind == 'U':
-        print(f"Site数据类型: 字符串，样本值: {unique_sites[:3]}")
-        # 检查空值
-        empty_sites = pd.isna(site_col) | (site_col == '')
-        if empty_sites.any():
-            print(f"警告: 发现 {empty_sites.sum()} 个空site值")
-            site_col[empty_sites] = 'Unknown'
-    else:
-        print(f"Site数据类型: {site_col.dtype}，范围: {unique_sites}")
+    # convert site string to number
+    site_dict = {site: i for i, site in enumerate(np.unique(Covariates_selected[:, 2]))}
+    Covariates_selected[:, 2] = np.array([site_dict[site] for site in Covariates_selected[:, 2]])
+    Covariates = Covariates_selected.astype(float)
 else:
     Covariates = Covariates[:, [2, 3]].astype(float)  # sex, motion
 
