@@ -2,8 +2,8 @@
 #SBATCH --job-name=unified_hcpd
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --partition=q_fat_c
+#SBATCH --cpus-per-task=10
+#SBATCH --partition=q_cn
 #SBATCH --array=1-531%531            # TODO: 修改 100 为实际被试数量 (根据 sublist.txt 行数)
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/unified_hcpd/unified_hcpd_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/unified_hcpd/unified_hcpd_%A_%a.err

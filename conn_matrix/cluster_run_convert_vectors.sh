@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --partition=q_fat_c
+#SBATCH --partition=q_fat
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/convert_fc_vectors/convert_fc_vectors_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/convert_fc_vectors/convert_fc_vectors_%A_%a.err
 
@@ -12,10 +12,10 @@ conda activate ML
 
 # Set up paths (adjust these based on your cluster environment)
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
-INPUT_PATH="${PROJECT_ROOT}/data/ABCD/fc_matrix/individual_z"
-SUBLIST_FILE="${PROJECT_ROOT}/data/ABCD/table/pfactor_sublist.txt"
-OUTPUT_PATH="${PROJECT_ROOT}/data/ABCD/pfactor_fc_vector"
-DATASET_NAME="ABCD"
+INPUT_PATH="${PROJECT_ROOT}/data/HCPD/fc_matrix/individual_z"
+SUBLIST_FILE="${PROJECT_ROOT}/data/HCPD/table/sublist.txt"
+OUTPUT_PATH="${PROJECT_ROOT}/data/HCPD/fc_vector"
+DATASET_NAME="HCPD"
 
 # Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_PATH}"
