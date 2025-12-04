@@ -73,7 +73,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(Subjects_Data_List, Subjects_Score, Covariat
         script.write('#SBATCH --job-name=prediction' + str(i) + '\n');
         script.write('#SBATCH --nodes=1\n');
         script.write('#SBATCH --ntasks=1\n');
-        script.write('#SBATCH --cpus-per-task=4\n');
+        script.write('#SBATCH --cpus-per-task=9\n');
         # script.write('#SBATCH --mem-per-cpu 5G\n');
         script.write('#SBATCH -p q_cn\n');
         # script.write('#SBATCH -q high_c\n');
@@ -181,7 +181,7 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
                 df['Covariate_'+str(k)] = Covariates_train[:,k]
                 df_test['Covariate_'+str(k)] = Covariates_test[:,k]
             all_Corvariate_0 =  sorted(set(Covariates[:, 0]).union(set(Covariates[:, 0])))
-            if Covariates_Quantity > 3:
+            if Covariates_Quantity >= 3:
                 all_Corvariate_2 =  sorted(set(Covariates[:, 2]).union(set(Covariates[:, 2])))
             # Construct formula
             Formula = 'Data ~ Covariate_0'

@@ -124,23 +124,16 @@ for targetStr in targetStr_list:
     print(f"协变量文件列数: {Covariates_filtered.shape[1]}")
     print(f"可用列: {list(Covariates_filtered.columns)}")
     
-    # ABCD: 选择sex, motion, site列，保持原始数据类型（site是分类变量）
-    # 列索引: [subid, age, sex, meanFD, site] -> 选择 [2, 3, 4] = [sex, meanFD, site]
-    if Covariates_filtered.shape[1] >= 5:
-        Covariates = Covariates_filtered.iloc[:, [2, 3, 4]].values  # sex, motion, site
-        print(f"ABCD协变量形状: {Covariates.shape}")
-        print(f"样本数据类型: {[type(Covariates[i, 0]) for i in range(min(3, len(Covariates)))]}")
-        print(f"样本值: {[Covariates[i, 2] for i in range(min(3, len(Covariates)))]}")  # 显示site值
-    else:
-        print(f"警告: ABCD协变量文件列数不足。期望5列，实际有 {Covariates_filtered.shape[1]} 列")
-        # 回退到可用的列
-        if Covariates_filtered.shape[1] >= 3:
-            Covariates = Covariates_filtered.iloc[:, [1, 2]].values  # age, sex
-        elif Covariates_filtered.shape[1] >= 2:
-            Covariates = Covariates_filtered.iloc[:, [0, 1]].values  # 前两列
-        else:
-            Covariates = Covariates_filtered.values  # 所有列
+    # ABCD: 选择age, sex, motion, site列，保持原始数据类型（site是分类变量）
+    Covariates_selected = Covariates_filtered.iloc[:, [2, 3, 4, 1]].values  # shape: (n_samples, 4) sex motion site age
 
+    site_labels = Covariates_selected[:, 2]  # 提取 site 列
+    site_dict = {site: i for i, site in enumerate(np.unique(site_labels))}
+    Covariates_selected[:, 2] = np.array([site_dict[site] for site in site_labels])
+
+    # 4. 转换为 float 类型（确保可用于回归等数值计算）
+    Covariates = Covariates_selected.astype(float)
+    
     # subID,age,sex,meanFD
     # Range of parameters
     ComponentNumber_Range = np.arange(10) + 1
