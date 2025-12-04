@@ -100,9 +100,28 @@ class DatasetProcessor:
                 
         elif self.dataset_name == 'HCPD':
             # HCPD specific paths
-            base_path = Path('/ibmgpfs/cuizaixu_lab/zhaoshaoling/MSC_data/HCPD/code_xcpd0.7.1rc5_hcpMiniPrepData/final2025/data')
-            self.fmriprep_dirs = [base_path / 'xcpd0.7.1rc5' / 'bids']  # dseg files are in bids
-            self.xcpd_dirs = [base_path / 'xcpd0.7.1rc5' / 'step_2nd_24PcsfGlobal']
+            # Path 1: Original location
+            base_path_1 = Path('/ibmgpfs/cuizaixu_lab/zhaoshaoling/MSC_data/HCPD/code_xcpd0.7.1rc5_hcpMiniPrepData/final2025/data')
+            # Path 2: New location
+            base_path_2 = Path('/ibmgpfs/cuizaixu_lab/congjing/WM_prediction/HCPD/data')
+            
+            self.fmriprep_dirs = [
+                base_path_1 / 'xcpd0.7.1rc5' / 'bids',
+                base_path_2 / 'bids'
+            ]
+            self.xcpd_dirs = [
+                base_path_1 / 'xcpd0.7.1rc5' / 'step_2nd_24PcsfGlobal',
+                base_path_2 / 'step_2nd_24PcsfGlobal'
+            ]
+            
+            # Filter out non-existent paths
+            self.fmriprep_dirs = [p for p in self.fmriprep_dirs if p.exists()]
+            self.xcpd_dirs = [p for p in self.xcpd_dirs if p.exists()]
+            
+            if not self.fmriprep_dirs:
+                logger.warning(f"No fmriprep/bids directories found for HCPD")
+            if not self.xcpd_dirs:
+                logger.warning(f"No xcpd directories found for HCPD")
             
         elif self.dataset_name == 'CCNP':
             # CCNP has dual paths
@@ -288,7 +307,7 @@ class DatasetProcessor:
         if self.dataset_name == 'PNC':
             xcpd_steps = ['step_2nd_24PcsfGlobal']
         elif self.dataset_name == 'HCPD':
-            xcpd_steps = ['step_2nd_24PcsfGlobal']
+            xcpd_steps = ['']
         elif self.dataset_name == 'CCNP':
             xcpd_steps = ['step_2nd_24PcsfGlobal']
         elif self.dataset_name == 'EFNY':
