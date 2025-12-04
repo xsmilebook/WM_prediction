@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 """
-python src/results_vis/compute_haufe_median.py --dataset ABCD --project_folder /path/to/prediction/results --targets nihtbx_cryst_uncorrected
+python compute_haufe_median.py --dataset ABCD --project_folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/prediction --targets nihtbx_cryst_uncorrected
 """
 
 def get_dimension_from_tril_len(length):

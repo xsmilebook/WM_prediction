@@ -39,7 +39,8 @@ def partial_corr(x, y, z):
 # ==========================================
 # 在这里定义你的目标变量列表 (targetStr_List)
 # ==========================================
-targetStr_List = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
+# targetStr_List = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
+targetStr_List = ['General','Ext','ADHD','Int']
 
 targetStr_total = targetStr_List # 保持变量名与原逻辑一致
 num_targets = len(targetStr_total)
