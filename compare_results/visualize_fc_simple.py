@@ -3,18 +3,34 @@
 """
 Simplified visualization of FC matrix comparison
 command:
-python  .\\src\\compare_results\\visualize_fc_simple.py  --contrast_dir .\\data\\ABCD\\fc_matrix\\individual --individual_dir .\\data\\ABCD\\fc_matrix\\contrast --subject_id sub-NDARINV00HEV6HB --output_dir .\\data\\ABCD\\fc_compare
+python  .\\src\\compare_results\\visualize_fc_simple.py  --contrast_dir .\\data\\ABCD\\fc_matrix\\contrast --individual_dir .\\data\\ABCD\\fc_matrix\\individual --subject_id sub-NDARINV00HEV6HB --output_dir .\\data\\ABCD\\fc_compare
+python  .\\src\\compare_results\\visualize_fc_simple.py  --contrast_dir .\\data\\HCPD\\fc_matrix\\contrast --individual_dir .\\data\\HCPD\\fc_matrix\\individual --subject_id sub-HCD0008117 --output_dir .\\data\\HCPD\\fc_compare
+python  .\\src\\compare_results\\visualize_fc_simple.py  --contrast_dir .\\data\\EFNY\\fc_matrix\\contrast --individual_dir .\\data\\EFNY\\fc_matrix\\individual --subject_id sub-THU20250927772WJZX --output_dir .\\data\\EFNY\\fc_compare
 """
 
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+import scipy.io
 
 def load_matrix(file_path):
     """Load matrix file"""
     try:
-        return np.load(file_path)
+        file_path = Path(file_path)
+        if file_path.suffix == '.npy':
+            return np.load(file_path)
+        elif file_path.suffix == '.mat':
+            mat = scipy.io.loadmat(file_path)
+            # Find first variable that is not a meta variable (starts with __)
+            for key in mat:
+                if not key.startswith('__'):
+                    return mat[key]
+            print(f"No valid variable found in {file_path}")
+            return None
+        else:
+            print(f"Unsupported file format: {file_path}")
+            return None
     except Exception as e:
         print(f"Failed to load {file_path}: {e}")
         return None
@@ -158,7 +174,14 @@ def main():
     individual_search_dir = subject_individual_dir if subject_individual_dir.exists() else individual_dir
     
     contrast_files = list(contrast_search_dir.glob("*.npy"))
+    if not contrast_files:
+        print("No .npy files found in contrast directory, checking for .mat files...")
+        contrast_files = list(contrast_search_dir.glob("*.mat"))
+
     individual_files = list(individual_search_dir.glob("*.npy"))
+    if not individual_files:
+        print("No .npy files found in individual directory, checking for .mat files...")
+        individual_files = list(individual_search_dir.glob("*.mat"))
     
     # Filter out timeseries files
     contrast_matrices = [f for f in contrast_files if 'timeseries' not in f.name]
@@ -175,27 +198,36 @@ def main():
     for f in individual_matrices:
         print(f"  {f.name}")
     
-    # Match matrix pairs - find files with same names in both directories
+    # Match matrix pairs - find files with same type (GG, GW, WW)
     matches = []
     
     # For each file in contrast directory, find matching file in individual directory
     for contrast_file in contrast_matrices:
-        # Look for file with same name in individual directory
-        matching_individual = [f for f in individual_matrices if f.name == contrast_file.name]
+        # Determine type
+        if 'GG' in contrast_file.name:
+            matrix_type = 'GG'
+        elif 'GW' in contrast_file.name:
+            matrix_type = 'GW'
+        elif 'WW' in contrast_file.name:
+            matrix_type = 'WW'
+        else:
+            continue
+
+        # Look for individual file with same type
+        candidates = [f for f in individual_matrices if matrix_type in f.name]
         
-        if matching_individual:
-            # Extract matrix type from filename (GG, GW, or WW)
-            if 'GG' in contrast_file.name:
-                matrix_type = 'GG'
-            elif 'GW' in contrast_file.name:
-                matrix_type = 'GW'
-            elif 'WW' in contrast_file.name:
-                matrix_type = 'WW'
-            else:
-                continue
-                
-            matches.append((contrast_file, matching_individual[0], matrix_type, matrix_type))
-            print(f"Matched pair: {contrast_file.name} vs {matching_individual[0].name} (type: {matrix_type})")
+        # Filter by subject_id if present in filename to avoid mismatches if multiple files exist
+        subject_candidates = [f for f in candidates if args.subject_id in f.name]
+        
+        final_match = None
+        if subject_candidates:
+            final_match = subject_candidates[0]
+        elif candidates:
+            final_match = candidates[0]
+            
+        if final_match:
+            matches.append((contrast_file, final_match, matrix_type, matrix_type))
+            print(f"Matched pair: {contrast_file.name} vs {final_match.name} (type: {matrix_type})")
     
     if not matches:
         print("Error: No matching matrix pairs found")

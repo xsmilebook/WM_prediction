@@ -5,7 +5,7 @@
 Compare atlas files between contrast_abcd and resliced_abcd directories
 
 command:
-python d:/code/WM_prediction/src/conn_matrix/compare_atlas_files.py --contrast_dir d:/code/WM_prediction/data/atlas/contrast_abcd --resliced_dir d:/code/WM_prediction/data/atlas/resliced_abcd --output_dir ./atlas_comparison 
+python d:/code/WM_prediction/src/compare_results/compare_atlas_files.py --contrast_dir d:/code/WM_prediction/data/atlas/contrast_hcpd --resliced_dir d:/code/WM_prediction/data/atlas/resliced_hcpd --output_dir ./atlas_comparison 
 """
 
 import argparse
@@ -26,7 +26,7 @@ def load_nifti(file_path):
 
 def find_matching_files(contrast_dir, resliced_dir):
     """根据文件内容找到匹配的文件对"""
-    contrast_files = list(contrast_dir.glob("*.nii.gz"))
+    contrast_files = list(contrast_dir.glob("*.nii"))
     resliced_files = list(resliced_dir.glob("*.nii.gz"))
     
     matches = []
@@ -38,8 +38,8 @@ def find_matching_files(contrast_dir, resliced_dir):
     
     # 手动匹配文件对
     file_mappings = [
-        ("rICBM_DTI_81_WMPM_60p_FMRIB58_resample.nii.gz", "rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz"),
-        ("Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resample.nii.gz", "Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz")
+        ("rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii", "rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz"),
+        ("Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii", "Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz")
     ]
     
     for contrast_name, resliced_name in file_mappings:
