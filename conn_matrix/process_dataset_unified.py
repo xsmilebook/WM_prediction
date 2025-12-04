@@ -346,9 +346,14 @@ class DatasetProcessor:
             if not found:
                 # Try recursive search in all xcpd directories
                 for xcpd_dir in self.xcpd_dirs:
-                    files = list(xcpd_dir.rglob(f'*{pattern}'))
+                    # Always include subject ID in the search pattern to avoid matching other subjects
+                    # First try starting with subject ID (standard BIDS)
+                    files = list(xcpd_dir.rglob(f'{self.subject_id}*{pattern}'))
+                    
                     if not files:
-                        files = list(xcpd_dir.rglob(f'{self.subject_id}*{pattern}'))
+                        # Try matching with subject ID anywhere in the name
+                        files = list(xcpd_dir.rglob(f'*{self.subject_id}*{pattern}'))
+                    
                     if files:
                         func_files.append(files[0])
                         logger.info(f"Found functional file via recursive search: {files[0]} in {xcpd_dir}")
