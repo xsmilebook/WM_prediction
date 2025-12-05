@@ -100,6 +100,36 @@ def main():
     print(f"Project Folder: {args.project_folder}")
     print(f"Targets: {args.targets}")
     
+    # Load Atlas Info for sorting
+    sort_idx_gm, sort_idx_wm = None, None
+    try:
+        # Assuming script is in src/results_vis/
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        # Go up to project root: src/results_vis -> src -> WM_prediction
+        project_root = os.path.dirname(os.path.dirname(script_dir))
+        atlas_dir = os.path.join(project_root, 'data', 'atlas')
+        
+        schaefer_path = os.path.join(atlas_dir, 'Schaefer100_info.mat')
+        jhu_path = os.path.join(atlas_dir, 'JHU68_info.mat')
+        
+        if os.path.exists(schaefer_path) and os.path.exists(jhu_path):
+            schaefer_info = sio.loadmat(schaefer_path)
+            jhu_info = sio.loadmat(jhu_path)
+            
+            # MATLAB 1-based -> Python 0-based
+            if 'regionID_sortedByNetwork' in schaefer_info:
+                sort_idx_gm = schaefer_info['regionID_sortedByNetwork'].flatten() - 1
+            if 'regionID_sortedByTracts' in jhu_info:
+                sort_idx_wm = jhu_info['regionID_sortedByTracts'].flatten() - 1
+            
+            if sort_idx_gm is not None and sort_idx_wm is not None:
+                print(f"Loaded Atlas sorting info. GM: {len(sort_idx_gm)}, WM: {len(sort_idx_wm)}")
+        else:
+            print(f"Warning: Atlas files not found at {atlas_dir}. Sorting will be skipped.")
+            
+    except Exception as e:
+        print(f"Warning: Failed to load Atlas info: {e}")
+
     # Enforce processing order to ensure dimensions are found for GWFC
     fc_types = ['GGFC', 'WWFC', 'GWFC']
     
@@ -154,6 +184,21 @@ def main():
                 
                 # Reconstruct matrix
                 recon_matrix, dim_info = reconstruct_matrix(median_vector, fc_type, dims)
+                
+                # Apply sorting if available and dimensions match
+                if sort_idx_gm is not None and sort_idx_wm is not None:
+                    try:
+                        if fc_type == 'GGFC' and recon_matrix.shape == (100, 100) and len(sort_idx_gm) == 100:
+                            recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_gm]
+                            print("    Reordered GGFC matrix by network.")
+                        elif fc_type == 'WWFC' and recon_matrix.shape == (68, 68) and len(sort_idx_wm) == 68:
+                            recon_matrix = recon_matrix[sort_idx_wm][:, sort_idx_wm]
+                            print("    Reordered WWFC matrix by tracts.")
+                        elif fc_type == 'GWFC' and recon_matrix.shape == (100, 68) and len(sort_idx_gm) == 100 and len(sort_idx_wm) == 68:
+                            recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_wm]
+                            print("    Reordered GWFC matrix by network/tracts.")
+                    except Exception as sort_e:
+                        print(f"    Warning: Failed to reorder matrix: {sort_e}")
                 
                 # Update dimensions
                 if fc_type == 'GGFC':
