@@ -2,8 +2,8 @@
 #SBATCH --job-name=submit
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH -p q_cn
+#SBATCH --cpus-per-task=4
+#SBATCH -p q_fat_c
 #SBATCH -o /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/predict/HCPD/age/job.%j.out
 #SBATCH -e /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/predict/HCPD/age/job.%j.error.txt
 
