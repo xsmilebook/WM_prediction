@@ -85,37 +85,18 @@ def reconstruct_matrix(vector, fc_type, dims=None):
         
     return None, None
 
-def process_age_across_datasets(project_root: str, datasets: list = None):
+def process_age_across_datasets(project_root, sort_idx_gm=None, sort_idx_wm=None, num_cv=101, num_folds=5):
     """
-    Process age target across multiple datasets (EFNY, ABCD, PNC, HCPD) 
-    and create combined visualization.
+    Process age target across EFNY, ABCD, PNC, HCPD datasets and combine results.
     """
-    if datasets is None:
-        datasets = ['EFNY', 'ABCD', 'PNC', 'HCPD']
+    datasets = ["EFNY", "ABCD", "PNC", "HCPD"]
+    target_str = "age"
     
     print(f"Processing age target across datasets: {datasets}")
     
-    # Load Atlas Info for sorting
-    sort_idx_gm, sort_idx_wm = None, None
-    try:
-        atlas_dir = os.path.join(project_root, 'data', 'atlas')
-        schaefer_path = os.path.join(atlas_dir, 'Schaefer100_info.mat')
-        jhu_path = os.path.join(atlas_dir, 'JHU68_info.mat')
-        
-        if os.path.exists(schaefer_path) and os.path.exists(jhu_path):
-            schaefer_info = sio.loadmat(schaefer_path)
-            jhu_info = sio.loadmat(jhu_path)
-            
-            # MATLAB 1-based -> Python 0-based
-            if 'regionID_sortedByNetwork' in schaefer_info:
-                sort_idx_gm = schaefer_info['regionID_sortedByNetwork'].flatten() - 1
-            if 'regionID_sortedByTracts' in jhu_info:
-                sort_idx_wm = jhu_info['regionID_sortedByTracts'].flatten() - 1
-            
-            if sort_idx_gm is not None and sort_idx_wm is not None:
-                print(f"Loaded Atlas sorting info. GM: {len(sort_idx_gm)}, WM: {len(sort_idx_wm)}")
-    except Exception as e:
-        print(f"Warning: Failed to load Atlas info: {e}")
+    # Store all Haufe vectors for each FC type across all datasets
+    all_haufe_by_fc = {'GGFC': [], 'WWFC': [], 'GWFC': []}
+    dataset_counts = {}
     
     # Process each FC type
     fc_types = ['GGFC', 'WWFC', 'GWFC']
@@ -131,17 +112,17 @@ def process_age_across_datasets(project_root: str, datasets: list = None):
             print(f"  Processing {dataset}...")
             
             # Construct base folder path for this dataset
-            base_folder = os.path.join(project_root, 'data', dataset, 'prediction', 'age', 'RegressCovariates_RandomCV')
+            base_folder = os.path.join(project_root, 'data', dataset, 'prediction', target_str, 'RegressCovariates_RandomCV')
             
             if not os.path.exists(base_folder):
                 print(f"    Warning: Base folder not found for {dataset}: {base_folder}. Skipping.")
                 continue
-                
+                    
             dataset_vectors = []
             
             # Iterate over all CV runs and folds
-            for i in range(101):  # 101 CV runs
-                for k in range(5):  # 5 folds
+            for i in range(num_cv):  # 101 CV runs
+                for k in range(num_folds):  # 5 folds
                     mat_path = os.path.join(base_folder, f"Time_{i}", fc_type, f"Fold_{k}_Score.mat")
                     
                     if os.path.isfile(mat_path):
@@ -191,13 +172,13 @@ def process_age_across_datasets(project_root: str, datasets: list = None):
                 try:
                     if fc_type == 'GGFC' and recon_matrix.shape == (100, 100) and len(sort_idx_gm) == 100:
                         recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_gm]
-                        print(f"    Reordered GGFC matrix by network.")
+                        print("    Reordered GGFC matrix by network.")
                     elif fc_type == 'WWFC' and recon_matrix.shape == (68, 68) and len(sort_idx_wm) == 68:
                         recon_matrix = recon_matrix[sort_idx_wm][:, sort_idx_wm]
-                        print(f"    Reordered WWFC matrix by tracts.")
+                        print("    Reordered WWFC matrix by tracts.")
                     elif fc_type == 'GWFC' and recon_matrix.shape == (100, 68) and len(sort_idx_gm) == 100 and len(sort_idx_wm) == 68:
                         recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_wm]
-                        print(f"    Reordered GWFC matrix by network/tracts.")
+                        print("    Reordered GWFC matrix by network/tracts.")
                 except Exception as sort_e:
                     print(f"    Warning: Failed to reorder matrix: {sort_e}")
             
@@ -223,7 +204,6 @@ def process_age_across_datasets(project_root: str, datasets: list = None):
                 plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val, aspect='auto')
                 plt.colorbar(label='Haufe Weight', fraction=0.046, pad=0.04)
             else:
-                # Original visualization for GGFC and WWFC
                 plt.figure(figsize=(10, 8))
                 max_val = np.max(np.abs(recon_matrix))
                 plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val)
@@ -245,28 +225,60 @@ def process_age_across_datasets(project_root: str, datasets: list = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Extract and reconstruct Haufe weights from CV results.")
-    parser.add_argument("--dataset", type=str, required=True, help="Dataset name (e.g. ABCD, HCPD)")
-    parser.add_argument("--project_folder", type=str, required=True, help="Base project folder containing prediction results")
+    parser.add_argument("--dataset", type=str, help="Dataset name (e.g. ABCD, HCPD)")
+    parser.add_argument("--project_folder", type=str, help="Base project folder containing prediction results")
     parser.add_argument("--targets", type=str, nargs='+', 
                         default=["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"], 
                         help="List of target variables")
     parser.add_argument("--num_cv", type=int, default=101, help="Number of CV runs (default: 101)")
     parser.add_argument("--num_folds", type=int, default=5, help="Number of folds (default: 5)")
-    parser.add_argument("--age_combined", action='store_true', help="Process age target across all datasets (EFNY, ABCD, PNC, HCPD)")
+    parser.add_argument("--age_combined", action="store_true", help="Process age target across all datasets (EFNY, ABCD, PNC, HCPD)")
     
     args = parser.parse_args()
     
+    if args.age_combined:
+        print("Running in age_combined mode - processing across all datasets")
+        # Load Atlas info for sorting
+        sort_idx_gm, sort_idx_wm = None, None
+        try:
+            # Assuming script is in src/results_vis/
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up to project root: src/results_vis -> src -> WM_prediction
+            project_root = os.path.dirname(os.path.dirname(script_dir))
+            atlas_dir = os.path.join(project_root, 'data', 'atlas')
+            
+            schaefer_path = os.path.join(atlas_dir, 'Schaefer100_info.mat')
+            jhu_path = os.path.join(atlas_dir, 'JHU68_info.mat')
+            
+            if os.path.exists(schaefer_path) and os.path.exists(jhu_path):
+                schaefer_info = sio.loadmat(schaefer_path)
+                jhu_info = sio.loadmat(jhu_path)
+                
+                # MATLAB 1-based -> Python 0-based
+                if 'regionID_sortedByNetwork' in schaefer_info:
+                    sort_idx_gm = schaefer_info['regionID_sortedByNetwork'].flatten() - 1
+                if 'regionID_sortedByTracts' in jhu_info:
+                    sort_idx_wm = jhu_info['regionID_sortedByTracts'].flatten() - 1
+                
+                if sort_idx_gm is not None and sort_idx_wm is not None:
+                    print(f"Loaded Atlas sorting info. GM: {len(sort_idx_gm)}, WM: {len(sort_idx_wm)}")
+            else:
+                print(f"Warning: Atlas files not found at {atlas_dir}. Sorting will be skipped.")
+                
+        except Exception as e:
+            print(f"Warning: Failed to load Atlas info: {e}")
+        
+        process_age_across_datasets(project_root, sort_idx_gm, sort_idx_wm, args.num_cv, args.num_folds)
+        return
+    
+    # 验证参数逻辑
+    if not args.dataset or not args.project_folder:
+        parser.error("--dataset and --project_folder are required when not using --age_combined")
+    
+    # 原有的单数据集处理逻辑
     print(f"Dataset: {args.dataset}")
     print(f"Project Folder: {args.project_folder}")
     print(f"Targets: {args.targets}")
-    
-    # Handle age combined processing
-    if args.age_combined:
-        # Assuming script is in src/results_vis/
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(os.path.dirname(script_dir))
-        process_age_across_datasets(project_root)
-        return
     
     # Load Atlas Info for sorting
     sort_idx_gm, sort_idx_wm = None, None
