@@ -9,7 +9,7 @@ import warnings
 
 """
 python compute_haufe_median.py --dataset ABCD --project_folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/prediction --targets nihtbx_cryst_uncorrected
-python compute_haufe_median.py --dataset ABCD --project_folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/prediction --targets nihtbx_totalcomp_uncorrected
+python compute_haufe_median.py --age_combined
 """
 
 def get_dimension_from_tril_len(length):
@@ -85,6 +85,164 @@ def reconstruct_matrix(vector, fc_type, dims=None):
         
     return None, None
 
+def process_age_across_datasets(project_root: str, datasets: list = None):
+    """
+    Process age target across multiple datasets (EFNY, ABCD, PNC, HCPD) 
+    and create combined visualization.
+    """
+    if datasets is None:
+        datasets = ['EFNY', 'ABCD', 'PNC', 'HCPD']
+    
+    print(f"Processing age target across datasets: {datasets}")
+    
+    # Load Atlas Info for sorting
+    sort_idx_gm, sort_idx_wm = None, None
+    try:
+        atlas_dir = os.path.join(project_root, 'data', 'atlas')
+        schaefer_path = os.path.join(atlas_dir, 'Schaefer100_info.mat')
+        jhu_path = os.path.join(atlas_dir, 'JHU68_info.mat')
+        
+        if os.path.exists(schaefer_path) and os.path.exists(jhu_path):
+            schaefer_info = sio.loadmat(schaefer_path)
+            jhu_info = sio.loadmat(jhu_path)
+            
+            # MATLAB 1-based -> Python 0-based
+            if 'regionID_sortedByNetwork' in schaefer_info:
+                sort_idx_gm = schaefer_info['regionID_sortedByNetwork'].flatten() - 1
+            if 'regionID_sortedByTracts' in jhu_info:
+                sort_idx_wm = jhu_info['regionID_sortedByTracts'].flatten() - 1
+            
+            if sort_idx_gm is not None and sort_idx_wm is not None:
+                print(f"Loaded Atlas sorting info. GM: {len(sort_idx_gm)}, WM: {len(sort_idx_wm)}")
+    except Exception as e:
+        print(f"Warning: Failed to load Atlas info: {e}")
+    
+    # Process each FC type
+    fc_types = ['GGFC', 'WWFC', 'GWFC']
+    
+    for fc_type in fc_types:
+        print(f"\nProcessing {fc_type} across all datasets...")
+        
+        all_haufe_vectors = []
+        dataset_counts = {}
+        
+        # Collect data from all datasets
+        for dataset in datasets:
+            print(f"  Processing {dataset}...")
+            
+            # Construct base folder path for this dataset
+            base_folder = os.path.join(project_root, 'data', dataset, 'prediction', 'age', 'RegressCovariates_RandomCV')
+            
+            if not os.path.exists(base_folder):
+                print(f"    Warning: Base folder not found for {dataset}: {base_folder}. Skipping.")
+                continue
+                
+            dataset_vectors = []
+            
+            # Iterate over all CV runs and folds
+            for i in range(101):  # 101 CV runs
+                for k in range(5):  # 5 folds
+                    mat_path = os.path.join(base_folder, f"Time_{i}", fc_type, f"Fold_{k}_Score.mat")
+                    
+                    if os.path.isfile(mat_path):
+                        try:
+                            mat_data = sio.loadmat(mat_path)
+                            if 'w_Brain_Haufe' in mat_data:
+                                vec = mat_data['w_Brain_Haufe'].flatten()
+                                dataset_vectors.append(vec)
+                                all_haufe_vectors.append(vec)
+                        except Exception as e:
+                            print(f"    Error reading {mat_path}: {e}")
+            
+            dataset_counts[dataset] = len(dataset_vectors)
+            print(f"    Loaded {len(dataset_vectors)} vectors from {dataset}")
+        
+        if not all_haufe_vectors:
+            print(f"  No data found for {fc_type} across all datasets. Skipping.")
+            continue
+            
+        # Stack and compute median across all datasets
+        try:
+            all_haufe_matrix = np.vstack(all_haufe_vectors)
+            median_vector = np.median(all_haufe_matrix, axis=0)
+            
+            # Reconstruct matrix
+            dims = {}
+            if fc_type == 'GGFC':
+                # For GGFC, we expect 100 regions
+                n = get_dimension_from_tril_len(len(median_vector))
+                if n == 100:
+                    dims['GGFC'] = n
+            elif fc_type == 'WWFC':
+                # For WWFC, we expect 68 regions  
+                n = get_dimension_from_tril_len(len(median_vector))
+                if n == 68:
+                    dims['WWFC'] = n
+            elif fc_type == 'GWFC':
+                # For GWFC, we expect 100x68 = 6800 elements
+                if len(median_vector) == 6800:
+                    dims['GGFC'] = 100
+                    dims['WWFC'] = 68
+            
+            recon_matrix, dim_info = reconstruct_matrix(median_vector, fc_type, dims)
+            
+            # Apply sorting if available and dimensions match
+            if sort_idx_gm is not None and sort_idx_wm is not None:
+                try:
+                    if fc_type == 'GGFC' and recon_matrix.shape == (100, 100) and len(sort_idx_gm) == 100:
+                        recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_gm]
+                        print(f"    Reordered GGFC matrix by network.")
+                    elif fc_type == 'WWFC' and recon_matrix.shape == (68, 68) and len(sort_idx_wm) == 68:
+                        recon_matrix = recon_matrix[sort_idx_wm][:, sort_idx_wm]
+                        print(f"    Reordered WWFC matrix by tracts.")
+                    elif fc_type == 'GWFC' and recon_matrix.shape == (100, 68) and len(sort_idx_gm) == 100 and len(sort_idx_wm) == 68:
+                        recon_matrix = recon_matrix[sort_idx_gm][:, sort_idx_wm]
+                        print(f"    Reordered GWFC matrix by network/tracts.")
+                except Exception as sort_e:
+                    print(f"    Warning: Failed to reorder matrix: {sort_e}")
+            
+            # Save combined results
+            output_dir = os.path.join(project_root, 'results', 'age_combined')
+            os.makedirs(output_dir, exist_ok=True)
+            
+            output_file = os.path.join(output_dir, f"Haufe_Median_age_{fc_type}_combined.mat")
+            sio.savemat(output_file, {
+                'w_Brain_Haufe': median_vector,
+                'w_Brain_Haufe_Matrix': recon_matrix,
+                'dims': dim_info,
+                'dataset_counts': dataset_counts,
+                'total_samples': len(all_haufe_vectors)
+            })
+            print(f"  Saved combined results to {output_file}")
+            
+            # Visualization for combined data
+            if fc_type == 'GWFC':
+                # Square display for GWFC matrix
+                plt.figure(figsize=(10, 10))
+                max_val = np.max(np.abs(recon_matrix))
+                plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val, aspect='auto')
+                plt.colorbar(label='Haufe Weight', fraction=0.046, pad=0.04)
+            else:
+                # Original visualization for GGFC and WWFC
+                plt.figure(figsize=(10, 8))
+                max_val = np.max(np.abs(recon_matrix))
+                plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val)
+                plt.colorbar(label='Haufe Weight')
+            
+            # Create title with dataset counts
+            dataset_info = ", ".join([f"{ds}: {count}" for ds, count in dataset_counts.items()])
+            plt.title(f"Median Haufe Matrix - Age Combined - {fc_type}\n({len(all_haufe_vectors)} total samples from {len(dataset_counts)} datasets)\n{dataset_info}")
+            
+            vis_file = os.path.join(output_dir, f"Haufe_Median_age_{fc_type}_combined.png")
+            plt.savefig(vis_file, dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"  Saved combined visualization to {vis_file}")
+            
+        except Exception as e:
+            print(f"  Error during processing/reconstruction for {fc_type}: {e}")
+            import traceback
+            traceback.print_exc()
+
 def main():
     parser = argparse.ArgumentParser(description="Extract and reconstruct Haufe weights from CV results.")
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name (e.g. ABCD, HCPD)")
@@ -94,12 +252,21 @@ def main():
                         help="List of target variables")
     parser.add_argument("--num_cv", type=int, default=101, help="Number of CV runs (default: 101)")
     parser.add_argument("--num_folds", type=int, default=5, help="Number of folds (default: 5)")
+    parser.add_argument("--age_combined", action='store_true', help="Process age target across all datasets (EFNY, ABCD, PNC, HCPD)")
     
     args = parser.parse_args()
     
     print(f"Dataset: {args.dataset}")
     print(f"Project Folder: {args.project_folder}")
     print(f"Targets: {args.targets}")
+    
+    # Handle age combined processing
+    if args.age_combined:
+        # Assuming script is in src/results_vis/
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(os.path.dirname(script_dir))
+        process_age_across_datasets(project_root)
+        return
     
     # Load Atlas Info for sorting
     sort_idx_gm, sort_idx_wm = None, None
@@ -219,13 +386,21 @@ def main():
                 })
                 print(f"    Saved results to {output_file}")
                 
-                # Visualization
-                plt.figure(figsize=(10, 8))
-                # Use divergent colormap centered at 0
-                max_val = np.max(np.abs(recon_matrix))
-                plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val)
-                plt.colorbar(label='Haufe Weight')
-                plt.title(f"Median Haufe Matrix - {target_str} - {fc_type}\n(Median of {len(all_haufe_vectors)} folds)")
+                # Visualization - Square display for GWFC matrix
+                if fc_type == 'GWFC':
+                    # For GWFC (68x100), create square figure with aspect='auto'
+                    plt.figure(figsize=(10, 10))
+                    max_val = np.max(np.abs(recon_matrix))
+                    plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val, aspect='auto')
+                    plt.colorbar(label='Haufe Weight', fraction=0.046, pad=0.04)
+                    plt.title(f"Median Haufe Matrix - {target_str} - {fc_type}\n(Median of {len(all_haufe_vectors)} folds)")
+                else:
+                    # Original visualization for GGFC and WWFC
+                    plt.figure(figsize=(10, 8))
+                    max_val = np.max(np.abs(recon_matrix))
+                    plt.imshow(recon_matrix, cmap='RdBu_r', vmin=-max_val, vmax=max_val)
+                    plt.colorbar(label='Haufe Weight')
+                    plt.title(f"Median Haufe Matrix - {target_str} - {fc_type}\n(Median of {len(all_haufe_vectors)} folds)")
                 
                 vis_file = os.path.join(output_dir, f"Haufe_Median_{fc_type}.png")
                 plt.savefig(vis_file, dpi=300, bbox_inches='tight')
