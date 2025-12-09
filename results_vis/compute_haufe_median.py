@@ -87,9 +87,9 @@ def reconstruct_matrix(vector, fc_type, dims=None):
 
 def process_age_across_datasets(project_root, sort_idx_gm=None, sort_idx_wm=None, num_cv=101, num_folds=5):
     """
-    Process age target across EFNY, ABCD, PNC, HCPD datasets and combine results.
+    Process age target across EFNY, CCNP, PNC, HCPD datasets and combine results.
     """
-    datasets = ["EFNY", "ABCD", "PNC", "HCPD"]
+    datasets = ["EFNY", "CCNP", "PNC", "HCPD"]
     target_str = "age"
     
     print(f"Processing age target across datasets: {datasets}")
@@ -232,7 +232,7 @@ def main():
                         help="List of target variables")
     parser.add_argument("--num_cv", type=int, default=101, help="Number of CV runs (default: 101)")
     parser.add_argument("--num_folds", type=int, default=5, help="Number of folds (default: 5)")
-    parser.add_argument("--age_combined", action="store_true", help="Process age target across all datasets (EFNY, ABCD, PNC, HCPD)")
+    parser.add_argument("--age_combined", action="store_true", help="Process age target across all datasets (EFNY, CCNP, PNC, HCPD)")
     
     args = parser.parse_args()
     
