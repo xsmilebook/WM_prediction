@@ -9,7 +9,7 @@ from sklearn import preprocessing
 from sklearn import cross_decomposition
 from joblib import Parallel, delayed
 import statsmodels.formula.api as sm
-CodesPath = '/ibmgpfs/cuizaixu_lab/congjing/WM_prediction/HCPD/code/4th_prediction/s02_PLSprediction/nosmooth';
+CodesPath = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/test_confounds_regress';
  
 def PLSr1_KFold_RandomCV_MultiTimes(Subjects_Data_List, Subjects_Score, Covariates, Fold_Quantity, ComponentNumber_Range, CVRepeatTimes, ResultantFolder, Parallel_Quantity, Permutation_Flag, RandIndex_File_List=''):
     """
@@ -73,9 +73,9 @@ def PLSr1_KFold_RandomCV_MultiTimes(Subjects_Data_List, Subjects_Score, Covariat
         script.write('#SBATCH --job-name=HCPD' + str(i) + '\n');
         script.write('#SBATCH --nodes=1\n');
         script.write('#SBATCH --ntasks=1\n');
-        script.write('#SBATCH --cpus-per-task=2\n');
+        script.write('#SBATCH --cpus-per-task=1\n');
         # script.write('#SBATCH --mem-per-cpu 5G\n');
-        script.write('#SBATCH -p q_cn\n');
+        script.write('#SBATCH -p q_fat_c\n');
         # script.write('#SBATCH -q high_c\n');
         script.write('#SBATCH -o ' + ResultantFolder_TimeI + '/job.%j.out\n');
         script.write('#SBATCH -e ' + ResultantFolder_TimeI + '/job.%j.error.txt\n\n');
@@ -262,7 +262,16 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
 
             Weight = clf.coef_ / np.sqrt(np.sum(clf.coef_ **2))
             ################# this is the added#############################
-            Weight_Haufe = np.dot(np.cov(np.transpose(Subjects_Data_train_List[conn_index])), clf.coef_);
+            # Fix shape alignment: ensure clf.coef_ is compatible with (n_features, n_features) covariance matrix
+            coef_vector = clf.coef_
+            # If shape is (1, n_features), transpose to (n_features, 1)
+            if coef_vector.ndim == 2 and coef_vector.shape[0] == 1 and coef_vector.shape[1] > 1:
+                coef_vector = coef_vector.T
+            # If shape is (n_features,), reshape to (n_features, 1)
+            elif coef_vector.ndim == 1:
+                coef_vector = coef_vector.reshape(-1, 1)
+            
+            Weight_Haufe = np.dot(np.cov(np.transpose(Subjects_Data_train_List[conn_index])), coef_vector);
             Weight_Haufe = Weight_Haufe / np.sqrt(np.sum(Weight_Haufe ** 2));
             ############################################################
             Fold_J_result = {'Index':Fold_J_Index, 'Test_Score':Subjects_Score_test, 'Predict_Score':Fold_J_Score, 'Corr':Fold_J_Corr, 'MAE':Fold_J_MAE, 'ComponentNumber':Optimal_ComponentNumber_List[conn_index], 'Inner_Corr':Inner_Corr_List[conn_index], 'Inner_MAE_inv':Inner_MAE_inv_List[conn_index], 'w_Brain':Weight, 'w_Brain_Haufe': Weight_Haufe}

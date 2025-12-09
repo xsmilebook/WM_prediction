@@ -41,13 +41,13 @@ def partial_corr(x, y, z):
 # ==========================================
 # targetStr_List = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
 # targetStr_List = ['General','Ext','ADHD','Int']
-targetStr_List = ['age']
+targetStr_List = ['interview_age']
 
 targetStr_total = targetStr_List # 保持变量名与原逻辑一致
 num_targets = len(targetStr_total)
 
 # Project Folder
-ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction'
+ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/test_confounds_regress'
 
 num_cv_runs = 101  # Time_0 to Time_100
 num_folds = 5      # Fold_0 to Fold_4

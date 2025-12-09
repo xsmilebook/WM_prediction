@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH -p q_fat_c
 #SBATCH -q high_c
-#SBATCH -o /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/HCPD/code/4th_prediction/s02_prediction/nosmooth/job.%j.out
-#SBATCH -e /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/HCPD/code/4th_prediction/s02_prediction/nosmooth/job.%j.error.txt
+#SBATCH -o /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/predict/HCPD/age_test/job.%j.out
+#SBATCH -e /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/predict/HCPD/age_test/job.%j.error.txt
 
-python /ibmgpfs/cuizaixu_lab/congjing/WM_prediction/HCPD/code/4th_prediction/s02_PLSprediction/nosmooth/Step_1st_Prediction_OverallPsyFactor_RandomCV_HCPD.py
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/test_confounds_regress/Step_1st_Prediction_OverallPsyFactor_RandomCV_HCPD.py
