@@ -183,15 +183,24 @@ def PLSr1_KFold_RandomCV(Subjects_Data_List, Subjects_Score, Covariates, Fold_Qu
             all_Corvariate_0 =  sorted(set(Covariates[:, 0]).union(set(Covariates[:, 0])))
             if Covariates_Quantity >= 3:
                 all_Corvariate_2 =  sorted(set(Covariates[:, 2]).union(set(Covariates[:, 2])))
-            # Construct formula
-            Formula = 'Data ~ Covariate_0'
-
-            for k in np.arange(Covariates_Quantity - 1) + 1:
-                if k==0 or k==2: #0 is sex, 2 is the site
-                    Formula = Formula + ' + C(Covariate_' + str(k)  + ', levels=all_Corvariate_' + str(k) + ')'
-                else:
-                    Formula = Formula + ' + Covariate_' + str(k)
             
+            # Construct formula
+            Formula = 'Data'
+            for k in np.arange(Covariates_Quantity):
+                term = ''
+                # 0 is sex, 2 is site - hardcoded but matches current inputs
+                if k == 0 or k == 2: 
+                    # Get all levels from the full dataset for consistent encoding
+                    all_levels = sorted(set(Covariates[:, k]))
+                    term = f'C(Covariate_{k}, levels={all_levels})'
+                else:
+                    term = f'Covariate_{k}'
+                
+                if k == 0:
+                    Formula += f' ~ {term}'
+                else:
+                    Formula += f' + {term}'
+
             for k in np.arange(Features_Quantity_List[conn_index]):
                 df['Data'] = Subjects_Data_train_List[conn_index][:,k]
                 df = pd.DataFrame(df)
