@@ -35,12 +35,12 @@ label_files_all = pd.read_csv(labelpath)
 dimention = targetStr 
 label = label_files_all[dimention]
 y_label = np.array(label)
+y_label = y_label / 12
 OverallPsyFactor = y_label
 
 # 3. covariates  
 covariatespath = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/table/test_confounds_regress/HCPD_covariates_531.csv';
 Covariates = pd.read_csv(covariatespath, header=0)
-Covariates.iloc[:, 2] = Covariates.iloc[:, 2] / 12
 Covariates = Covariates.values
 Covariates = Covariates[:, [1,2,3]].astype(float) # sex, motion
 # subID,age,sex,meanFD

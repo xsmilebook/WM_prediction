@@ -57,8 +57,7 @@ base_path = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}'
 outFolder = f'{base_path}/prediction/{targetStr}'
 os.makedirs(outFolder, exist_ok=True)
 
-# 添加sublist路径配置
-sublist_path = f'{base_path}/table/sublist.txt'  # 假设sublist文件名为sublist.txt
+sublist_path = f'{base_path}/table/sublist.txt'
 
 # Import data
 # 1. atlas loading - 向量文件已根据sublist生成，直接使用
@@ -158,10 +157,7 @@ if dataset == "HCPD":
     print(f"站点信息: {sorted(set(Covariates[:, 2])) if Covariates.shape[1] > 2 else 'No site info'}")
     print(f"性别分布: {np.unique(Covariates[:, 1] if Covariates.shape[1] > 1 else 'No sex info')}")
 
-# 检查是否有足够的列用于协变量
-if Covariates.shape[1] <= 4:
-    Covariates = Covariates[:, [2, 3]].astype(float)  # 使用前两列
-elif dataset == "HCPD":
+if dataset == "HCPD":
     # HCPD: 选择sex, motion, site列，处理嵌套的numpy数组
     Covariates_selected = Covariates[:, [2, 3, 4]]  # sex, motion, site
     # convert site string to number
