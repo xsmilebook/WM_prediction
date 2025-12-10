@@ -73,7 +73,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(Subjects_Data_List, Subjects_Score, Covariat
         script.write('#SBATCH --job-name=HCPD' + str(i) + '\n');
         script.write('#SBATCH --nodes=1\n');
         script.write('#SBATCH --ntasks=1\n');
-        script.write('#SBATCH --cpus-per-task=1\n');
+        script.write('#SBATCH --cpus-per-task=2\n');
         # script.write('#SBATCH --mem-per-cpu 5G\n');
         script.write('#SBATCH -p q_fat_c\n');
         # script.write('#SBATCH -q high_c\n');

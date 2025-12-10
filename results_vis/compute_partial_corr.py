@@ -47,7 +47,7 @@ targetStr_total = targetStr_List # 保持变量名与原逻辑一致
 num_targets = len(targetStr_total)
 
 # Project Folder
-ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/test_confounds_regress'
+ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/test_confounds_regress_fix_randindex'
 
 num_cv_runs = 101  # Time_0 to Time_100
 num_folds = 5      # Fold_0 to Fold_4

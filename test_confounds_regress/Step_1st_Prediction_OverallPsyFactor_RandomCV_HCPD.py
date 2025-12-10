@@ -3,12 +3,13 @@ import scipy.io as sio
 import numpy as np
 import pandas as pd
 import os
+import glob
 import sys
 sys.path.append('/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/test_confounds_regress');
 import PLSr1_CZ_Random_RegressCovariates
 
 targetStr = 'interview_age'
-outFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/test_confounds_regress/'+ targetStr
+outFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/test_confounds_regress_age_year_fix_randindex/'+ targetStr
 
 # Import data
 # 1. atlas loading
@@ -39,6 +40,7 @@ OverallPsyFactor = y_label
 # 3. covariates  
 covariatespath = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/table/test_confounds_regress/HCPD_covariates_531.csv';
 Covariates = pd.read_csv(covariatespath, header=0)
+Covariates.iloc[:, 2] = Covariates.iloc[:, 2] / 12
 Covariates = Covariates.values
 Covariates = Covariates[:, [1,2,3]].astype(float) # sex, motion
 # subID,age,sex,meanFD
@@ -48,9 +50,19 @@ FoldQuantity = 5
 Parallel_Quantity = 1
 CVtimes = 101
 
+rand_root = r'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/HCPD/prediction/age/RegressCovariates_RandomCV'
+
+# 2) 找出所有 Time_i 里的 RandIndex.mat
+randindex_files = sorted(
+    glob.glob(os.path.join(rand_root, 'Time_*', 'RandIndex.mat')),
+    key=lambda x: int(os.path.basename(os.path.dirname(x)).split('_')[-1])  # Time_i -> i
+)
+
+print(f'找到 {len(randindex_files)} 份 RandIndex')
+
 # Predict
 ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
-PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
+PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0, randindex_files)
 
 # Permutation
 # ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';
