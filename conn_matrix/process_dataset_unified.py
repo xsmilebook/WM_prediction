@@ -62,6 +62,8 @@ class DatasetProcessor:
         self.mask_output_dir = Path(mask_output_dir)
         self.fc_output_dir = Path(fc_output_dir)
         self.z_output_dir = Path(z_output_dir)
+        self.selected_fmriprep_dir: Optional[Path] = None
+        self.selected_xcpd_dir: Optional[Path] = None
         
         if self.dataset_name not in self.DATASET_CONFIGS:
             raise ValueError(f"Unsupported dataset: {dataset_name}. Supported: {list(self.DATASET_CONFIGS.keys())}")
@@ -70,6 +72,32 @@ class DatasetProcessor:
         
         # Setup paths based on dataset-specific structure
         self._setup_dataset_paths()
+
+    def _select_root_from_fmriprep_dir(self, fmriprep_dir: Path):
+        if self.dataset_name != 'HCPD':
+            return
+        base = fmriprep_dir
+        if fmriprep_dir.name == 'bids':
+            base = fmriprep_dir.parent
+            if base.name == 'xcpd0.7.1rc5':
+                base = base.parent
+        self.selected_fmriprep_dir = fmriprep_dir
+        candidate = (base / 'xcpd0.7.1rc5' / 'step_2nd_24PcsfGlobal') if (base / 'xcpd0.7.1rc5').exists() else (base / 'step_2nd_24PcsfGlobal')
+        self.selected_xcpd_dir = candidate
+        logger.info(f"Selected HCPD root: fmriprep={self.selected_fmriprep_dir}, xcpd={self.selected_xcpd_dir}")
+
+    def _select_root_from_func_file(self, func_file: Path, xcpd_dir: Optional[Path] = None):
+        if self.dataset_name != 'HCPD':
+            return
+        if xcpd_dir is None:
+            p = func_file.parent
+            while p != p.parent and p.name != 'step_2nd_24PcsfGlobal':
+                p = p.parent
+            xcpd_dir = p if p.name == 'step_2nd_24PcsfGlobal' else func_file.parent
+        self.selected_xcpd_dir = xcpd_dir
+        base = xcpd_dir.parent if xcpd_dir.name == 'step_2nd_24PcsfGlobal' else xcpd_dir
+        self.selected_fmriprep_dir = base / 'bids'
+        logger.info(f"Selected HCPD root from func: fmriprep={self.selected_fmriprep_dir}, xcpd={self.selected_xcpd_dir}")
     
     def _setup_dataset_paths(self):
         """Setup dataset-specific paths for fmriprep and xcpd directories."""
@@ -272,8 +300,10 @@ class DatasetProcessor:
         else:
             patterns = [f'{self.subject_id}*space-MNI152NLin6Asym*dseg.nii.gz']
         
-        # Search in all fmriprep directories
-        for fmriprep_dir in self.fmriprep_dirs:
+        search_dirs = self.fmriprep_dirs
+        if self.dataset_name == 'HCPD' and self.selected_fmriprep_dir is not None:
+            search_dirs = [self.selected_fmriprep_dir]
+        for fmriprep_dir in search_dirs:
             # Try specific anatomical paths first
             search_paths = [
                 fmriprep_dir / self.subject_id / 'anat',
@@ -315,6 +345,10 @@ class DatasetProcessor:
         else:
             xcpd_steps = ['']
         
+        search_xcpd_dirs = self.xcpd_dirs
+        if self.dataset_name == 'HCPD' and self.selected_xcpd_dir is not None:
+            search_xcpd_dirs = [self.selected_xcpd_dir]
+
         for run_name in valid_runs:
             # Construct search pattern based on dataset
             if self.dataset_name == 'HCPD':
@@ -325,7 +359,7 @@ class DatasetProcessor:
             found = False
             
             # Search in all xcpd directories
-            for xcpd_dir in self.xcpd_dirs:
+            for xcpd_dir in search_xcpd_dirs:
                 for step in xcpd_steps:
                     # Construct search paths
                     if step:
@@ -353,6 +387,9 @@ class DatasetProcessor:
                             if files:
                                 func_files.append(files[0])
                                 found = True
+                                if self.dataset_name == 'HCPD' and self.selected_xcpd_dir is None:
+                                    self._select_root_from_func_file(files[0], xcpd_dir)
+                                    search_xcpd_dirs = [self.selected_xcpd_dir]
                                 logger.info(f"Found functional file: {files[0]} in {search_path}")
                                 break
                     
@@ -364,9 +401,7 @@ class DatasetProcessor:
             
             if not found:
                 # Try recursive search in all xcpd directories
-                for xcpd_dir in self.xcpd_dirs:
-                    # Always include subject ID in the search pattern to avoid matching other subjects
-                    # First try starting with subject ID (standard BIDS)
+                for xcpd_dir in search_xcpd_dirs:
                     files = list(xcpd_dir.rglob(f'{self.subject_id}*{pattern}'))
                     
                     if not files:
@@ -376,6 +411,9 @@ class DatasetProcessor:
                     if files:
                         func_files.append(files[0])
                         logger.info(f"Found functional file via recursive search: {files[0]} in {xcpd_dir}")
+                        if self.dataset_name == 'HCPD' and self.selected_xcpd_dir is None:
+                            self._select_root_from_func_file(files[0], xcpd_dir)
+                            search_xcpd_dirs = [self.selected_xcpd_dir]
                         found = True
                         break
                 
@@ -607,9 +645,8 @@ class DatasetProcessor:
                 logger.warning(f"No valid runs found for {self.subject_id}")
                 return False
             
-            # Step 2: Find necessary files
-            dseg_file = self.find_dseg_file()
             func_files = self.find_functional_files(valid_runs)
+            dseg_file = self.find_dseg_file()
             
             if not func_files:
                 logger.error(f"No functional files found for {self.subject_id}")
