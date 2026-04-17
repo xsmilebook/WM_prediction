@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import shlex
 import numpy as np
 import pandas as pd
 import scipy.io as sio
@@ -90,9 +91,8 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             randindex_file,
         )
 
-        system_cmd = (
-            "python3 -c "
-            "'import sys; "
+        python_cmd = (
+            "import sys; "
             f"sys.path.insert(0, {CODE_PATH!r}); "
             "import numpy as np; "
             "from PLSr1_CZ_Random_RegressCovariates import PLSr1_KFold_RandomCV_MultiTimes_Sub; "
@@ -108,8 +108,9 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             "int(config[\"Parallel_Quantity\"][0]), "
             "int(config[\"Permutation_Flag\"][0]), "
             "config[\"Feature_Name_List\"].tolist(), "
-            "config[\"RandIndex_File\"].tolist()[0])'"
+            "config[\"RandIndex_File\"].tolist()[0])"
         )
+        system_cmd = f"python3 -c {shlex.quote(python_cmd)}"
         system_cmd = f'{system_cmd} > "{os.path.join(resultant_folder_time_i, f"Time_{i}.log")}" 2>&1\n'
 
         script_path = os.path.join(resultant_folder_time_i, 'script.sh')
@@ -119,7 +120,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             script.write('#SBATCH --nodes=1\n')
             script.write('#SBATCH --ntasks=1\n')
             script.write('#SBATCH --cpus-per-task=1\n')
-            script.write('#SBATCH -p q_fat_c\n')
+            script.write('#SBATCH -p q_fat_l\n')
             script.write(f'#SBATCH -o {os.path.join(resultant_folder_time_i, "job.%j.out")}\n')
             script.write(f'#SBATCH -e {os.path.join(resultant_folder_time_i, "job.%j.error.txt")}\n\n')
             script.write(system_cmd)
