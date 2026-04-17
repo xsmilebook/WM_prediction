@@ -10,8 +10,6 @@
 3) 若变更影响代码的用法或结构，需同步更新 `README.md`。
 3.1) 只要代码被修改或生成了新结果，必须新增或更新补充文档 `/docs` 进行说明。
 3.2) 运行时间短且不需并行的脚本可直接执行（执行方式：source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate; conda activate ML）；并行任务如多次CV以及permutation，提供提交命令或 sbatch 脚本，供用户执行。
-4) 只要修改了代码或文档，必须通过 git 提交（提交信息由助手撰写）。
-5) 若使用 `create-plan` 技能，需将计划写入仓库根目录 `PLAN.md`。
 
 ## 范围与约束
 
