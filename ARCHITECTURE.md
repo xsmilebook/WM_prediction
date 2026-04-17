@@ -4,9 +4,11 @@
 WM_prediction/src/                        # 当前仓库根目录
 ├── README.md                             # 项目概览、典型流程与代表性结果
 ├── AGENTS.md                             # AI 协作规则与修改约束
+├── PLAN.md                               # 当前实现计划
 ├── ARCHITECTURE.md                       # 结构说明（本文）
 ├── docs/                                 # 补充文档
-│   └── architecture_update.md            # 本次架构文档同步说明
+│   ├── architecture_update.md            # 本次架构文档同步说明
+│   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
 ├── conn_matrix/                          # 功能连接矩阵生成、变换与批处理脚本
 │   ├── process_dataset_unified.py        # 统一处理多数据集：筛选有效 run、生成掩膜、提取时序、计算 FC、Fisher Z
@@ -31,7 +33,13 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── predict_age_RandomCV.py           # 年龄预测入口脚本
 │   ├── predict_cognition_RandomCV.py     # 认知指标预测入口脚本
 │   ├── predict_pfactor_RandomCV.py       # p-factor 预测入口脚本
-│   └── cluster_run_predict.sh            # 集群批量提交预测任务
+│   ├── cluster_run_predict.sh            # 集群批量提交预测任务
+│   └── V_feature_merge/                  # merged FC 组合预测脚本
+│       ├── common.py                     # merged 特征组合与 RandIndex 路径构建
+│       ├── PLSr1_CZ_Random_RegressCovariates.py # merged FC 使用的本地 PLS 管线
+│       ├── predict_age_RandomCV.py       # 年龄 merged FC 预测入口
+│       ├── predict_cognition_RandomCV.py # 认知 merged FC 预测入口
+│       └── predict_pfactor_RandomCV.py   # p-factor merged FC 预测入口
 │
 ├── preprocess/                           # 数据预处理与样本筛选脚本
 │   ├── abcd_preprocess_final.py          # ABCD 认知与 p-factor 样本预处理
@@ -47,5 +55,6 @@ WM_prediction/src/                        # 当前仓库根目录
 │
 └── results_vis/                          # 结果解释与统计分析脚本
     ├── compute_haufe_median.py           # 计算 Haufe 权重中位数并重建矩阵/作图
-    └── compute_partial_corr.py           # 计算结果相关性的偏相关统计
+    ├── compute_partial_corr.py           # 计算结果相关性的偏相关统计
+    └── compare_feature_merge_performance.py # 汇总基线与 merged FC 预测结果
 ```

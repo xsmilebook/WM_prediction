@@ -10,6 +10,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
 
 import PLSr1_CZ_Random_RegressCovariates
+from common import build_merged_feature_sets, build_randindex_file_list
 
 dataset = 'ABCD'
 targetStr_list = ['General','Ext','ADHD','Int']
@@ -18,7 +19,8 @@ sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset
 for targetStr in targetStr_list:
     # 基础路径配置
     base_path = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}'
-    outFolder = f'{base_path}/prediction/{targetStr}'
+    target_prediction_folder = f'{base_path}/prediction/{targetStr}'
+    outFolder = f'{target_prediction_folder}/V_feature_merge'
     os.makedirs(outFolder, exist_ok=True)
     # Import data
     # 1. atlas loading
@@ -38,10 +40,13 @@ for targetStr in targetStr_list:
     
     WW_data_files_all = np.load(WW_datapath)
 
-    SubjectsData = []
-    SubjectsData.append(GG_data_files_all)
-    SubjectsData.append(GW_data_files_all)
-    SubjectsData.append(WW_data_files_all)
+    Feature_Name_List, SubjectsData = build_merged_feature_sets(
+        GG_data_files_all,
+        GW_data_files_all,
+        WW_data_files_all,
+    )
+    for feature_name, feature_data in zip(Feature_Name_List, SubjectsData):
+        print(f"{feature_name} 向量形状: {feature_data.shape}")
 
     # 读取sublist以确保数据顺序一致
     with open(sublist_file, 'r') as f:
@@ -148,6 +153,8 @@ for targetStr in targetStr_list:
     print(f"组件数量范围: {ComponentNumber_Range}")
     print(f"交叉验证次数: {CVtimes}")
 
+    RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
+
     # # Predict
     ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
     print(f"结果文件夹: {ResultantFolder}")
@@ -155,7 +162,19 @@ for targetStr in targetStr_list:
     # 确保输出目录存在
     os.makedirs(ResultantFolder, exist_ok=True)
 
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        SubjectsData,
+        OverallPsyFactor,
+        Covariates,
+        FoldQuantity,
+        ComponentNumber_Range,
+        CVtimes,
+        ResultantFolder,
+        Parallel_Quantity,
+        0,
+        Feature_Name_List,
+        RandIndex_File_List,
+    )
 
     # Permutation
     # ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';

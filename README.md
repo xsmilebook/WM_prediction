@@ -14,8 +14,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `generate_*_covariates.py`, `generate_sublists.py`: Builds covariates and subject lists.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
+  - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
-  - `compute_haufe_median.py`, `compute_partial_corr.py`: Model interpretability and statistical analysis utilities.
+  - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
 
 ## Unified Pipeline Highlights (HCPD example)
 - Valid run selection: Read `table/rest_fd_summary.csv` and select `REST1_acq-AP/PA`, `REST2_acq-AP/PA` under thresholds (e.g., FD ≤ 0.5 and low-motion ratio > 0.4).
@@ -34,6 +35,26 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/predict_age_RandomCV.py`
   - `python src/prediction/predict_cognition_RandomCV.py`
   - `python src/prediction/predict_pfactor_RandomCV.py`
+- Run merged-feature prediction (examples):
+  - `python src/prediction/V_feature_merge/predict_age_RandomCV.py`
+  - `python src/prediction/V_feature_merge/predict_cognition_RandomCV.py`
+  - `python src/prediction/V_feature_merge/predict_pfactor_RandomCV.py`
+- Summarize merged-feature performance against baseline:
+  - `python src/results_vis/compare_feature_merge_performance.py --dataset HCPD --task age`
+  - `python src/results_vis/compare_feature_merge_performance.py --dataset ABCD --task cognition`
+  - `python src/results_vis/compare_feature_merge_performance.py --dataset ABCD --task pfactor`
+
+## Merged Feature Evaluation
+The `prediction/V_feature_merge/` workflow concatenates the original GG, GW, and WW vectors into four combinations:
+
+- `GG_GW_MergedFC`
+- `GG_WW_MergedFC`
+- `GW_WW_MergedFC`
+- `GG_GW_WW_MergedFC`
+
+All other modeling steps remain unchanged. The merged scripts reuse the existing baseline `Time_i/RandIndex.mat` files so performance differences are attributable to feature composition rather than a new random split. Results are written to:
+
+- `data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.
