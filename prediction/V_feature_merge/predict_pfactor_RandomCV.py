@@ -156,26 +156,40 @@ for targetStr in targetStr_list:
     RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
 
     # # Predict
-    ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
-    print(f"结果文件夹: {ResultantFolder}")
+    # ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
+    # print(f"结果文件夹: {ResultantFolder}")
 
     # 确保输出目录存在
-    os.makedirs(ResultantFolder, exist_ok=True)
+    # os.makedirs(ResultantFolder, exist_ok=True)
 
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-        SubjectsData,
-        OverallPsyFactor,
-        Covariates,
-        FoldQuantity,
-        ComponentNumber_Range,
-        CVtimes,
-        ResultantFolder,
-        Parallel_Quantity,
-        0,
-        Feature_Name_List,
-        RandIndex_File_List,
-    )
+    # PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+    #     SubjectsData,
+    #     OverallPsyFactor,
+    #     Covariates,
+    #     FoldQuantity,
+    #     ComponentNumber_Range,
+    #     CVtimes,
+    #     ResultantFolder,
+    #     Parallel_Quantity,
+    #     0,
+    #     Feature_Name_List,
+    #     RandIndex_File_List,
+    # )
 
     # Permutation
-    # ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';
-    # PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
+    ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation'
+    print(f"结果文件夹: {ResultantFolder}")
+    os.makedirs(ResultantFolder, exist_ok=True)
+    
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        SubjectsData, 
+        OverallPsyFactor, 
+        Covariates, 
+        FoldQuantity, 
+        ComponentNumber_Range, 
+        1000, 
+        ResultantFolder, 
+        Parallel_Quantity, 
+        1,
+        Feature_Name_List,
+        RandIndex_File_List)
