@@ -56,5 +56,9 @@ WM_prediction/src/                        # 当前仓库根目录
 └── results_vis/                          # 结果解释与统计分析脚本
     ├── compute_haufe_median.py           # 计算 Haufe 权重中位数并重建矩阵/作图
     ├── compute_partial_corr.py           # 计算结果相关性的偏相关统计
-    └── compare_feature_merge_performance.py # 汇总基线与 merged FC 预测结果
+    ├── compare_feature_merge_performance.py # 汇总基线与 merged FC 预测结果
+    └── V_feature_merge/                  # merged FC 统计比较脚本
+        ├── common.py                     # merged 结果读取、目标映射与作图辅助函数
+        ├── paired_ttest_best_child.py    # merged FC 与最佳子 feature 的配对 t 检验和 before-after 图
+        └── rm_anova_all_children.py      # merged FC 与全部子 feature 的重复测量 ANOVA 和箱线图
 ```

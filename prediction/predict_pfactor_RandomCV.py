@@ -12,7 +12,7 @@ sys.path.append(script_dir)
 import PLSr1_CZ_Random_RegressCovariates
 
 dataset = 'ABCD'
-targetStr_list = ['General','Ext','ADHD','Int']
+targetStr_list = ['General','Ext','ADHD']
 sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}/table/pfactor_sublist.txt'
 
 for targetStr in targetStr_list:
@@ -161,5 +161,5 @@ for targetStr in targetStr_list:
     ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation'
     print(f"结果文件夹: {ResultantFolder}")
     os.makedirs(ResultantFolder, exist_ok=True)
-    
+
     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)

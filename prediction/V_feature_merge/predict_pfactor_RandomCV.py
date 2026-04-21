@@ -13,7 +13,7 @@ import PLSr1_CZ_Random_RegressCovariates
 from common import build_merged_feature_sets, build_randindex_file_list
 
 dataset = 'ABCD'
-targetStr_list = ['General','Ext','ADHD','Int']
+targetStr_list = ['General','Ext','ADHD']
 sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}/table/pfactor_sublist.txt'
 
 for targetStr in targetStr_list:
@@ -153,7 +153,9 @@ for targetStr in targetStr_list:
     print(f"组件数量范围: {ComponentNumber_Range}")
     print(f"交叉验证次数: {CVtimes}")
 
-    RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
+    ## main analysis
+
+    # RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
 
     # # Predict
     # ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
@@ -176,7 +178,7 @@ for targetStr in targetStr_list:
     #     RandIndex_File_List,
     # )
 
-    # Permutation
+    ## Permutation
     ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation'
     print(f"结果文件夹: {ResultantFolder}")
     os.makedirs(ResultantFolder, exist_ok=True)
@@ -191,5 +193,4 @@ for targetStr in targetStr_list:
         ResultantFolder, 
         Parallel_Quantity, 
         1,
-        Feature_Name_List,
-        RandIndex_File_List)
+        Feature_Name_List)

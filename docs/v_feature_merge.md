@@ -81,3 +81,58 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/compare
 ```text
 data/<dataset>/prediction/feature_merge_summary_<task>.csv
 ```
+
+## 统计比较
+
+新增目录 `results_vis/V_feature_merge/`，用于在已有 `Res_NFold.mat` 基础上直接对 101 次 random CV 的 `Mean_Corr` 序列进行统计检验与可视化。
+
+### 1. merged FC 与最佳子 feature 的配对 t 检验
+
+脚本：
+
+```bash
+/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python \
+  /home/cuizaixu_lab/xuhaoshu/DATA_C/code/WM_prediction/src/results_vis/V_feature_merge/paired_ttest_best_child.py \
+  --dataset HCPD \
+  --task age
+```
+
+该脚本对每个 merged feature：
+
+- 读取其 101 次 `Mean_Corr`
+- 读取对应子 feature 的 101 次 `Mean_Corr`
+- 按子 feature 的整体 `median_corr` 选择表现更好的 baseline
+- 对 merged 与该最佳子 feature 做配对样本 t 检验
+- 输出 before-after 箱线图，并在图中添加显著性标记
+
+输出路径：
+
+```text
+data/<dataset>/prediction/<target>/V_feature_merge/statistics/paired_ttest_best_child.csv
+data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_ttest/
+```
+
+### 2. merged FC 与全部子 feature 的重复测量 ANOVA
+
+脚本：
+
+```bash
+/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python \
+  /home/cuizaixu_lab/xuhaoshu/DATA_C/code/WM_prediction/src/results_vis/V_feature_merge/rm_anova_all_children.py \
+  --dataset HCPD \
+  --task age
+```
+
+该脚本对每个 merged feature：
+
+- 将 merged 与其所有子 feature 的 `Mean_Corr` 组成 repeated-measures 设计
+- 对完整配对的 `Time_i` 样本做重复测量 ANOVA
+- 输出 F 值、自由度、p 值和 partial eta squared
+- 绘制各 feature 的箱线图，并在标题中写入 ANOVA 统计量
+
+输出路径：
+
+```text
+data/<dataset>/prediction/<target>/V_feature_merge/statistics/rm_anova_all_children.csv
+data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/rm_anova/
+```
