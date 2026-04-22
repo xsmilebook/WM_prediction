@@ -112,7 +112,7 @@ data/<dataset>/prediction/<target>/V_feature_merge/statistics/paired_ttest_best_
 data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_ttest/
 ```
 
-### 2. merged FC 与全部子 feature 的重复测量 ANOVA
+### 2. merged FC 与全部子 feature 的普通单因素 ANOVA
 
 脚本：
 
@@ -125,8 +125,7 @@ data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_tte
 
 该脚本对每个 merged feature：
 
-- 将 merged 与其所有子 feature 的 `Mean_Corr` 组成 repeated-measures 设计
-- 对完整配对的 `Time_i` 样本做重复测量 ANOVA
+- 将 merged 与其所有子 feature 的 `Mean_Corr` 作为独立组输入普通单因素 ANOVA
 - 输出 F 值、自由度、p 值和 partial eta squared
 - 绘制各 feature 的箱线图，并在标题中写入 ANOVA 统计量
 

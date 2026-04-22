@@ -17,7 +17,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
-  - `V_feature_merge/`: Paired t-test and repeated-measures ANOVA scripts for merged-feature result comparison and plotting.
+  - `V_feature_merge/`: Paired t-test and one-way ANOVA scripts for merged-feature result comparison and plotting.
 
 ## Unified Pipeline Highlights (HCPD example)
 - Valid run selection: Read `table/rest_fd_summary.csv` and select `REST1_acq-AP/PA`, `REST2_acq-AP/PA` under thresholds (e.g., FD ≤ 0.5 and low-motion ratio > 0.4).
@@ -46,7 +46,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/results_vis/compare_feature_merge_performance.py --dataset ABCD --task pfactor`
 - Run paired t-test against the best child feature:
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/paired_ttest_best_child.py --dataset HCPD --task age`
-- Run repeated-measures ANOVA against all child features:
+- Run one-way ANOVA against all child features:
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/rm_anova_all_children.py --dataset HCPD --task age`
 
 ## Merged Feature Evaluation

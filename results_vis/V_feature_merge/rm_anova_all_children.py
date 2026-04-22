@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from statsmodels.stats.anova import AnovaRM
+from scipy import stats
 
 from common import (
     MERGED_FEATURES,
@@ -16,28 +16,17 @@ from common import (
 )
 
 
-def build_long_form(merged_feature, merged_df, baseline_data):
+def build_group_data(merged_feature, merged_df, baseline_data):
     feature_order = MERGED_TO_CHILDREN[merged_feature] + [merged_feature]
-    frames = []
+    group_data = {}
     for feature_name in feature_order:
         source_df = merged_df if feature_name == merged_feature else baseline_data[feature_name]
-        feature_df = source_df.copy()
-        feature_df = feature_df.rename(columns={'corr': 'corr_value'})
-        feature_df['feature'] = feature_name
-        frames.append(feature_df[['time_id', 'feature', 'corr_value']])
+        values = source_df['corr'].dropna().to_numpy()
+        if len(values) == 0:
+            raise ValueError(f'No observations available for {merged_feature} {feature_name}.')
+        group_data[feature_name] = values
 
-    long_df = pd.concat(frames, ignore_index=True)
-    pivot_df = long_df.pivot(index='time_id', columns='feature', values='corr_value')
-    balanced_df = pivot_df.dropna(axis=0, how='any')
-    if balanced_df.empty:
-        raise ValueError(f'No complete repeated-measures rows for {merged_feature}.')
-
-    long_balanced = (
-        balanced_df.reset_index()
-        .melt(id_vars='time_id', var_name='feature', value_name='corr_value')
-        .rename(columns={'time_id': 'subject_id'})
-    )
-    return long_balanced, feature_order
+    return group_data, feature_order
 
 
 def analyze_target(project_root, dataset, target, output_root=None):
@@ -47,23 +36,17 @@ def analyze_target(project_root, dataset, target, output_root=None):
 
     rows = []
     for merged_feature in MERGED_FEATURES:
-        long_df, feature_order = build_long_form(
+        group_data, feature_order = build_group_data(
             merged_feature=merged_feature,
             merged_df=merged_data[merged_feature],
             baseline_data=baseline_data,
         )
 
-        anova = AnovaRM(
-            data=long_df,
-            depvar='corr_value',
-            subject='subject_id',
-            within=['feature'],
-        ).fit()
-        anova_table = anova.anova_table.reset_index(drop=True).iloc[0]
-        f_value = float(anova_table['F Value'])
-        df_num = float(anova_table['Num DF'])
-        df_den = float(anova_table['Den DF'])
-        p_value = float(anova_table['Pr > F'])
+        group_values = [group_data[feature_name] for feature_name in feature_order]
+        f_value, p_value = stats.f_oneway(*group_values)
+        df_num = float(len(feature_order) - 1)
+        total_n = int(sum(len(values) for values in group_values))
+        df_den = float(total_n - len(feature_order))
         partial_eta_squared = (f_value * df_num) / ((f_value * df_num) + df_den)
 
         rows.append(
@@ -71,30 +54,30 @@ def analyze_target(project_root, dataset, target, output_root=None):
                 'target': target,
                 'merged_feature': merged_feature,
                 'features_included': ';'.join(feature_order),
-                'n_subjects': int(long_df['subject_id'].nunique()),
+                'group_sizes': ';'.join(
+                    f'{feature_name}:{len(group_data[feature_name])}' for feature_name in feature_order
+                ),
+                'total_n': total_n,
                 'df_num': df_num,
                 'df_den': df_den,
-                'f_value': f_value,
-                'p_value': p_value,
+                'f_value': float(f_value),
+                'p_value': float(p_value),
                 'partial_eta_squared': partial_eta_squared,
             }
         )
 
-        pivot_df = (
-            long_df.pivot(index='subject_id', columns='feature', values='corr_value')[feature_order]
-        )
         output_path = os.path.join(
             figure_dir,
             f'{merged_feature}_rm_anova_boxplot.png',
         )
         title = (
-            f'{target}: {merged_feature} repeated-measures ANOVA\n'
+            f'{target}: {merged_feature} one-way ANOVA\n'
             f'F({format_float(df_num)}, {format_float(df_den)})={format_float(f_value)}, '
             f'p={format_float(p_value)}, partial eta^2={format_float(partial_eta_squared)}'
         )
         colors = ['#b8c4d6'] * (len(feature_order) - 1) + ['#de8f6e']
         plot_boxplot_with_points(
-            series_list=[pivot_df[feature].to_numpy() for feature in feature_order],
+            series_list=group_values,
             labels=feature_order,
             colors=colors,
             title=title,
@@ -110,7 +93,7 @@ def analyze_target(project_root, dataset, target, output_root=None):
 
 def main():
     args = parse_common_args(
-        'Run repeated-measures ANOVA for merged FC features against all child features.',
+        'Run one-way ANOVA for merged FC features against all child features.',
     )
     targets = resolve_targets(args.task, args.targets)
 
@@ -126,7 +109,7 @@ def main():
         all_results.append(result_df)
         output_paths.append(output_csv)
         print(result_df.to_string(index=False))
-        print(f'Saved repeated-measures ANOVA summary to {output_csv}\n')
+        print(f'Saved one-way ANOVA summary to {output_csv}\n')
 
     if len(all_results) > 1:
         combined_df = pd.concat(all_results, ignore_index=True)
