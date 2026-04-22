@@ -35,8 +35,8 @@ setup_module_env() {
 resolve_workbench_dir() {
     local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/workbench"
     local candidates=(
-        "$root/exe_rh_linux64"
         "$root/bin_rh_linux64"
+        "$root/exe_rh_linux64"
         "$root"
     )
     local dir
@@ -51,16 +51,64 @@ resolve_workbench_dir() {
     exit 1
 }
 
+setup_workbench_runtime() {
+    local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/workbench"
+    local primary_lib="$root/libs_rh_linux64"
+    local ogl_lib="$root/libs_rh_linux64_software_opengl"
+    local conda_lib=""
+    local conda_sysroot_lib=""
+    local library_path_parts=()
+
+    if [[ ! -d "$primary_lib" ]]; then
+        echo "Workbench library directory not found: $primary_lib" >&2
+        exit 1
+    fi
+
+    export QT_PLUGIN_PATH="$primary_lib/plugins"
+
+    if [[ -n "${CONDA_PREFIX:-}" ]]; then
+        conda_lib="$CONDA_PREFIX/lib"
+        conda_sysroot_lib="$CONDA_PREFIX/x86_64-conda-linux-gnu/sysroot/usr/lib64"
+    fi
+
+    if [[ -d "$conda_sysroot_lib" ]]; then
+        library_path_parts+=("$conda_sysroot_lib")
+    fi
+
+    if [[ -d "$conda_lib" ]]; then
+        library_path_parts+=("$conda_lib")
+    fi
+
+    library_path_parts+=("$primary_lib")
+
+    if [[ -d "$ogl_lib" ]]; then
+        library_path_parts+=("$ogl_lib")
+    fi
+
+    if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+        library_path_parts+=("$LD_LIBRARY_PATH")
+    fi
+
+    export LD_LIBRARY_PATH
+    LD_LIBRARY_PATH=$(IFS=:; printf '%s' "${library_path_parts[*]}")
+}
+
 resolve_msm_bin_dir() {
-    local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/MSM_HOCR-3.0FSL"
+    local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/msm_centos_v3_bin"
     local candidates=(
-        "$root"
-        "$root/bin"
-        "$root/build"
-        "$root/src/MSM"
+        "."
+        "bin"
+        "build"
+        "src/MSM"
     )
+    local candidate
     local dir
-    for dir in "${candidates[@]}"; do
+
+    for candidate in "${candidates[@]}"; do
+        dir="$root/$candidate"
+        if [[ "$candidate" == "." ]]; then
+            dir="$root"
+        fi
         if [[ -x "$dir/msm" ]]; then
             printf '%s\n' "$dir"
             return 0
@@ -75,7 +123,7 @@ resolve_msm_bin_dir() {
     fi
 
     echo "Unable to find executable msm under $root" >&2
-    echo "Compile MSM_HOCR first or point MSMBINDIR to a directory containing msm." >&2
+    echo "Install a runnable MSM binary and point MSMBINDIR to a directory containing msm." >&2
     exit 1
 }
 
@@ -90,6 +138,7 @@ check_command() {
 if setup_module_env; then
     module load freesurfer/6.0.0
     module load fsl/6.3.0
+    module load openblas/0.3.7
 else
     echo "module command is unavailable; using existing PATH and environment variables" >&2
 fi
@@ -100,6 +149,8 @@ conda activate ML
 export HCPPIPEDIR="$PROJECT_ROOT/HCPpipelines-5.0.0"
 export CARET7DIR
 CARET7DIR=$(resolve_workbench_dir)
+setup_workbench_runtime
+export PATH="$CARET7DIR:$PATH"
 export MSMBINDIR
 MSMBINDIR=$(resolve_msm_bin_dir)
 export HCPCIFTIRWDIR="$HCPPIPEDIR/global/matlab/cifti-matlab"
