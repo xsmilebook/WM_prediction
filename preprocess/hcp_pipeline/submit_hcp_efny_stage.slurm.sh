@@ -21,7 +21,7 @@ Arguments:
   [study_folder]  Default: /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder
 
 Examples:
-  sbatch --cpus-per-task=2 --array=1 preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt
+  sbatch --cpus-per-task=2 --array=1-1 submit_hcp_efny_stage.slurm.sh prefreesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt
 
   sbatch --cpus-per-task=8 --array=1-10 \
     preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh freesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist.txt
