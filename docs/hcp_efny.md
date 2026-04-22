@@ -35,8 +35,8 @@
 
 以 `sub-THU20231118133GYC` 为例，脚本中固定使用以下参数：
 
-- rest run：`task-rest_run-1/2/3`
-- HCP run 名：`rfMRI_REST1_PA`、`rfMRI_REST2_PA`、`rfMRI_REST3_PA`
+- rest run：自动识别 `task-rest_run-1` 到 `task-rest_run-4`
+- HCP run 名：按实际存在的 run 生成 `rfMRI_REST{1..4}_{PA/AP/RL/LR}`
 - `fMRIVolume` 的 `echospacing`：`0.000269996`
 - spin-echo fieldmap 的 `seechospacing`：`0.000530007`
 - `fMRIVolume` 的 `unwarpdir`：`y`
@@ -65,10 +65,13 @@ python preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py \
 
 - `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/T1w_MPR1/`
 - `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/T2w_SPC1/`
-- `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/rfMRI_REST1_PA/`
-- `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/rfMRI_REST2_PA/`
-- `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/rfMRI_REST3_PA/`
+- `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/unprocessed/3T/rfMRI_REST*_*/`
 - `data/EFNY/hcp_studyfolder/manifests/hcp_efny_manifest.tsv`
+
+说明：
+
+- `prepare_hcp_studyfolder_efny.py` 会自动纳入当前被试实际存在的全部 rest run
+- 当前按 EFNY 约束要求，run 数量必须在 1 到 4 之间；若为 0 次或超过 4 次，脚本会直接报错
 
 ### 2. 依次运行 HCP 阶段
 
@@ -106,11 +109,9 @@ bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
   - `.../sub-THU20231118133GYC/MNINonLinear/Native/`
   - `...sphere.MSMSulc.native.surf.gii`
 - `fMRIVolume`
-  - `.../sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST1_PA/`
-  - `.../sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST2_PA/`
-  - `.../sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST3_PA/`
+  - `.../sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST*_*/`
 - `fMRISurface`
-  - 相同 `Results/rfMRI_REST*_PA/` 目录下的 surface/CIFTI 输出
+  - 相同 `Results/rfMRI_REST*_*/` 目录下的 surface/CIFTI 输出
 
 ## 日志位置
 

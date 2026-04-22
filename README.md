@@ -31,6 +31,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 ## Typical Usage
 - Stage EFNY BIDS data for HCP preprocessing:
   - `python src/preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py --subject sub-THU20231118133GYC --study-folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder`
+  - The staging script automatically includes all available EFNY rest runs for a subject, with the current dataset convention constrained to `run-1` through `run-4`.
 - Run one HCP stage for EFNY:
   - `bash src/preprocess/hcp_pipeline/run_hcp_efny_stage.sh --stage prefreesurfer --subject sub-THU20231118133GYC`
 - Submit one HCP stage as a Slurm array for EFNY:
