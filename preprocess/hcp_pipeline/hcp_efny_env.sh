@@ -139,6 +139,7 @@ if setup_module_env; then
     module load freesurfer/6.0.0
     module load fsl/6.3.0
     module load openblas/0.3.7
+    export FS_LICENSE="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/freesurfer_license/license.txt"
 else
     echo "module command is unavailable; using existing PATH and environment variables" >&2
 fi
