@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+SCRIPT_DIR="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/preprocess/hcp_pipeline"
 STUDY_FOLDER_DEFAULT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder"
 
 usage() {
