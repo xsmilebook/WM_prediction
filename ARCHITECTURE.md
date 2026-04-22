@@ -49,9 +49,14 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── generate_pnc_covariates.py        # 生成 PNC 协变量表
 │   ├── generate_sublists.py              # 生成建模用被试列表
 │   ├── hcp_pipeline/                     # EFNY 数据集 HCP 预处理辅助脚本
+│   │   ├── hcp_efny_batch_common.sh      # 五个 HCP batch 入口共享的 EFNY 参数、日志与输入发现函数
 │   │   ├── hcp_efny_env.sh               # 加载 HCP 5.0.0、FSL、FreeSurfer、Workbench、MSM 与 ML 环境
+│   │   ├── PreFreeSurferPipelineBatch.sh # EFNY 的 PreFreeSurfer 批处理入口，对齐 HCP 示例脚本命名
+│   │   ├── FreeSurferPipelineBatch.sh    # EFNY 的 FreeSurfer 批处理入口，对齐 HCP 示例脚本命名
+│   │   ├── PostFreeSurferPipelineBatch.sh # EFNY 的 PostFreeSurfer 批处理入口，对齐 HCP 示例脚本命名
+│   │   ├── GenericfMRIVolumeProcessingPipelineBatch.sh # EFNY 的 fMRIVolume 批处理入口
+│   │   ├── GenericfMRISurfaceProcessingPipelineBatch.sh # EFNY 的 fMRISurface 批处理入口
 │   │   ├── prepare_hcp_studyfolder_efny.py # 将 EFNY BIDS 数据整理为 HCP StudyFolder 结构并生成 manifest
-│   │   ├── run_hcp_efny_stage.sh         # 驱动 PreFreeSurfer、FreeSurfer、PostFreeSurfer、fMRIVolume、fMRISurface
 │   │   └── submit_hcp_efny_stage.slurm.sh # Slurm array 入口，按 subject list 提交单阶段批处理
 │   ├── screen_head_motion_abcd.py        # ABCD 静息态头动筛选
 │   ├── screen_head_motion_ccnp.py        # CCNP 静息态头动筛选

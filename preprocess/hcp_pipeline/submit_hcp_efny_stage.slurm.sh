@@ -37,8 +37,29 @@ stage="$1"
 subject_list="$2"
 study_folder="${3:-$STUDY_FOLDER_DEFAULT}"
 
+subject_arg_name=""
+stage_script=""
+
 case "$stage" in
-    prefreesurfer|freesurfer|postfreesurfer|fmrivolume|fmrisurface)
+    prefreesurfer)
+        stage_script="$SCRIPT_DIR/PreFreeSurferPipelineBatch.sh"
+        subject_arg_name="--Session"
+        ;;
+    freesurfer)
+        stage_script="$SCRIPT_DIR/FreeSurferPipelineBatch.sh"
+        subject_arg_name="--Session"
+        ;;
+    postfreesurfer)
+        stage_script="$SCRIPT_DIR/PostFreeSurferPipelineBatch.sh"
+        subject_arg_name="--Subject"
+        ;;
+    fmrivolume)
+        stage_script="$SCRIPT_DIR/GenericfMRIVolumeProcessingPipelineBatch.sh"
+        subject_arg_name="--Subject"
+        ;;
+    fmrisurface)
+        stage_script="$SCRIPT_DIR/GenericfMRISurfaceProcessingPipelineBatch.sh"
+        subject_arg_name="--Subject"
         ;;
     *)
         echo "Unsupported stage: $stage" >&2
@@ -56,9 +77,15 @@ if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     exit 1
 fi
 
+subject=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$subject_list" | tr -d '\r')
+if [[ -z "$subject" ]]; then
+    echo "No subject found at line $SLURM_ARRAY_TASK_ID in $subject_list" >&2
+    exit 1
+fi
+
 mkdir -p "$study_folder/logs/slurm"
 
-exec bash "$SCRIPT_DIR/run_hcp_efny_stage.sh" \
-    --stage "$stage" \
-    --study-folder "$study_folder" \
-    --subject-list "$subject_list"
+exec bash "$stage_script" \
+    --StudyFolder="$study_folder" \
+    "${subject_arg_name}=$subject" \
+    --runlocal

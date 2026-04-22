@@ -12,9 +12,14 @@
 
 ## 目录与脚本
 
+- 共享参数与日志函数：`preprocess/hcp_pipeline/hcp_efny_batch_common.sh`
 - 环境脚本：`preprocess/hcp_pipeline/hcp_efny_env.sh`
 - BIDS 转 HCP staging：`preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py`
-- HCP 阶段驱动器：`preprocess/hcp_pipeline/run_hcp_efny_stage.sh`
+- `PreFreeSurfer` 入口：`preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh`
+- `FreeSurfer` 入口：`preprocess/hcp_pipeline/FreeSurferPipelineBatch.sh`
+- `PostFreeSurfer` 入口：`preprocess/hcp_pipeline/PostFreeSurferPipelineBatch.sh`
+- `fMRIVolume` 入口：`preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh`
+- `fMRISurface` 入口：`preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh`
 - Slurm 数组提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh`
 
 ## 环境约定
@@ -76,25 +81,30 @@ python preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py \
 ### 2. 依次运行 HCP 阶段
 
 ```bash
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage prefreesurfer \
-  --subject sub-THU20231118133GYC
+bash preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh \
+  --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --Session=sub-THU20231118133GYC \
+  --runlocal
 
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage freesurfer \
-  --subject sub-THU20231118133GYC
+bash preprocess/hcp_pipeline/FreeSurferPipelineBatch.sh \
+  --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --Session=sub-THU20231118133GYC \
+  --runlocal
 
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage postfreesurfer \
-  --subject sub-THU20231118133GYC
+bash preprocess/hcp_pipeline/PostFreeSurferPipelineBatch.sh \
+  --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --Subject=sub-THU20231118133GYC \
+  --runlocal
 
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage fmrivolume \
-  --subject sub-THU20231118133GYC
+bash preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh \
+  --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --Subject=sub-THU20231118133GYC \
+  --runlocal
 
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage fmrisurface \
-  --subject sub-THU20231118133GYC
+bash preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh \
+  --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --Subject=sub-THU20231118133GYC \
+  --runlocal
 ```
 
 ### 3. 关键输出
@@ -144,20 +154,7 @@ python preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py \
   --study-folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder
 ```
 
-### 3. 打印 `sbatch` 模板
-
-```bash
-bash preprocess/hcp_pipeline/run_hcp_efny_stage.sh \
-  --stage prefreesurfer \
-  --subject-list /path/to/efny_subjects.txt \
-  --partition q_cn \
-  --cpus 4 \
-  --mem 24G \
-  --time 48:00:00 \
-  --print-sbatch
-```
-
-### 4. 直接提交 Slurm array
+### 3. 提交 Slurm array
 
 ```bash
 sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 \
@@ -166,7 +163,7 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
   /path/to/efny_subjects.txt
 ```
 
-`submit_hcp_efny_stage.slurm.sh` 会读取 `SLURM_ARRAY_TASK_ID`，并调用 `run_hcp_efny_stage.sh` 处理列表中的第 N 个被试。
+`submit_hcp_efny_stage.slurm.sh` 会读取 `SLURM_ARRAY_TASK_ID`，然后按阶段名调用对应的五个独立 batch 入口脚本之一。
 
 其他阶段建议资源：
 
@@ -175,7 +172,7 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 - `fmrivolume`：`--cpus 4 --mem 24G --time 24:00:00`
 - `fmrisurface`：`--cpus 4 --mem 16G --time 12:00:00`
 
-### 5. `SLURM_ARRAY_TASK_ID` 驱动
+### 4. `SLURM_ARRAY_TASK_ID` 驱动
 
 脚本支持 Slurm array。若设置了 `SLURM_ARRAY_TASK_ID`，则会读取 `--subject-list` 的第 N 行作为当前被试；若没有设置，则会顺序处理列表中的全部被试。
 

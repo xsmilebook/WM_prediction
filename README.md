@@ -12,7 +12,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - `preprocess/`
   - `screen_head_motion_*.py`: Computes `framewise_displacement` per dataset and writes `rest_fd_summary.csv` used to select valid runs.
   - `generate_*_covariates.py`, `generate_sublists.py`: Builds covariates and subject lists.
-  - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and drives HCP 5.0.0 structural and resting-state preprocessing stages.
+  - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and provides five HCP-style batch entry scripts for structural and resting-state preprocessing stages.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
@@ -33,7 +33,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py --subject sub-THU20231118133GYC --study-folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder`
   - The staging script automatically includes all available EFNY rest runs for a subject, with the current dataset convention constrained to `run-1` through `run-4`.
 - Run one HCP stage for EFNY:
-  - `bash src/preprocess/hcp_pipeline/run_hcp_efny_stage.sh --stage prefreesurfer --subject sub-THU20231118133GYC`
+  - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC --runlocal`
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
 - Unified processing (example):
