@@ -27,5 +27,5 @@ echo "$@"
 
 for Subject in $Subjlist; do
     echo "PostFreeSurferPipelineBatch.sh: Processing Subject: $Subject"
-    run_postfreesurfer_subject "$StudyFolder" "$Subject" "$command_line_specified_run_local"
+    run_postfreesurfer_subject "$StudyFolder" "$Subject"
 done

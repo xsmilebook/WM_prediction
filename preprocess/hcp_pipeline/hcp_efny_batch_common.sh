@@ -10,7 +10,6 @@ get_hcp_efny_batch_options() {
     command_line_specified_study_folder=""
     command_line_specified_subject=""
     command_line_specified_session=""
-    command_line_specified_run_local="FALSE"
 
     local index=0
     local num_args=${#arguments[@]}
@@ -28,9 +27,6 @@ get_hcp_efny_batch_options() {
             --Session=*)
                 command_line_specified_session=${argument#*=}
                 ;;
-            --runlocal)
-                command_line_specified_run_local="TRUE"
-                ;;
             *)
                 echo "" >&2
                 echo "ERROR: Unrecognized Option: ${argument}" >&2
@@ -44,7 +40,6 @@ get_hcp_efny_batch_options() {
 
 setup_hcp_efny_batch_env() {
     source "$SCRIPT_DIR/hcp_efny_env.sh"
-    QUEUE=""
     if [[ -n "${HCPPIPEDEBUG:-}" ]]; then
         set -x
     fi
@@ -78,15 +73,8 @@ make_log_dir() {
 
 run_with_queue() {
     local log_dir="$1"
-    local run_local="$2"
-    shift 2
-
-    local queuing_command=()
-    if [[ "$run_local" == "TRUE" || -z "$QUEUE" ]]; then
-        queuing_command=("$HCPPIPEDIR/global/scripts/captureoutput.sh")
-    else
-        queuing_command=("$FSLDIR/bin/fsl_sub" -q "$QUEUE")
-    fi
+    shift
+    local queuing_command=("$HCPPIPEDIR/global/scripts/captureoutput.sh")
 
     (
         cd "$log_dir"
@@ -169,7 +157,6 @@ phase_to_unwarpdir() {
 run_prefreesurfer_session() {
     local study_folder="$1"
     local session="$2"
-    local run_local="$3"
     local t1w_input_images
     local t2w_input_images
     local fmap_ap
@@ -180,7 +167,7 @@ run_prefreesurfer_session() {
     fmap_ap=$(find_one "$study_folder/$session/unprocessed/3T/T1w_MPR?/${session}_3T_SpinEchoFieldMap_AP.nii*" "AP structural spin echo fieldmap for $session")
     fmap_pa=$(find_one "$study_folder/$session/unprocessed/3T/T1w_MPR?/${session}_3T_SpinEchoFieldMap_PA.nii*" "PA structural spin echo fieldmap for $session")
 
-    run_with_queue "$(make_log_dir "$study_folder" prefreesurfer "$session")" "$run_local" \
+    run_with_queue "$(make_log_dir "$study_folder" prefreesurfer "$session")" \
         "$HCPPIPEDIR/PreFreeSurfer/PreFreeSurferPipeline.sh" \
         --path="$study_folder" \
         --session="$session" \
@@ -215,9 +202,8 @@ run_prefreesurfer_session() {
 run_freesurfer_session() {
     local study_folder="$1"
     local session="$2"
-    local run_local="$3"
 
-    run_with_queue "$(make_log_dir "$study_folder" freesurfer "$session")" "$run_local" \
+    run_with_queue "$(make_log_dir "$study_folder" freesurfer "$session")" \
         "$HCPPIPEDIR/FreeSurfer/FreeSurferPipeline.sh" \
         --session="$session" \
         --session-dir="$study_folder/$session/T1w" \
@@ -229,9 +215,8 @@ run_freesurfer_session() {
 run_postfreesurfer_subject() {
     local study_folder="$1"
     local subject="$2"
-    local run_local="$3"
 
-    run_with_queue "$(make_log_dir "$study_folder" postfreesurfer "$subject")" "$run_local" \
+    run_with_queue "$(make_log_dir "$study_folder" postfreesurfer "$subject")" \
         "$HCPPIPEDIR/PostFreeSurfer/PostFreeSurferPipeline.sh" \
         --study-folder="$study_folder" \
         --subject="$subject" \
@@ -250,7 +235,6 @@ run_postfreesurfer_subject() {
 run_fmrivolume_subject() {
     local study_folder="$1"
     local subject="$2"
-    local run_local="$3"
     local run_dir
 
     while IFS= read -r run_dir; do
@@ -270,7 +254,7 @@ run_fmrivolume_subject() {
         spin_echo_neg=$(find_one "$run_dir/${subject}_3T_SpinEchoFieldMap_AP.nii*" "negative polarity spin echo fieldmap for $subject $fmri_name")
         spin_echo_pos=$(find_one "$run_dir/${subject}_3T_SpinEchoFieldMap_PA.nii*" "positive polarity spin echo fieldmap for $subject $fmri_name")
 
-        run_with_queue "$(make_log_dir "$study_folder" fmrivolume "$subject" "$fmri_name")" "$run_local" \
+        run_with_queue "$(make_log_dir "$study_folder" fmrivolume "$subject" "$fmri_name")" \
             "$HCPPIPEDIR/fMRIVolume/GenericfMRIVolumeProcessingPipeline.sh" \
             --studyfolder="$study_folder" \
             --subject="$subject" \
@@ -297,7 +281,6 @@ run_fmrivolume_subject() {
 run_fmrisurface_subject() {
     local study_folder="$1"
     local subject="$2"
-    local run_local="$3"
     local run_dir
 
     while IFS= read -r run_dir; do
@@ -305,7 +288,7 @@ run_fmrisurface_subject() {
         local fmri_name
         fmri_name=$(basename "$run_dir")
 
-        run_with_queue "$(make_log_dir "$study_folder" fmrisurface "$subject" "$fmri_name")" "$run_local" \
+        run_with_queue "$(make_log_dir "$study_folder" fmrisurface "$subject" "$fmri_name")" \
             "$HCPPIPEDIR/fMRISurface/GenericfMRISurfaceProcessingPipeline.sh" \
             --path="$study_folder" \
             --subject="$subject" \

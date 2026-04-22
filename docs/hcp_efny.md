@@ -83,28 +83,23 @@ python preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py \
 ```bash
 bash preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh \
   --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
-  --Session=sub-THU20231118133GYC \
-  --runlocal
+  --Session=sub-THU20231118133GYC
 
 bash preprocess/hcp_pipeline/FreeSurferPipelineBatch.sh \
   --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
-  --Session=sub-THU20231118133GYC \
-  --runlocal
+  --Session=sub-THU20231118133GYC
 
 bash preprocess/hcp_pipeline/PostFreeSurferPipelineBatch.sh \
   --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
-  --Subject=sub-THU20231118133GYC \
-  --runlocal
+  --Subject=sub-THU20231118133GYC
 
 bash preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh \
   --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
-  --Subject=sub-THU20231118133GYC \
-  --runlocal
+  --Subject=sub-THU20231118133GYC
 
 bash preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh \
   --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
-  --Subject=sub-THU20231118133GYC \
-  --runlocal
+  --Subject=sub-THU20231118133GYC
 ```
 
 ### 3. 关键输出
@@ -164,6 +159,7 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 ```
 
 `submit_hcp_efny_stage.slurm.sh` 会读取 `SLURM_ARRAY_TASK_ID`，然后按阶段名调用对应的五个独立 batch 入口脚本之一。
+如果只测试单个被试，也建议准备一个只含一行 subject ID 的列表文件，并用 `--array=1-1` 提交为单个作业。
 
 其他阶段建议资源：
 

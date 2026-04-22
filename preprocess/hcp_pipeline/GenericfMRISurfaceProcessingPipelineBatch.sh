@@ -27,5 +27,5 @@ echo "$@"
 
 for Subject in $Subjlist; do
     echo "GenericfMRISurfaceProcessingPipelineBatch.sh: Processing Subject: $Subject"
-    run_fmrisurface_subject "$StudyFolder" "$Subject" "$command_line_specified_run_local"
+    run_fmrisurface_subject "$StudyFolder" "$Subject"
 done

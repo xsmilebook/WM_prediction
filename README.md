@@ -33,7 +33,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py --subject sub-THU20231118133GYC --study-folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder`
   - The staging script automatically includes all available EFNY rest runs for a subject, with the current dataset convention constrained to `run-1` through `run-4`.
 - Run one HCP stage for EFNY:
-  - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC --runlocal`
+  - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC`
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
 - Unified processing (example):

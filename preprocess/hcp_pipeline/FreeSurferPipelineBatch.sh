@@ -27,5 +27,5 @@ echo "$@"
 
 for Session in $Sessionlist; do
     echo "FreeSurferPipelineBatch.sh: Processing Session: $Session"
-    run_freesurfer_session "$StudyFolder" "$Session" "$command_line_specified_run_local"
+    run_freesurfer_session "$StudyFolder" "$Session"
 done
