@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=hcp_stage
+#SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder/logs/slurm/%x_%A_%a.out
+#SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder/logs/slurm/%x_%A_%a.err
+
+set -euo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+STUDY_FOLDER_DEFAULT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder"
+
+usage() {
+    cat <<'EOF'
+Usage:
+  sbatch --array=1-N [resources...] preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh \
+    <stage> <subject_list> [study_folder]
+
+Arguments:
+  <stage>         prefreesurfer | freesurfer | postfreesurfer | fmrivolume | fmrisurface
+  <subject_list>  Text file with one subject ID per line
+  [study_folder]  Default: /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder
+
+Examples:
+  sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 \
+    preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt
+
+  sbatch --partition=q_cn --cpus-per-task=8 --mem=32G --time=72:00:00 --array=1-10 \
+    preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh freesurfer /path/to/efny_subjects.txt
+EOF
+}
+
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+    usage >&2
+    exit 1
+fi
+
+stage="$1"
+subject_list="$2"
+study_folder="${3:-$STUDY_FOLDER_DEFAULT}"
+
+case "$stage" in
+    prefreesurfer|freesurfer|postfreesurfer|fmrivolume|fmrisurface)
+        ;;
+    *)
+        echo "Unsupported stage: $stage" >&2
+        exit 1
+        ;;
+esac
+
+if [[ ! -f "$subject_list" ]]; then
+    echo "Subject list not found: $subject_list" >&2
+    exit 1
+fi
+
+if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+    echo "SLURM_ARRAY_TASK_ID is not set. Submit with sbatch --array=1-N." >&2
+    exit 1
+fi
+
+mkdir -p "$study_folder/logs/slurm"
+
+exec bash "$SCRIPT_DIR/run_hcp_efny_stage.sh" \
+    --stage "$stage" \
+    --study-folder "$study_folder" \
+    --subject-list "$subject_list"

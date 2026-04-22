@@ -12,6 +12,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - `preprocess/`
   - `screen_head_motion_*.py`: Computes `framewise_displacement` per dataset and writes `rest_fd_summary.csv` used to select valid runs.
   - `generate_*_covariates.py`, `generate_sublists.py`: Builds covariates and subject lists.
+  - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and drives HCP 5.0.0 structural and resting-state preprocessing stages.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
@@ -28,6 +29,12 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Vectorization: Expand the upper triangle of matrices to feature vectors for prediction scripts.
 
 ## Typical Usage
+- Stage EFNY BIDS data for HCP preprocessing:
+  - `python src/preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py --subject sub-THU20231118133GYC --study-folder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder`
+- Run one HCP stage for EFNY:
+  - `bash src/preprocess/hcp_pipeline/run_hcp_efny_stage.sh --stage prefreesurfer --subject sub-THU20231118133GYC`
+- Submit one HCP stage as a Slurm array for EFNY:
+  - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
 - Unified processing (example):
   - `python src/conn_matrix/process_dataset_unified.py --dataset_name HCPD --subject_id sub-HCDxxxxx --dataset_path d:\code\WM_prediction\data\HCPD --mask_output_dir d:\code\WM_prediction\data\HCPD\mri_data\wm_postproc --fc_output_dir d:\code\WM_prediction\data\HCPD\fc_matrix\individual --z_output_dir d:\code\WM_prediction\data\HCPD\fc_matrix\individual_z --gm_atlas d:\code\WM_prediction\data\atlas\resliced_hcpd\Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz --wm_atlas d:\code\WM_prediction\data\atlas\resliced_hcpd\rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz`
 - Vectorize matrices:

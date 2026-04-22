@@ -8,6 +8,7 @@ WM_prediction/src/                        # 当前仓库根目录
 ├── ARCHITECTURE.md                       # 结构说明（本文）
 ├── docs/                                 # 补充文档
 │   ├── architecture_update.md            # 本次架构文档同步说明
+│   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
 ├── conn_matrix/                          # 功能连接矩阵生成、变换与批处理脚本
@@ -47,6 +48,11 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── generate_abcd_covariates.py       # 生成 ABCD 协变量表
 │   ├── generate_pnc_covariates.py        # 生成 PNC 协变量表
 │   ├── generate_sublists.py              # 生成建模用被试列表
+│   ├── hcp_pipeline/                     # EFNY 数据集 HCP 预处理辅助脚本
+│   │   ├── hcp_efny_env.sh               # 加载 HCP 5.0.0、FSL、FreeSurfer、Workbench、MSM 与 ML 环境
+│   │   ├── prepare_hcp_studyfolder_efny.py # 将 EFNY BIDS 数据整理为 HCP StudyFolder 结构并生成 manifest
+│   │   ├── run_hcp_efny_stage.sh         # 驱动 PreFreeSurfer、FreeSurfer、PostFreeSurfer、fMRIVolume、fMRISurface
+│   │   └── submit_hcp_efny_stage.slurm.sh # Slurm array 入口，按 subject list 提交单阶段批处理
 │   ├── screen_head_motion_abcd.py        # ABCD 静息态头动筛选
 │   ├── screen_head_motion_ccnp.py        # CCNP 静息态头动筛选
 │   ├── screen_head_motion_efny.py        # EFNY 静息态头动筛选
