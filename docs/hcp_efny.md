@@ -32,9 +32,10 @@
 - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate`
 - `conda activate ML`
 - `HCPPIPEDIR=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/HCPpipelines-5.0.0`
-- `CARET7DIR` 自动解析到运行时生成的 workbench wrapper 目录，`wb_command` 通过该 wrapper 调用真实的 `bin_rh_linux64/wb_command`
+- `CARET7DIR` 自动解析到运行时生成的 workbench wrapper 目录，`wb_command` 通过该 wrapper 调用真实的 `exe_rh_linux64/wb_command`
 - workbench 依赖的 `LD_LIBRARY_PATH` 只在 `wb_command` 的局部 wrapper 中设置，不再全局污染 shell 环境
 - `MSMBINDIR` 解析到 `/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/msm_centos_v3_bin`
+- wrapper 目录中的 `wb_command` 必须是单独生成的普通脚本文件，不能先对 `wb_command` 建软链接再写入，否则会反向覆盖 workbench 安装目录中的目标文件
 
 注意：当前默认使用官网预编译的 `msm_centos_v3`，需确保 `msm_centos_v3_bin/msm` 链接存在，并且 `module load openblas/0.3.7` 后可正常执行。
 
@@ -77,8 +78,9 @@ python preprocess/hcp_pipeline/prepare_hcp_studyfolder_efny.py \
 
 说明：
 
-- `prepare_hcp_studyfolder_efny.py` 会自动纳入当前被试实际存在的全部 rest run
-- 当前按 EFNY 约束要求，run 数量必须在 1 到 4 之间；若为 0 次或超过 4 次，脚本会直接报错
+- `prepare_hcp_studyfolder_efny.py` 会自动纳入当前被试实际存在的 `run-1` 到 `run-4`
+- 若存在 `run-5` 及之后的 rest 扫描，脚本会直接忽略，不纳入 HCP staging
+- 若 `run-1` 到 `run-4` 中一个都没有，脚本会报错
 
 ### 2. 依次运行 HCP 阶段
 
@@ -178,6 +180,8 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 
 - `wb_command` 找不到
   - 检查 workbench 是否完整，尤其是 `exe_rh_linux64/wb_command`
+- `PostFreeSurfer` 长时间停在 `wmparc` 附近且 `MNINonLinear/Native` 没有继续产出
+  - 优先检查环境脚本是否错误解析到了 `bin_rh_linux64/wb_command` 的包装脚本；当前应使用 `exe_rh_linux64/wb_command`
 - `wb_command` 报 `libglapi.so.0` 或 OpenGL 相关动态库缺失
   - 先确认 `ML` 环境已安装 `mesa-libglapi-cos7-x86_64`，并重新 `source .../activate && conda activate ML`
 - `msm` 找不到

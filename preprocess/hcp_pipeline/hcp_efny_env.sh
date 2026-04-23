@@ -35,8 +35,8 @@ setup_module_env() {
 resolve_workbench_dir() {
     local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/workbench"
     local candidates=(
-        "$root/bin_rh_linux64"
         "$root/exe_rh_linux64"
+        "$root/bin_rh_linux64"
         "$root"
     )
     local dir
@@ -93,12 +93,16 @@ setup_workbench_runtime() {
 
     mkdir -p "$wrapper_dir"
 
-    find "$wrapper_dir" -mindepth 1 -maxdepth 1 -type l -delete 2>/dev/null || true
+    find "$wrapper_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
     for entry in "$bindir"/*; do
         [[ -e "$entry" ]] || continue
+        if [[ "$(basename "$entry")" == "wb_command" ]]; then
+            continue
+        fi
         ln -sf "$entry" "$wrapper_dir/$(basename "$entry")"
     done
 
+    rm -f "$wrapper_path"
     cat > "$wrapper_path" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail

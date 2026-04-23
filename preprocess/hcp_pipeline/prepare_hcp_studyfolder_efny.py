@@ -87,15 +87,13 @@ def find_rest_runs(subject_dir: Path) -> list[RunSpec]:
         suffix_map = {"j": "PA", "j+": "PA", "j-": "AP", "i": "RL", "i+": "RL", "i-": "LR"}
         if pe_dir not in suffix_map:
             raise ValueError(f"Unsupported PhaseEncodingDirection {pe_dir!r} in {meta_path}")
+        if run_index > 4:
+            continue
         hcp_name = f"rfMRI_REST{run_index}_{suffix_map[pe_dir]}"
         specs.append(RunSpec(run_index=run_index, hcp_name=hcp_name, bold_path=path))
     if not specs:
         raise FileNotFoundError(f"No rest runs found under {subject_dir / 'func'}")
     run_indices = sorted(item.run_index for item in specs)
-    if len(specs) > 4:
-        raise ValueError(
-            f"Expected 1 to 4 rest runs for {subject_dir.name}, found {len(specs)}: {run_indices}"
-        )
     if any(index < 1 or index > 4 for index in run_indices):
         raise ValueError(
             f"EFNY rest run index must be within 1 to 4 for {subject_dir.name}, found: {run_indices}"
