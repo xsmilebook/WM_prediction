@@ -53,18 +53,20 @@ resolve_workbench_dir() {
 
 setup_workbench_runtime() {
     local root="/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/workbench"
+    local bindir="$1"
     local primary_lib="$root/libs_rh_linux64"
     local ogl_lib="$root/libs_rh_linux64_software_opengl"
     local conda_lib=""
     local conda_sysroot_lib=""
+    local wrapper_dir="${TMPDIR:-/tmp}/hcp_workbench_wrapper_${USER}"
+    local wrapper_path="$wrapper_dir/wb_command"
     local library_path_parts=()
+    local entry
 
     if [[ ! -d "$primary_lib" ]]; then
         echo "Workbench library directory not found: $primary_lib" >&2
         exit 1
     fi
-
-    export QT_PLUGIN_PATH="$primary_lib/plugins"
 
     if [[ -n "${CONDA_PREFIX:-}" ]]; then
         conda_lib="$CONDA_PREFIX/lib"
@@ -89,8 +91,26 @@ setup_workbench_runtime() {
         library_path_parts+=("$LD_LIBRARY_PATH")
     fi
 
-    export LD_LIBRARY_PATH
-    LD_LIBRARY_PATH=$(IFS=:; printf '%s' "${library_path_parts[*]}")
+    mkdir -p "$wrapper_dir"
+
+    find "$wrapper_dir" -mindepth 1 -maxdepth 1 -type l -delete 2>/dev/null || true
+    for entry in "$bindir"/*; do
+        [[ -e "$entry" ]] || continue
+        ln -sf "$entry" "$wrapper_dir/$(basename "$entry")"
+    done
+
+    cat > "$wrapper_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+export QT_PLUGIN_PATH="$primary_lib/plugins"
+export LD_LIBRARY_PATH="$(IFS=:; printf '%s' "${library_path_parts[*]}")"
+
+exec "$bindir/wb_command" "\$@"
+EOF
+    chmod 755 "$wrapper_path"
+
+    printf '%s\n' "$wrapper_dir"
 }
 
 resolve_msm_bin_dir() {
@@ -149,8 +169,8 @@ conda activate ML
 
 export HCPPIPEDIR="$PROJECT_ROOT/HCPpipelines-5.0.0"
 export CARET7DIR
-CARET7DIR=$(resolve_workbench_dir)
-setup_workbench_runtime
+WORKBENCH_BINDIR=$(resolve_workbench_dir)
+CARET7DIR=$(setup_workbench_runtime "$WORKBENCH_BINDIR")
 export PATH="$CARET7DIR:$PATH"
 export MSMBINDIR
 MSMBINDIR=$(resolve_msm_bin_dir)

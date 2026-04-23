@@ -263,8 +263,8 @@ show_tool_versions()
     
     # Show tkregister version
     log_Msg "Showing tkregister version"
-    which tkregister
-    tkregister -version
+    which tkregister2
+    tkregister2 -version
 
     # Show mri_concatenate_lta version
     log_Msg "Showing mri_concatenate_lta version"
@@ -627,7 +627,7 @@ if [[ "${T2wImage}" != "" ]]; then
     fi
 
     log_Msg "...Create a registration between the original conformed space and the rawavg space"
-    tkregister_cmd="tkregister"
+    tkregister_cmd="tkregister2"
     tkregister_cmd+=" --mov orig.mgz"
     tkregister_cmd+=" --targ rawavg.mgz"
     tkregister_cmd+=" --regheader"
@@ -660,7 +660,7 @@ if [[ "${T2wImage}" != "" ]]; then
     fi
 
     log_Msg "...Convert to FSL format"
-    tkregister_cmd="tkregister"
+    tkregister_cmd="tkregister2"
     tkregister_cmd+=" --mov orig/${t2_or_flair}raw.mgz"
     tkregister_cmd+=" --targ rawavg.mgz"
     tkregister_cmd+=" --reg Q.lta"

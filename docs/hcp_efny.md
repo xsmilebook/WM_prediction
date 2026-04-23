@@ -28,13 +28,15 @@
 
 - `module load freesurfer/6.0.0`
 - `module load fsl/6.3.0`
+- `module load openblas/0.3.7`
 - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate`
 - `conda activate ML`
 - `HCPPIPEDIR=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/HCPpipelines-5.0.0`
-- `CARET7DIR` 自动解析到 workbench 可执行目录
-- `MSMBINDIR` 从 `/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/MSM_HOCR-3.0FSL` 下搜索可执行 `msm`
+- `CARET7DIR` 自动解析到运行时生成的 workbench wrapper 目录，`wb_command` 通过该 wrapper 调用真实的 `bin_rh_linux64/wb_command`
+- workbench 依赖的 `LD_LIBRARY_PATH` 只在 `wb_command` 的局部 wrapper 中设置，不再全局污染 shell 环境
+- `MSMBINDIR` 解析到 `/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/msm_centos_v3_bin`
 
-注意：当前 `MSM_HOCR-3.0FSL` 如果只有源码、没有编译出的 `msm`，环境脚本会直接报错退出。需要先完成编译，或把 `msm` 可执行文件放到该目录或其子目录中。
+注意：当前默认使用官网预编译的 `msm_centos_v3`，需确保 `msm_centos_v3_bin/msm` 链接存在，并且 `module load openblas/0.3.7` 后可正常执行。
 
 ## 参数来源
 
@@ -176,8 +178,12 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 
 - `wb_command` 找不到
   - 检查 workbench 是否完整，尤其是 `exe_rh_linux64/wb_command`
+- `wb_command` 报 `libglapi.so.0` 或 OpenGL 相关动态库缺失
+  - 先确认 `ML` 环境已安装 `mesa-libglapi-cos7-x86_64`，并重新 `source .../activate && conda activate ML`
 - `msm` 找不到
-  - 当前 `MSM_HOCR-3.0FSL` 路径如果只有源码，需要先编译
+  - 优先检查 `/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/msm_centos_v3_bin/msm` 是否存在且可执行
+- `msm` 报 `libopenblas.so.0` 缺失
+  - 检查 `module load openblas/0.3.7` 是否在当前 shell 或 Slurm 作业中生效
 - `PreFreeSurfer` 在 TOPUP 阶段失败
   - 检查 AP/PA spin-echo 文件是否存在，且 `seechospacing=0.000530007`
 - `fMRIVolume` 报 scout 相关错误
