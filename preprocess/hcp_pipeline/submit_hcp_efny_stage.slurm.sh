@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=hcp_stage
-#SBATCH --partition=q_fat_c,q_fat
+#SBATCH --partition=q_fat_c,q_fat,q_fat_l
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder/logs/slurm/%x_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder/logs/slurm/%x_%A_%a.err
 
