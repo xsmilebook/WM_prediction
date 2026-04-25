@@ -53,7 +53,7 @@ fi
 rm -rf "$FMRIPREP_BRIDGE_SUBJECT" "$CUSTOM_CP" "$WD"
 mkdir -p "$FMRIPREP_BRIDGE_FUNC" "$FMRIPREP_BRIDGE_ANAT" "$CUSTOM_CP" "$OUTPUT" "$WD"
 
-source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/etc/profile.d/conda.sh
 conda activate ML
 
 cat > "$FMRIPREP_BRIDGE_ROOT/dataset_description.json" <<EOF
@@ -96,13 +96,13 @@ EOF
 
 link_file \
     "$HCP_SUBJECT_DIR/MNINonLinear/T1w.nii.gz" \
-    "$FMRIPREP_BRIDGE_ANAT/${subj}_space-MNI152NLin6Asym_res-2_desc-preproc_T1w.nii.gz"
+    "$FMRIPREP_BRIDGE_ANAT/${subj}_desc-preproc_T1w.nii.gz"
 link_file \
     "$HCP_SUBJECT_DIR/MNINonLinear/brainmask_fs.2.nii.gz" \
-    "$FMRIPREP_BRIDGE_ANAT/${subj}_space-MNI152NLin6Asym_res-2_desc-brain_mask.nii.gz"
+    "$FMRIPREP_BRIDGE_ANAT/${subj}_desc-brain_mask.nii.gz"
 link_file \
     "$HCP_SUBJECT_DIR/MNINonLinear/ROIs/wmparc.2.nii.gz" \
-    "$FMRIPREP_BRIDGE_ANAT/${subj}_space-MNI152NLin6Asym_res-2_dseg.nii.gz"
+    "$FMRIPREP_BRIDGE_ANAT/${subj}_dseg.nii.gz"
 write_identity_xfm "$FMRIPREP_BRIDGE_ANAT/${subj}_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.txt"
 write_identity_xfm "$FMRIPREP_BRIDGE_ANAT/${subj}_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.txt"
 
@@ -127,6 +127,7 @@ for run_dir in "${run_dirs[@]}"; do
     boldref_file="$run_dir/${run_name}_SBRef.nii.gz"
     mask_file="$run_dir/brainmask_fs.2.nii.gz"
     motion_file="$run_dir/Movement_Regressors.txt"
+    rmsd_file="$run_dir/Movement_RelativeRMS.txt"
 
     link_file "$bold_file" "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-preproc_bold.nii.gz"
     link_file "$boldref_file" "$FMRIPREP_BRIDGE_FUNC/${prefix}_boldref.nii.gz"
@@ -135,10 +136,13 @@ for run_dir in "${run_dirs[@]}"; do
     python3 "$SCRIPT_DIR/extract_confounds_by_title.py" \
         --bold-file "$bold_file" \
         --motion-file "$motion_file" \
+        --rmsd-file "$rmsd_file" \
         --seg-file "$HCP_SUBJECT_DIR/MNINonLinear/ROIs/wmparc.2.nii.gz" \
         --brain-mask-file "$mask_file" \
         --base-confounds-out "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-confounds_timeseries.tsv" \
+        --base-confounds-json-out "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-confounds_timeseries.json" \
         --custom-confounds-out "$CUSTOM_CP/${subj}_task-rest_run-${run_id}_space-MNI152NLin6Asym_res-2_desc-confounds_timeseries.tsv" \
+        --custom-confounds-json-out "$CUSTOM_CP/${subj}_task-rest_run-${run_id}_space-MNI152NLin6Asym_res-2_desc-confounds_timeseries.json" \
         --bold-json-out "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-preproc_bold.json" \
         --task-name rest
 done
@@ -160,6 +164,7 @@ singularity run --cleanenv \
     -w /wd --nthreads 2 --mem-gb 40 \
     --nuisance-regressors 24P --despike -c /custom_confounds \
     --lower-bpf=0.01 --upper-bpf=0.1 \
+    --smoothing 0 \
     --motion-filter-type lp --band-stop-min 6 \
     --skip-parcellation \
     --fd-thresh -1

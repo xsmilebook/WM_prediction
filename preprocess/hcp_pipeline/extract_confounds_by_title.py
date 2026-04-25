@@ -82,6 +82,21 @@ def read_motion_regressors(path: Path, n_frames: int) -> dict[str, np.ndarray]:
     return confounds
 
 
+def read_relative_rms(path: Path, n_frames: int) -> np.ndarray:
+    data = np.loadtxt(path, dtype=np.float64)
+    if data.ndim == 0:
+        data = data[np.newaxis]
+    if data.ndim != 1:
+        data = np.squeeze(data)
+    if data.ndim != 1:
+        raise ValueError(f"Relative RMS file must be 1D after squeeze, got shape {data.shape}")
+    if data.shape[0] != n_frames:
+        raise ValueError(
+            f"Relative RMS has {data.shape[0]} frames, but BOLD has {n_frames} frames"
+        )
+    return data
+
+
 def write_tsv(path: Path, columns: dict[str, np.ndarray]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     headers = list(columns.keys())
@@ -94,14 +109,23 @@ def write_tsv(path: Path, columns: dict[str, np.ndarray]) -> None:
             writer.writerow(row)
 
 
+def write_confounds_json(path: Path, columns: dict[str, np.ndarray]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    metadata = {name: {} for name in columns.keys()}
+    path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bold-file", required=True)
     parser.add_argument("--motion-file", required=True)
+    parser.add_argument("--rmsd-file", required=True)
     parser.add_argument("--seg-file", required=True)
     parser.add_argument("--brain-mask-file", required=True)
     parser.add_argument("--base-confounds-out", required=True)
+    parser.add_argument("--base-confounds-json-out", required=False)
     parser.add_argument("--custom-confounds-out", required=True)
+    parser.add_argument("--custom-confounds-json-out", required=False)
     parser.add_argument("--bold-json-out", required=False)
     parser.add_argument("--task-name", default="rest")
     args = parser.parse_args()
@@ -130,6 +154,7 @@ def main() -> None:
 
     n_frames = bold_data.shape[-1]
     base_confounds = read_motion_regressors(Path(args.motion_file), n_frames)
+    base_confounds["rmsd"] = read_relative_rms(Path(args.rmsd_file), n_frames)
     custom_confounds = {
         "csf": csf_signal,
         "global_signal": global_signal,
@@ -142,6 +167,10 @@ def main() -> None:
 
     write_tsv(Path(args.base_confounds_out), base_confounds)
     write_tsv(Path(args.custom_confounds_out), custom_confounds)
+    if args.base_confounds_json_out:
+        write_confounds_json(Path(args.base_confounds_json_out), base_confounds)
+    if args.custom_confounds_json_out:
+        write_confounds_json(Path(args.custom_confounds_json_out), custom_confounds)
 
     if args.bold_json_out:
         tr = float(bold_img.header.get_zooms()[-1])
