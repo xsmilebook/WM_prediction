@@ -23,9 +23,10 @@ else
 fi
 participant_label="${subj#sub-}"
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-PROJECT_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
-DATA_ROOT="$PROJECT_ROOT/../data/EFNY"
+PROJECT_ROOT_DEFAULT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
+PROJECT_ROOT="${WM_PREDICTION_ROOT:-$PROJECT_ROOT_DEFAULT}"
+SCRIPT_DIR="$PROJECT_ROOT/src/preprocess/hcp_pipeline"
+DATA_ROOT="$PROJECT_ROOT/data/EFNY"
 HCP_STUDYFOLDER="$DATA_ROOT/hcp_studyfolder"
 HCP_SUBJECT_DIR="$HCP_STUDYFOLDER/$subj"
 RESULTS_ROOT="$HCP_SUBJECT_DIR/MNINonLinear/Results"

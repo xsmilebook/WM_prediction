@@ -15,5 +15,5 @@ while IFS= read -r subj || [[ -n "$subj" ]]; do
     sbatch -J "$subj" \
         -o "$LOG_DIR/out.${subj}.txt" \
         -e "$LOG_DIR/error.${subj}.txt" \
-        "xcpd_24p_csf_global.sh" "$subj"
+        "$PROJECT_ROOT/src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh" "$subj"
 done < "$SUBJ_LIST"
