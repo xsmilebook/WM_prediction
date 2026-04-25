@@ -159,7 +159,6 @@ singularity run --cleanenv \
     -w /wd --nthreads 2 --mem-gb 40 \
     --nuisance-regressors 24P --despike -c /custom_confounds \
     --lower-bpf=0.01 --upper-bpf=0.1 \
-    --smoothing 6 \
     --motion-filter-type lp --band-stop-min 6 \
     --skip-parcellation \
     --fd-thresh -1
