@@ -20,6 +20,9 @@
 - `PostFreeSurfer` 入口：`preprocess/hcp_pipeline/PostFreeSurferPipelineBatch.sh`
 - `fMRIVolume` 入口：`preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh`
 - `fMRISurface` 入口：`preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh`
+- HCP 到 XCP-D 的 confounds helper：`preprocess/hcp_pipeline/extract_confounds_by_title.py`
+- 单被试 XCP-D 入口：`preprocess/hcp_pipeline/xcpd_24p_csf_global.sh`
+- 批量提交 XCP-D：`preprocess/hcp_pipeline/batch_xcpd.sh`
 - Slurm 数组提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh`
 
 ## 环境约定
@@ -122,6 +125,59 @@ bash preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh \
 - `fMRISurface`
   - 相同 `Results/rfMRI_REST*_*/` 目录下的 surface/CIFTI 输出
 
+## HCP 结果继续接 XCP-D
+
+当前 EFNY 的 HCP run 命名为 `rfMRI_REST{1..4}_{PA/AP/...}`，而仓库当前使用的 XCP-D 版本仍沿用旧版调用方式。因此本仓库不直接把 `hcp_studyfolder` 当作 XCP-D 的 HCP 输入，而是在单被试脚本内部临时生成最小 `fMRIPrep` 风格 bridge，再继续运行 XCP-D。这个 bridge 只在脚本运行期间使用，不作为新的独立目录规范。
+
+### 单被试运行
+
+```bash
+bash preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC
+```
+
+脚本会执行以下步骤：
+
+- 从 `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST*_*/` 发现已完成的 `fMRIVolume` run
+- 在 `data/EFNY/xcpd_hcp/fmriprep_bridge/` 下为当前被试创建临时 bridge
+- 用 `extract_confounds_by_title.py` 生成两类 TSV
+  - bridge 所需的 `desc-confounds_timeseries.tsv`
+  - 仅包含 `csf` 与 `global_signal` 及其导数/平方项的 custom confounds TSV
+- `Movement_Regressors.txt` 中的旋转参数在 HCP 输出里使用角度制，helper 会先转换为弧度，再写入 bridge confounds 和基于这些参数计算的 `framewise_displacement`
+- 运行 XCP-D，并将结果写到 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/`
+
+### 批量提交
+
+```bash
+bash preprocess/hcp_pipeline/batch_xcpd.sh
+```
+
+默认被试列表为：
+
+`data/EFNY/table/sublist_new_left521.txt`
+
+也可显式指定列表文件：
+
+```bash
+bash preprocess/hcp_pipeline/batch_xcpd.sh /path/to/subjects.txt
+```
+
+批量日志默认写到：
+
+`log/hcp_pipeline/xcpd/`
+
+### 当前已生成的 bridge 示例
+
+本次已为单被试 `sub-THU20231118133GYC` 生成持久化 bridge，位置如下：
+
+- `data/EFNY/xcpd_hcp/fmriprep_bridge/sub-THU20231118133GYC/`
+- `data/EFNY/xcpd_hcp/custom_confounds_csf_global_24p/sub-THU20231118133GYC/func/`
+
+对应 3 个已完成的 HCP `fMRIVolume` run：
+
+- `task-rest_run-1`
+- `task-rest_run-2`
+- `task-rest_run-3`
+
 ## 日志位置
 
 每次运行都会将 stdout/stderr 写到：
@@ -192,5 +248,9 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
   - 检查 AP/PA spin-echo 文件是否存在，且 `seechospacing=0.000530007`
 - `fMRIVolume` 报 scout 相关错误
   - 当前方案固定 `--fmriscout=NONE`，由 HCP 自动提取第一帧；若原始时序异常，可单独检查该 run 的前几帧质量
+- `xcpd_24p_csf_global.sh` 报缺少 `Results/rfMRI_REST*_*/` 或 `Movement_Regressors.txt`
+  - 说明当前被试尚未完成 `fMRIVolume`，或该 run 关键输出不完整
+- `xcpd_24p_csf_global.sh` 报 bridge confounds 生成失败
+  - 优先检查 `MNINonLinear/ROIs/wmparc.2.nii.gz`、`brainmask_fs.2.nii.gz` 与对应 BOLD 的维度是否一致
 - `MSMSulc` 在 `PostFreeSurfer` 或 `fMRISurface` 失败
   - 优先检查 `$MSMBINDIR/msm` 是否可执行，以及 workbench、MSM 配套库是否可用

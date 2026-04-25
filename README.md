@@ -36,6 +36,12 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC`
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
+- Run XCP-D after EFNY HCP `fMRIVolume`:
+  - `bash src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC`
+  - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates Python-based bridge/custom confounds, and writes XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.
+- Batch-submit EFNY HCP->XCP-D jobs:
+  - `bash src/preprocess/hcp_pipeline/batch_xcpd.sh`
+  - Optional subject list override: `bash src/preprocess/hcp_pipeline/batch_xcpd.sh /path/to/subjects.txt`
 - Unified processing (example):
   - `python src/conn_matrix/process_dataset_unified.py --dataset_name HCPD --subject_id sub-HCDxxxxx --dataset_path d:\code\WM_prediction\data\HCPD --mask_output_dir d:\code\WM_prediction\data\HCPD\mri_data\wm_postproc --fc_output_dir d:\code\WM_prediction\data\HCPD\fc_matrix\individual --z_output_dir d:\code\WM_prediction\data\HCPD\fc_matrix\individual_z --gm_atlas d:\code\WM_prediction\data\atlas\resliced_hcpd\Schaefer2018_100Parcels_7Networks_order_FSLMNI152_2mm_resliced.nii.gz --wm_atlas d:\code\WM_prediction\data\atlas\resliced_hcpd\rICBM_DTI_81_WMPM_60p_FMRIB58_resliced.nii.gz`
 - Vectorize matrices:

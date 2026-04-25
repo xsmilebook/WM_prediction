@@ -56,7 +56,10 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── PostFreeSurferPipelineBatch.sh # EFNY 的 PostFreeSurfer 批处理入口，对齐 HCP 示例脚本命名
 │   │   ├── GenericfMRIVolumeProcessingPipelineBatch.sh # EFNY 的 fMRIVolume 批处理入口
 │   │   ├── GenericfMRISurfaceProcessingPipelineBatch.sh # EFNY 的 fMRISurface 批处理入口
+│   │   ├── extract_confounds_by_title.py # 从 HCP fMRIVolume 结果生成桥接 confounds 和 csf/global custom confounds
 │   │   ├── prepare_hcp_studyfolder_efny.py # 将 EFNY BIDS 数据整理为 HCP StudyFolder 结构并生成 manifest
+│   │   ├── xcpd_24p_csf_global.sh        # EFNY HCP 结果单被试桥接到最小 fMRIPrep 风格后运行 XCP-D
+│   │   ├── batch_xcpd.sh                 # 读取 EFNY 被试列表并逐个 sbatch 提交 XCP-D 作业
 │   │   └── submit_hcp_efny_stage.slurm.sh # Slurm array 入口，按 subject list 提交单阶段批处理
 │   ├── screen_head_motion_abcd.py        # ABCD 静息态头动筛选
 │   ├── screen_head_motion_ccnp.py        # CCNP 静息态头动筛选
