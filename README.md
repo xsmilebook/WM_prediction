@@ -19,7 +19,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
-  - `V_feature_merge/`: Paired t-test and one-way ANOVA scripts for merged-feature result comparison and plotting.
+  - `V_feature_merge/`: Distribution plotting, paired t-test, and one-way ANOVA scripts for merged-feature result comparison.
 
 ## Unified Pipeline Highlights (HCPD example)
 - Valid run selection: Read `table/rest_fd_summary.csv` and select `REST1_acq-AP/PA`, `REST2_acq-AP/PA` under thresholds (e.g., FD ≤ 0.5 and low-motion ratio > 0.4).
@@ -69,6 +69,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/paired_ttest_best_child.py --dataset HCPD --task age`
 - Run one-way ANOVA against all child features:
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/rm_anova_all_children.py --dataset HCPD --task age`
+- Plot half-violin + boxplots for the 7 feature sets:
+  - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/plot_feature_merge_distributions.py`
 
 ## Merged Feature Evaluation
 The `prediction/V_feature_merge/` workflow concatenates the original GG, GW, and WW vectors into four combinations:
@@ -88,6 +90,10 @@ Merged-feature statistical summaries and figures are written to:
 - `data/<dataset>/prediction/<target>/V_feature_merge/statistics/rm_anova_all_children.csv`
 - `data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_ttest/`
 - `data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/rm_anova/`
+- `results/V_feature_merge/age/`
+- `results/V_feature_merge/ABCD/cognition/`
+- `results/V_feature_merge/ABCD/pfactor/`
+- `results/V_feature_merge/feature_merge_distribution_summary.csv`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.

@@ -82,6 +82,49 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/compare
 data/<dataset>/prediction/feature_merge_summary_<task>.csv
 ```
 
+## 分布可视化
+
+新增脚本 `results_vis/V_feature_merge/plot_feature_merge_distributions.py`，用于直接读取基线与 merged 结果中的 `Res_NFold.mat`，绘制 101 次 random CV 的 `Mean_Corr` 分布图。
+
+绘图顺序固定为：
+
+- `GG`
+- `GW`
+- `WW`
+- `GG+GW`
+- `GW+WW`
+- `GG+WW`
+- `GG+GW+WW`
+
+图形形式为每个 feature 一组半边小提琴图加紧邻箱线图，其中：
+
+- 左侧半边小提琴图展示分布形状
+- 右侧窄箱线图展示四分位数和中位数
+- 单 feature（GG/GW/WW）与 merged feature 之间用竖虚线分隔
+
+默认行为：
+
+- age：为 `HCPD`、`CCNP`、`EFNY`、`PNC` 各输出 1 张图
+- ABCD cognition：为 `nihtbx_cryst_uncorrected`、`nihtbx_fluidcomp_uncorrected`、`nihtbx_totalcomp_uncorrected` 各输出 1 张图
+- ABCD pfactor：为 `General`、`Ext`、`ADHD`、`Int` 各输出 1 张图
+
+运行示例：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_feature_merge/plot_feature_merge_distributions.py
+```
+
+默认输出路径：
+
+```text
+code/WM_prediction/results/V_feature_merge/age/
+code/WM_prediction/results/V_feature_merge/ABCD/cognition/
+code/WM_prediction/results/V_feature_merge/ABCD/pfactor/
+code/WM_prediction/results/V_feature_merge/feature_merge_distribution_summary.csv
+```
+
 ## 统计比较
 
 新增目录 `results_vis/V_feature_merge/`，用于在已有 `Res_NFold.mat` 基础上直接对 101 次 random CV 的 `Mean_Corr` 序列进行统计检验与可视化。

@@ -32,6 +32,26 @@ TASK_TARGETS = {
     'pfactor': ['General', 'Ext', 'ADHD', 'Int'],
 }
 DEFAULT_PROJECT_ROOT = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data'
+DEFAULT_REPO_ROOT = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction'
+DEFAULT_RESULTS_ROOT = os.path.join(DEFAULT_REPO_ROOT, 'results', 'V_feature_merge')
+FEATURE_DISPLAY_MAP = {
+    'GGFC': 'GG',
+    'GWFC': 'GW',
+    'WWFC': 'WW',
+    'GG_GW_MergedFC': 'GG+GW',
+    'GW_WW_MergedFC': 'GW+WW',
+    'GG_WW_MergedFC': 'GG+WW',
+    'GG_GW_WW_MergedFC': 'GG+GW+WW',
+}
+FEATURE_PLOT_ORDER = [
+    'GGFC',
+    'GWFC',
+    'WWFC',
+    'GG_GW_MergedFC',
+    'GW_WW_MergedFC',
+    'GG_WW_MergedFC',
+    'GG_GW_WW_MergedFC',
+]
 
 
 def parse_common_args(description):
