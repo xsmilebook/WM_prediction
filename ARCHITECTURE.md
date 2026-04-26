@@ -27,6 +27,9 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── batch_run_unified_hcpd.sh         # HCPD 数据集统一流程提交脚本
 │   ├── batch_run_unified_pnc.sh          # PNC 数据集统一流程提交脚本
 │   ├── cluster_run_convert_vectors.sh    # 集群批量向量化 FC 矩阵
+│   ├── efny_hcppipeline/                 # EFNY HCP pipeline + XCP-D 结果的独立 FC 生成与对比入口
+│   │   ├── run_subject_fc.py             # 生成兼容旧 unified 逻辑的 tissue dseg，并复用 DatasetProcessor 计算单被试 FC
+│   │   └── compare_subject_fc.py         # 对比新旧 EFNY individual_z 结果并输出矩阵图与相关系数
 │   └── logs/                             # `conn_matrix/` 相关日志目录
 │
 ├── prediction/                           # 预测建模与交叉验证脚本

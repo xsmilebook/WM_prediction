@@ -32,7 +32,7 @@
 - `module load freesurfer/6.0.0`
 - `module load fsl/6.3.0`
 - `module load openblas/0.3.7`
-- `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate`
+- `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/etc/profile.d/conda.sh`
 - `conda activate ML`
 - `HCPPIPEDIR=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/HCPpipelines-5.0.0`
 - `CARET7DIR` 自动解析到运行时生成的 workbench wrapper 目录，`wb_command` 通过该 wrapper 调用真实的 `exe_rh_linux64/wb_command`
@@ -142,6 +142,9 @@ bash preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC
 - 用 `extract_confounds_by_title.py` 生成两类 TSV
   - bridge 所需的 `desc-confounds_timeseries.tsv`
   - 仅包含 `csf` 与 `global_signal` 及其导数/平方项的 custom confounds TSV
+- helper 还会为 bridge confounds 与 custom confounds 同步生成同名 `.json` sidecar，满足 XCP-D 对 `confounds_json` 的读取要求
+- bridge confounds 会额外写入 `rmsd`，该列直接读取 HCP run 目录中的 `Movement_RelativeRMS.txt`，用于满足 XCP-D QC/report 对相对 RMS 头动指标的读取要求
+- bridge 的 `func/` 仍保持 `space-MNI152NLin6Asym_res-2` 命名；`anat/` 改为无 `space` 的 fMRIPrep 风格命名，例如 `sub-*_desc-preproc_T1w.nii.gz`、`sub-*_desc-brain_mask.nii.gz`、`sub-*_dseg.nii.gz`
 - `Movement_Regressors.txt` 中的旋转参数在 HCP 输出里使用角度制，helper 会先转换为弧度，再写入 bridge confounds 和基于这些参数计算的 `framewise_displacement`
 - 运行 XCP-D，并将结果写到 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/`
 
@@ -252,5 +255,9 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
   - 说明当前被试尚未完成 `fMRIVolume`，或该 run 关键输出不完整
 - `xcpd_24p_csf_global.sh` 报 bridge confounds 生成失败
   - 优先检查 `MNINonLinear/ROIs/wmparc.2.nii.gz`、`brainmask_fs.2.nii.gz` 与对应 BOLD 的维度是否一致
+- `xcpd_24p_csf_global.sh` 在 `qc_report` 阶段报 `KeyError: 'rmsd'`
+  - 说明 bridge 的 `desc-confounds_timeseries.tsv` 缺少 `rmsd` 列；当前 helper 会从 HCP 的 `Movement_RelativeRMS.txt` 直接写入该列
+- `xcpd_24p_csf_global.sh` 报 `EnvironmentNameNotFound: sub-...`
+  - 说明 shell 误把被试 ID 当成 conda 环境名；当前脚本已经改为 `source .../etc/profile.d/conda.sh` 后再 `conda activate ML`
 - `MSMSulc` 在 `PostFreeSurfer` 或 `fMRISurface` 失败
   - 优先检查 `$MSMBINDIR/msm` 是否可执行，以及 workbench、MSM 配套库是否可用

@@ -6,6 +6,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - `conn_matrix/`
   - `process_dataset_unified.py`: Unified script that, per-dataset, performs valid-run selection → locate dseg and functional files → build GM/WM masks → extract atlas ROI time series → compute FC (GG/GW/WW) → apply Fisher Z → save outputs.
   - `generate_mask.py`, `compute_individual_fc.py`, `apply_fisher_z.py`: Single-subject tools for masking, FC computation, and Fisher Z transform.
+  - `efny_hcppipeline/run_subject_fc.py`, `efny_hcppipeline/compare_subject_fc.py`: Reuse the existing EFNY FC logic on HCP-pipeline + XCP-D outputs and compare the new matrices against the legacy EFNY `individual_z` results.
   - `convert_matrices_to_vectors.py`: Vectorizes the upper triangle of FC matrices to feature vectors for prediction.
   - `reslice_atlases.py`: Reslices atlases to target space/resolution.
   - `batch_run_unified_*.sh`: Cluster batch scripts to run the unified pipeline.
@@ -39,6 +40,12 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run XCP-D after EFNY HCP `fMRIVolume`:
   - `bash src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC`
   - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates Python-based bridge/custom confounds, and writes XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.
+- Generate FC matrices from EFNY HCP-pipeline XCP-D outputs:
+  - `python src/conn_matrix/efny_hcppipeline/run_subject_fc.py --subject_id sub-THU20231118133GYC`
+  - The script builds a compatibility tissue `dseg` from HCP `ribbon.nii.gz` and `aparc+aseg.nii.gz`, then reuses the existing `DatasetProcessor` logic to write independent outputs under `data/EFNY/hcppipeline_fc/`.
+- Compare the new HCP-pipeline FC matrices against legacy EFNY results:
+  - `python src/conn_matrix/efny_hcppipeline/compare_subject_fc.py --subject_id sub-THU20231118133GYC`
+  - Comparison figures and vector correlations are written to `data/EFNY/hcppipeline_fc/comparison/`.
 - Batch-submit EFNY HCP->XCP-D jobs:
   - `bash src/preprocess/hcp_pipeline/batch_xcpd.sh`
   - Optional subject list override: `bash src/preprocess/hcp_pipeline/batch_xcpd.sh /path/to/subjects.txt`
