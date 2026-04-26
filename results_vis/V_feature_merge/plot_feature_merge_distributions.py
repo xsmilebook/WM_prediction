@@ -20,11 +20,11 @@ AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
 ABCD_DATASET = 'ABCD'
 TARGET_TITLE_MAP = {
     'age': 'Age',
-    'nihtbx_cryst_uncorrected': 'Crystallized Cognition',
-    'nihtbx_fluidcomp_uncorrected': 'Fluid Cognition',
-    'nihtbx_totalcomp_uncorrected': 'Total Cognition',
+    'nihtbx_cryst_uncorrected': 'Crystal',
+    'nihtbx_fluidcomp_uncorrected': 'Fluid',
+    'nihtbx_totalcomp_uncorrected': 'Total',
     'General': 'General',
-    'Ext': 'Ext',
+    'Ext': 'External',
     'ADHD': 'ADHD',
     'Int': 'Int',
 }
@@ -199,7 +199,7 @@ def add_shifted_boxplot(ax, values, position, color, width=0.16):
         positions=[position + 0.2],
         widths=width,
         patch_artist=True,
-        showfliers=False,
+        showfliers=True,
         medianprops={'color': 'black', 'linewidth': 1.4},
         whiskerprops={'color': '#4d4d4d', 'linewidth': 1.0},
         capprops={'color': '#4d4d4d', 'linewidth': 1.0},
@@ -230,8 +230,8 @@ def plot_half_violin_box(plot_df, title, output_path, dpi):
     ax.set_ylim(y_min - 0.08 * y_range, y_max + 0.16 * y_range)
     ax.set_xticks(positions)
     ax.set_xticklabels([FEATURE_DISPLAY_MAP[name] for name in FEATURE_PLOT_ORDER], fontsize=11)
-    ax.set_ylabel('Median correlation across 101 random CV runs', fontsize=12)
-    ax.set_title(title, fontsize=14)
+    ax.set_ylabel('Prediction Accuracy', fontsize=12)
+    # ax.set_title(title, fontsize=14)
     ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.axvline(3.5, color='#bdbdbd', linestyle='--', linewidth=1.0)
     ax.text(2.0, y_max + 0.08 * y_range, 'Single feature', ha='center', va='bottom', fontsize=11)
