@@ -71,6 +71,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/rm_anova_all_children.py --dataset HCPD --task age`
 - Plot half-violin + boxplots for the 7 feature sets:
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/plot_feature_merge_distributions.py`
+- Evaluate ABCD pfactor features against permutation null correlations:
+  - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/compute_pfactor_permutation_significance.py`
 
 ## Merged Feature Evaluation
 The `prediction/V_feature_merge/` workflow concatenates the original GG, GW, and WW vectors into four combinations:
@@ -94,6 +96,7 @@ Merged-feature statistical summaries and figures are written to:
 - `results/V_feature_merge/ABCD/cognition/`
 - `results/V_feature_merge/ABCD/pfactor/`
 - `results/V_feature_merge/feature_merge_distribution_summary.csv`
+- `results/V_feature_merge/ABCD_pfactor_permutation_significance.csv`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.

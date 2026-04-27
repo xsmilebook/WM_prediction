@@ -123,6 +123,36 @@ code/WM_prediction/results/V_feature_merge/age/
 code/WM_prediction/results/V_feature_merge/ABCD/cognition/
 code/WM_prediction/results/V_feature_merge/ABCD/pfactor/
 code/WM_prediction/results/V_feature_merge/feature_merge_distribution_summary.csv
+code/WM_prediction/results/V_feature_merge/paired_ttest_pvalues/
+```
+
+## pfactor permutation 显著性
+
+新增脚本 `results_vis/V_feature_merge/compute_pfactor_permutation_significance.py`，用于对 `ABCD` 的 `General`、`Ext`、`ADHD` 三个 pfactor 指标进行经验 permutation 显著性评估。
+
+统计口径：
+
+- 实际统计量：每个 feature 在 `101` 次 random CV 上的 `median corr`
+- null 分布：对应 permutation 目录下 `1000` 次 `Mean_Corr`
+- 显著性：右尾经验 p 值，计算方式为 `(count(null >= observed) + 1) / (n_perm + 1)`
+
+当前数据限制：
+
+- `GG`、`GW`、`WW` 可直接使用各自已有的 permutation 结果计算 p 值
+- `GG+GW`、`GW+WW`、`GG+WW`、`GG+GW+WW` 目前没有独立的 `V_feature_merge` permutation 目录，因此结果表中这几项会保留 `NA`，并在 `status` 列标记 `missing_merged_permutation_dir`
+
+运行示例：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_feature_merge/compute_pfactor_permutation_significance.py
+```
+
+默认输出路径：
+
+```text
+code/WM_prediction/results/V_feature_merge/ABCD_pfactor_permutation_significance.csv
 ```
 
 ## 统计比较

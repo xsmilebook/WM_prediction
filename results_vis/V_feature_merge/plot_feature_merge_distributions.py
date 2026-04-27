@@ -211,7 +211,7 @@ def add_shifted_boxplot(ax, values, position, color, width=0.16):
 
 
 def plot_half_violin_box(plot_df, title, output_path, dpi):
-    fig, ax = plt.subplots(figsize=(11.5, 6.5))
+    fig, ax = plt.subplots(figsize=(9.5, 7.5))
     positions = np.arange(1, len(FEATURE_PLOT_ORDER) + 1)
 
     for position, feature_name in zip(positions, FEATURE_PLOT_ORDER):
@@ -229,8 +229,8 @@ def plot_half_violin_box(plot_df, title, output_path, dpi):
     ax.set_xlim(0.45, len(FEATURE_PLOT_ORDER) + 0.8)
     ax.set_ylim(y_min - 0.08 * y_range, y_max + 0.16 * y_range)
     ax.set_xticks(positions)
-    ax.set_xticklabels([FEATURE_DISPLAY_MAP[name] for name in FEATURE_PLOT_ORDER], fontsize=11)
-    ax.set_ylabel('Prediction Accuracy', fontsize=12)
+    ax.set_xticklabels([FEATURE_DISPLAY_MAP[name] for name in FEATURE_PLOT_ORDER], fontsize=14)
+    ax.set_ylabel('Prediction Accuracy', fontsize=14)
     # ax.set_title(title, fontsize=14)
     ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.axvline(3.5, color='#bdbdbd', linestyle='--', linewidth=1.0)

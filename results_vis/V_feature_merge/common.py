@@ -52,6 +52,7 @@ FEATURE_PLOT_ORDER = [
     'GG_WW_MergedFC',
     'GG_GW_WW_MergedFC',
 ]
+DEFAULT_PFACTOR_SIGNIFICANCE_TARGETS = ['General', 'Ext', 'ADHD']
 
 
 def parse_common_args(description):
