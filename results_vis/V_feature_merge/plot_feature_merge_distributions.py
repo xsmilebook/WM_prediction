@@ -25,6 +25,18 @@ plt.rcParams.update({
 AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
 ABCD_DATASET = 'ABCD'
 PLOTTED_FEATURES = ['GGFC', 'GG_GW_WW_MergedFC']
+REFERENCE_GROUP_COUNT = 4
+REFERENCE_VIOLIN_WIDTH = 0.3
+REFERENCE_BOX_WIDTH = 0.12
+REFERENCE_FEATURE_OFFSETS = {
+    'GGFC': -0.18,
+    'GG_GW_WW_MergedFC': 0.18,
+}
+REFERENCE_BOX_SHIFTS = {
+    'GGFC': 0.08,
+    'GG_GW_WW_MergedFC': -0.08,
+}
+FEATURE_SELF_SIGNIFICANCE_LABEL = '**'
 TARGET_TITLE_MAP = {
     'age': 'Age',
     'nihtbx_cryst_uncorrected': 'Crystal',
@@ -37,8 +49,33 @@ TARGET_TITLE_MAP = {
 }
 FEATURE_COLOR_MAP = {
     'GGFC': '#4C78A8',
-    'GG_GW_WW_MergedFC': '#9D755D',
+    'GG_GW_WW_MergedFC': '#F58518',
 }
+
+
+def get_figure_width(group_count):
+    return max(9.0, 2.35 * group_count + 1.0)
+
+
+def get_horizontal_geometry(group_count):
+    reference_figure_width = get_figure_width(REFERENCE_GROUP_COUNT)
+    current_figure_width = get_figure_width(group_count)
+    reference_scale = reference_figure_width / REFERENCE_GROUP_COUNT
+    current_scale = current_figure_width / group_count
+    width_scale = reference_scale / current_scale
+
+    return {
+        'violin_width': REFERENCE_VIOLIN_WIDTH * width_scale,
+        'box_width': REFERENCE_BOX_WIDTH * width_scale,
+        'feature_offsets': {
+            feature_name: offset * width_scale
+            for feature_name, offset in REFERENCE_FEATURE_OFFSETS.items()
+        },
+        'box_shifts': {
+            feature_name: shift * width_scale
+            for feature_name, shift in REFERENCE_BOX_SHIFTS.items()
+        },
+    }
 
 
 def parse_args():
@@ -200,7 +237,7 @@ def summarize_feature_dataframe(plot_df):
     return summary_df.sort_values(['plot_name', 'group_label', 'feature_name']).reset_index(drop=True)
 
 
-def add_half_violin(ax, values, position, color, side, width=0.3):
+def add_half_violin(ax, values, position, color, side, width):
     violin = ax.violinplot(
         [values],
         positions=[position],
@@ -223,8 +260,7 @@ def add_half_violin(ax, values, position, color, side, width=0.3):
         body.set_linewidth(1.2)
 
 
-def add_shifted_boxplot(ax, values, position, color, side, width=0.12):
-    shift = 0.08 if side == 'right' else -0.08
+def add_shifted_boxplot(ax, values, position, color, shift, width):
     box = ax.boxplot(
         [values],
         positions=[position + shift],
@@ -239,6 +275,8 @@ def add_shifted_boxplot(ax, values, position, color, side, width=0.12):
     for patch in box['boxes']:
         patch.set_facecolor(color)
         patch.set_alpha(0.75)
+
+    return position + shift
 
 
 def compute_significance(group_df):
@@ -279,21 +317,17 @@ def get_plot_significance_label(p_value):
 
 
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
-    fig_width = max(9.0, 2.35 * len(group_labels) + 1.0)
+    fig_width = get_figure_width(len(group_labels))
     fig, ax = plt.subplots(figsize=(fig_width, 7.0))
     centers = np.arange(1, len(group_labels) + 1)
-    feature_offsets = {
-        'GGFC': -0.18,
-        'GG_GW_WW_MergedFC': 0.18,
-    }
+    geometry = get_horizontal_geometry(len(group_labels))
+    feature_offsets = geometry['feature_offsets']
+    box_shifts = geometry['box_shifts']
     violin_sides = {
         'GGFC': 'left',
         'GG_GW_WW_MergedFC': 'right',
     }
-    box_sides = {
-        'GGFC': 'right',
-        'GG_GW_WW_MergedFC': 'left',
-    }
+    feature_marker_x = []
 
     for center, group_label in zip(centers, group_labels):
         group_df = plot_df.loc[plot_df['group_label'] == group_label]
@@ -306,14 +340,17 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
                 position,
                 FEATURE_COLOR_MAP[feature_name],
                 side=violin_sides[feature_name],
+                width=geometry['violin_width'],
             )
-            add_shifted_boxplot(
+            box_center = add_shifted_boxplot(
                 ax,
                 values,
                 position,
                 FEATURE_COLOR_MAP[feature_name],
-                side=box_sides[feature_name],
+                shift=box_shifts[feature_name],
+                width=geometry['box_width'],
             )
+            feature_marker_x.append((group_label, feature_name, (position + box_center) / 2))
 
     all_values = plot_df['corr'].dropna().to_numpy()
     y_min = float(np.min(all_values))
@@ -321,6 +358,21 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     y_range = y_max - y_min
     if y_range == 0:
         y_range = max(abs(y_max), 1.0) * 0.1 if y_max != 0 else 0.1
+
+    feature_max_map = (
+        plot_df.groupby(['group_label', 'feature_name'])['corr']
+        .max()
+        .to_dict()
+    )
+    for group_label, feature_name, marker_x in feature_marker_x:
+        ax.text(
+            marker_x,
+            float(feature_max_map[(group_label, feature_name)]) + 0.01 * y_range,
+            FEATURE_SELF_SIGNIFICANCE_LABEL,
+            ha='center',
+            va='bottom',
+            fontsize=11,
+        )
 
     significance_rows = []
     bar_tops = []
@@ -332,12 +384,12 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
 
         group_max = float(group_df['corr'].max())
         bar_y = group_max + 0.05 * y_range
-        bar_height = 0.03 * y_range
+        bar_height = 0.015 * y_range
         bar_tops.append(bar_y + bar_height)
         add_significance_bar(
             ax,
-            center + feature_offsets['GGFC'] + 0.08,
-            center + feature_offsets['GG_GW_WW_MergedFC'] - 0.08,
+            center + feature_offsets['GGFC'] + box_shifts['GGFC'],
+            center + feature_offsets['GG_GW_WW_MergedFC'] + box_shifts['GG_GW_WW_MergedFC'],
             bar_y,
             bar_height,
             stats_row['significance_label'],
@@ -352,12 +404,12 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.legend(
         handles=[
-            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='GG'),
+            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
             Patch(
                 facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
                 edgecolor='black',
                 alpha=0.5,
-                label='GG+GW+WW',
+                label='G-G,G-W,W-W',
             ),
         ],
         loc='upper right',
