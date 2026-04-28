@@ -15,9 +15,12 @@ from common import (
     FEATURE_DISPLAY_MAP,
     add_significance_bar,
     ensure_dir,
-    get_significance_label,
     load_target_feature_data,
 )
+
+plt.rcParams.update({
+    'font.family': 'sans-serif'
+})
 
 AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
 ABCD_DATASET = 'ABCD'
@@ -93,9 +96,15 @@ def get_plot_specifications(args):
                     {
                         'dataset': dataset,
                         'target': 'age',
-                        'group_label': dataset,
+                        'group_label': group_label,
                     }
-                    for dataset in args.age_datasets
+                    for dataset, group_label in [
+                        ('EFNY', 'EFNY'),
+                        ('CCNP', 'devCCNP'),
+                        ('HCPD', 'HCP-D'),
+                        ('PNC', 'PNC'),
+                    ]
+                    if dataset in args.age_datasets
                 ],
                 'output_dir': os.path.join(args.output_root, 'age'),
                 'filename': 'age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.png',
@@ -104,11 +113,11 @@ def get_plot_specifications(args):
 
     if not args.skip_abcd:
         cognition_targets = [
+            'nihtbx_totalcomp_uncorrected',
             'nihtbx_cryst_uncorrected',
             'nihtbx_fluidcomp_uncorrected',
-            'nihtbx_totalcomp_uncorrected',
         ]
-        pfactor_targets = ['General', 'Ext', 'ADHD', 'Int']
+        pfactor_targets = ['ADHD']
 
         specs.append(
             {
@@ -209,7 +218,7 @@ def add_half_violin(ax, values, position, color, side, width=0.3):
         else:
             raise ValueError(f'Unsupported violin side: {side}')
         body.set_facecolor(color)
-        body.set_edgecolor(color)
+        body.set_edgecolor('black')
         body.set_alpha(0.5)
         body.set_linewidth(1.2)
 
@@ -223,9 +232,9 @@ def add_shifted_boxplot(ax, values, position, color, side, width=0.12):
         patch_artist=True,
         showfliers=True,
         medianprops={'color': 'black', 'linewidth': 1.4},
-        whiskerprops={'color': '#4d4d4d', 'linewidth': 1.0},
-        capprops={'color': '#4d4d4d', 'linewidth': 1.0},
-        boxprops={'edgecolor': '#4d4d4d', 'linewidth': 1.0},
+        whiskerprops={'color': 'black', 'linewidth': 1.0},
+        capprops={'color': 'black', 'linewidth': 1.0},
+        boxprops={'edgecolor': 'black', 'linewidth': 1.0},
     )
     for patch in box['boxes']:
         patch.set_facecolor(color)
@@ -257,8 +266,16 @@ def compute_significance(group_df):
         'median_delta_corr': delta.median(),
         't_stat': float(t_stat),
         'p_value': float(p_value),
-        'significance_label': get_significance_label(p_value),
+        'significance_label': get_plot_significance_label(p_value),
     }
+
+
+def get_plot_significance_label(p_value):
+    if p_value < 0.005:
+        return '**'
+    if p_value < 0.05:
+        return '*'
+    return 'ns'
 
 
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
@@ -338,13 +355,13 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
             Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='GG'),
             Patch(
                 facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
-                edgecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
+                edgecolor='black',
                 alpha=0.5,
                 label='GG+GW+WW',
             ),
         ],
-        loc='upper left',
-        frameon=False,
+        loc='upper right',
+        frameon=True,
         fontsize=11,
     )
 

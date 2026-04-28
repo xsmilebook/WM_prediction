@@ -91,13 +91,17 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 - `GG`
 - `GG+GW+WW`
 
-图形形式为组内配对的半边小提琴图加箱线图，并在每个分组上方标注 `GG` 与 `GG+GW+WW` 的配对样本 `t test` 显著性（`ns`、`*`、`**`、`***`）。
+图形形式为组内配对的半边小提琴图加箱线图，图例固定放在右上角，并在每个分组上方标注 `GG` 与 `GG+GW+WW` 的配对样本 `t test` 显著性。其中显著性规则为：
+
+- `p < 0.005`：`**`
+- `0.005 <= p < 0.05`：`*`
+- `p >= 0.05`：`ns`
 
 默认输出 3 张图：
 
-- age：`HCPD`、`CCNP`、`EFNY`、`PNC` 4 个数据集绘制在同一张图
-- cognition：`Crystal`、`Fluid`、`Total` 3 个指标绘制在同一张图
-- pfactor：`General`、`External`、`ADHD`、`Int` 4 个指标绘制在同一张图
+- age：按 `EFNY`、`devCCNP`、`HCP-D`、`PNC` 的顺序在同一张图中绘制 4 个数据集
+- cognition：按 `Total`、`Crystal`、`Fluid` 的顺序在同一张图中绘制 3 个指标
+- pfactor：只绘制 `ADHD`
 
 运行示例：
 
