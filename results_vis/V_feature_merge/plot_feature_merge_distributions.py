@@ -6,18 +6,22 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.patches import Patch
+from scipy import stats
 
 from common import (
     DEFAULT_PROJECT_ROOT,
     DEFAULT_RESULTS_ROOT,
     FEATURE_DISPLAY_MAP,
-    FEATURE_PLOT_ORDER,
+    add_significance_bar,
     ensure_dir,
+    get_significance_label,
     load_target_feature_data,
 )
 
 AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
 ABCD_DATASET = 'ABCD'
+PLOTTED_FEATURES = ['GGFC', 'GG_GW_WW_MergedFC']
 TARGET_TITLE_MAP = {
     'age': 'Age',
     'nihtbx_cryst_uncorrected': 'Crystal',
@@ -30,11 +34,6 @@ TARGET_TITLE_MAP = {
 }
 FEATURE_COLOR_MAP = {
     'GGFC': '#4C78A8',
-    'GWFC': '#72B7B2',
-    'WWFC': '#54A24B',
-    'GG_GW_MergedFC': '#F58518',
-    'GW_WW_MergedFC': '#E45756',
-    'GG_WW_MergedFC': '#B279A2',
     'GG_GW_WW_MergedFC': '#9D755D',
 }
 
@@ -86,16 +85,22 @@ def parse_args():
 def get_plot_specifications(args):
     specs = []
     if not args.skip_age:
-        for dataset in args.age_datasets:
-            specs.append(
-                {
-                    'dataset': dataset,
-                    'task': 'age',
-                    'target': 'age',
-                    'output_dir': os.path.join(args.output_root, 'age'),
-                    'filename': f'{dataset}_age_median_corr_half_violin_box.png',
-                }
-            )
+        specs.append(
+            {
+                'plot_name': 'age',
+                'task': 'age',
+                'group_items': [
+                    {
+                        'dataset': dataset,
+                        'target': 'age',
+                        'group_label': dataset,
+                    }
+                    for dataset in args.age_datasets
+                ],
+                'output_dir': os.path.join(args.output_root, 'age'),
+                'filename': 'age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.png',
+            }
+        )
 
     if not args.skip_abcd:
         cognition_targets = [
@@ -105,43 +110,56 @@ def get_plot_specifications(args):
         ]
         pfactor_targets = ['General', 'Ext', 'ADHD', 'Int']
 
-        for target in cognition_targets:
-            specs.append(
-                {
-                    'dataset': args.abcd_dataset,
-                    'task': 'cognition',
-                    'target': target,
-                    'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'cognition'),
-                    'filename': f'{target}_median_corr_half_violin_box.png',
-                }
-            )
-
-        for target in pfactor_targets:
-            specs.append(
-                {
-                    'dataset': args.abcd_dataset,
-                    'task': 'pfactor',
-                    'target': target,
-                    'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'pfactor'),
-                    'filename': f'{target}_median_corr_half_violin_box.png',
-                }
-            )
+        specs.append(
+            {
+                'plot_name': 'cognition',
+                'task': 'cognition',
+                'group_items': [
+                    {
+                        'dataset': args.abcd_dataset,
+                        'target': target,
+                        'group_label': TARGET_TITLE_MAP.get(target, target),
+                    }
+                    for target in cognition_targets
+                ],
+                'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'cognition'),
+                'filename': 'cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.png',
+            }
+        )
+        specs.append(
+            {
+                'plot_name': 'pfactor',
+                'task': 'pfactor',
+                'group_items': [
+                    {
+                        'dataset': args.abcd_dataset,
+                        'target': target,
+                        'group_label': TARGET_TITLE_MAP.get(target, target),
+                    }
+                    for target in pfactor_targets
+                ],
+                'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'pfactor'),
+                'filename': 'pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.png',
+            }
+        )
 
     return specs
 
 
-def build_feature_dataframe(project_root, dataset, target, task):
+def build_feature_dataframe(project_root, dataset, target, task, plot_name, group_label):
     _, baseline_data, merged_data = load_target_feature_data(project_root, dataset, target)
     feature_sources = {}
     feature_sources.update(baseline_data)
     feature_sources.update(merged_data)
 
     rows = []
-    for feature_name in FEATURE_PLOT_ORDER:
+    for feature_name in PLOTTED_FEATURES:
         feature_df = feature_sources[feature_name]
         for _, row in feature_df.iterrows():
             rows.append(
                 {
+                    'plot_name': plot_name,
+                    'group_label': group_label,
                     'dataset': dataset,
                     'task': task,
                     'target': target,
@@ -156,7 +174,10 @@ def build_feature_dataframe(project_root, dataset, target, task):
 
 def summarize_feature_dataframe(plot_df):
     summary_df = (
-        plot_df.groupby(['dataset', 'task', 'target', 'feature_name', 'feature_label'], as_index=False)
+        plot_df.groupby(
+            ['plot_name', 'group_label', 'dataset', 'task', 'target', 'feature_name', 'feature_label'],
+            as_index=False,
+        )
         .agg(
             n_runs=('corr', 'size'),
             median_corr=('corr', 'median'),
@@ -166,15 +187,11 @@ def summarize_feature_dataframe(plot_df):
             max_corr=('corr', 'max'),
         )
     )
-    summary_df['feature_name'] = pd.Categorical(
-        summary_df['feature_name'],
-        categories=FEATURE_PLOT_ORDER,
-        ordered=True,
-    )
-    return summary_df.sort_values('feature_name').reset_index(drop=True)
+    summary_df['feature_name'] = pd.Categorical(summary_df['feature_name'], categories=PLOTTED_FEATURES, ordered=True)
+    return summary_df.sort_values(['plot_name', 'group_label', 'feature_name']).reset_index(drop=True)
 
 
-def add_half_violin(ax, values, position, color, width=0.7):
+def add_half_violin(ax, values, position, color, side, width=0.3):
     violin = ax.violinplot(
         [values],
         positions=[position],
@@ -184,19 +201,24 @@ def add_half_violin(ax, values, position, color, width=0.7):
         showextrema=False,
     )
     for body in violin['bodies']:
-        # Collapse the right half onto the center line so the exported shape is a true half violin.
         vertices = body.get_paths()[0].vertices
-        vertices[:, 0] = np.minimum(vertices[:, 0], position)
+        if side == 'left':
+            vertices[:, 0] = np.minimum(vertices[:, 0], position)
+        elif side == 'right':
+            vertices[:, 0] = np.maximum(vertices[:, 0], position)
+        else:
+            raise ValueError(f'Unsupported violin side: {side}')
         body.set_facecolor(color)
         body.set_edgecolor(color)
         body.set_alpha(0.5)
         body.set_linewidth(1.2)
 
 
-def add_shifted_boxplot(ax, values, position, color, width=0.16):
+def add_shifted_boxplot(ax, values, position, color, side, width=0.12):
+    shift = 0.08 if side == 'right' else -0.08
     box = ax.boxplot(
         [values],
-        positions=[position + 0.2],
+        positions=[position + shift],
         widths=width,
         patch_artist=True,
         showfliers=True,
@@ -210,14 +232,71 @@ def add_shifted_boxplot(ax, values, position, color, width=0.16):
         patch.set_alpha(0.75)
 
 
-def plot_half_violin_box(plot_df, title, output_path, dpi):
-    fig, ax = plt.subplots(figsize=(9.5, 7.5))
-    positions = np.arange(1, len(FEATURE_PLOT_ORDER) + 1)
+def compute_significance(group_df):
+    gg_df = (
+        group_df.loc[group_df['feature_name'] == 'GGFC', ['time_id', 'corr']]
+        .rename(columns={'corr': 'corr_gg'})
+        .sort_values('time_id')
+    )
+    merged_df = (
+        group_df.loc[group_df['feature_name'] == 'GG_GW_WW_MergedFC', ['time_id', 'corr']]
+        .rename(columns={'corr': 'corr_merged'})
+        .sort_values('time_id')
+    )
+    paired_df = gg_df.merge(merged_df, on='time_id', how='inner').dropna(subset=['corr_gg', 'corr_merged'])
+    if paired_df.empty:
+        raise ValueError('No paired observations available for GG vs GG_GW_WW_MergedFC.')
 
-    for position, feature_name in zip(positions, FEATURE_PLOT_ORDER):
-        values = plot_df.loc[plot_df['feature_name'] == feature_name, 'corr'].dropna().to_numpy()
-        add_half_violin(ax, values, position, FEATURE_COLOR_MAP[feature_name])
-        add_shifted_boxplot(ax, values, position, FEATURE_COLOR_MAP[feature_name])
+    t_stat, p_value = stats.ttest_rel(paired_df['corr_merged'], paired_df['corr_gg'])
+    delta = paired_df['corr_merged'] - paired_df['corr_gg']
+    return {
+        'n_pairs': len(paired_df),
+        'gg_median_corr': paired_df['corr_gg'].median(),
+        'gg_gw_ww_median_corr': paired_df['corr_merged'].median(),
+        'mean_delta_corr': delta.mean(),
+        'median_delta_corr': delta.median(),
+        't_stat': float(t_stat),
+        'p_value': float(p_value),
+        'significance_label': get_significance_label(p_value),
+    }
+
+
+def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
+    fig_width = max(9.0, 2.35 * len(group_labels) + 1.0)
+    fig, ax = plt.subplots(figsize=(fig_width, 7.0))
+    centers = np.arange(1, len(group_labels) + 1)
+    feature_offsets = {
+        'GGFC': -0.18,
+        'GG_GW_WW_MergedFC': 0.18,
+    }
+    violin_sides = {
+        'GGFC': 'left',
+        'GG_GW_WW_MergedFC': 'right',
+    }
+    box_sides = {
+        'GGFC': 'right',
+        'GG_GW_WW_MergedFC': 'left',
+    }
+
+    for center, group_label in zip(centers, group_labels):
+        group_df = plot_df.loc[plot_df['group_label'] == group_label]
+        for feature_name in PLOTTED_FEATURES:
+            values = group_df.loc[group_df['feature_name'] == feature_name, 'corr'].dropna().to_numpy()
+            position = center + feature_offsets[feature_name]
+            add_half_violin(
+                ax,
+                values,
+                position,
+                FEATURE_COLOR_MAP[feature_name],
+                side=violin_sides[feature_name],
+            )
+            add_shifted_boxplot(
+                ax,
+                values,
+                position,
+                FEATURE_COLOR_MAP[feature_name],
+                side=box_sides[feature_name],
+            )
 
     all_values = plot_df['corr'].dropna().to_numpy()
     y_min = float(np.min(all_values))
@@ -226,46 +305,80 @@ def plot_half_violin_box(plot_df, title, output_path, dpi):
     if y_range == 0:
         y_range = max(abs(y_max), 1.0) * 0.1 if y_max != 0 else 0.1
 
-    ax.set_xlim(0.45, len(FEATURE_PLOT_ORDER) + 0.8)
-    ax.set_ylim(y_min - 0.08 * y_range, y_max + 0.16 * y_range)
-    ax.set_xticks(positions)
-    ax.set_xticklabels([FEATURE_DISPLAY_MAP[name] for name in FEATURE_PLOT_ORDER], fontsize=14)
+    significance_rows = []
+    bar_tops = []
+    for center, group_label in zip(centers, group_labels):
+        group_df = plot_df.loc[plot_df['group_label'] == group_label]
+        stats_row = compute_significance(group_df)
+        stats_row['group_label'] = group_label
+        significance_rows.append(stats_row)
+
+        group_max = float(group_df['corr'].max())
+        bar_y = group_max + 0.05 * y_range
+        bar_height = 0.03 * y_range
+        bar_tops.append(bar_y + bar_height)
+        add_significance_bar(
+            ax,
+            center + feature_offsets['GGFC'] + 0.08,
+            center + feature_offsets['GG_GW_WW_MergedFC'] - 0.08,
+            bar_y,
+            bar_height,
+            stats_row['significance_label'],
+        )
+
+    upper_ylim = max(bar_tops) + 0.07 * y_range if bar_tops else y_max + 0.16 * y_range
+    ax.set_xlim(0.5, len(group_labels) + 0.5)
+    ax.set_ylim(y_min - 0.08 * y_range, upper_ylim)
+    ax.set_xticks(centers)
+    ax.set_xticklabels(group_labels, fontsize=14)
     ax.set_ylabel('Prediction Accuracy', fontsize=14)
-    # ax.set_title(title, fontsize=14)
     ax.grid(axis='y', linestyle='--', alpha=0.25)
-    ax.axvline(3.5, color='#bdbdbd', linestyle='--', linewidth=1.0)
-    ax.text(2.0, y_max + 0.08 * y_range, 'Single feature', ha='center', va='bottom', fontsize=11)
-    ax.text(5.5, y_max + 0.08 * y_range, 'Merged feature', ha='center', va='bottom', fontsize=11)
+    ax.legend(
+        handles=[
+            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='GG'),
+            Patch(
+                facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
+                edgecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
+                alpha=0.5,
+                label='GG+GW+WW',
+            ),
+        ],
+        loc='upper left',
+        frameon=False,
+        fontsize=11,
+    )
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
     plt.close(fig)
-
-
-def build_plot_title(dataset, task, target):
-    target_label = TARGET_TITLE_MAP.get(target, target)
-    if task == 'age':
-        return f'{dataset} age: median corr across 101 random CV runs'
-    return f'{dataset} {task} ({target_label}): median corr across 101 random CV runs'
-
+    return pd.DataFrame(significance_rows)
 
 def run_plot(spec, project_root, dpi):
-    plot_df = build_feature_dataframe(
-        project_root=project_root,
-        dataset=spec['dataset'],
-        target=spec['target'],
-        task=spec['task'],
-    )
+    plot_frames = []
+    for item in spec['group_items']:
+        plot_frames.append(
+            build_feature_dataframe(
+                project_root=project_root,
+                dataset=item['dataset'],
+                target=item['target'],
+                task=spec['task'],
+                plot_name=spec['plot_name'],
+                group_label=item['group_label'],
+            )
+        )
+    plot_df = pd.concat(plot_frames, ignore_index=True)
     output_dir = ensure_dir(spec['output_dir'])
     output_path = os.path.join(output_dir, spec['filename'])
-    plot_half_violin_box(
+    significance_df = plot_half_violin_box(
         plot_df=plot_df,
-        title=build_plot_title(spec['dataset'], spec['task'], spec['target']),
+        group_labels=[item['group_label'] for item in spec['group_items']],
         output_path=output_path,
         dpi=dpi,
     )
     summary_df = summarize_feature_dataframe(plot_df)
-    return output_path, summary_df
+    significance_df.insert(0, 'plot_name', spec['plot_name'])
+    significance_df.insert(1, 'task', spec['task'])
+    return output_path, summary_df, significance_df
 
 
 def main():
@@ -273,19 +386,26 @@ def main():
     ensure_dir(args.output_root)
 
     all_summaries = []
+    all_significance = []
     for spec in get_plot_specifications(args):
-        output_path, summary_df = run_plot(
+        output_path, summary_df, significance_df = run_plot(
             spec=spec,
             project_root=args.project_root,
             dpi=args.dpi,
         )
         all_summaries.append(summary_df)
+        all_significance.append(significance_df)
         print(f'Saved figure: {output_path}')
 
     combined_summary = pd.concat(all_summaries, ignore_index=True)
     summary_path = os.path.join(args.output_root, 'feature_merge_distribution_summary.csv')
     combined_summary.to_csv(summary_path, index=False)
     print(f'Saved summary: {summary_path}')
+
+    combined_significance = pd.concat(all_significance, ignore_index=True)
+    significance_path = os.path.join(args.output_root, 'feature_merge_distribution_significance.csv')
+    combined_significance.to_csv(significance_path, index=False)
+    print(f'Saved significance summary: {significance_path}')
 
 
 if __name__ == '__main__':

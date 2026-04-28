@@ -86,27 +86,18 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 
 新增脚本 `results_vis/V_feature_merge/plot_feature_merge_distributions.py`，用于直接读取基线与 merged 结果中的 `Res_NFold.mat`，绘制 101 次 random CV 的 `Mean_Corr` 分布图。
 
-绘图顺序固定为：
+当前脚本只绘制两类 feature：
 
 - `GG`
-- `GW`
-- `WW`
-- `GG+GW`
-- `GW+WW`
-- `GG+WW`
 - `GG+GW+WW`
 
-图形形式为每个 feature 一组半边小提琴图加紧邻箱线图，其中：
+图形形式为组内配对的半边小提琴图加箱线图，并在每个分组上方标注 `GG` 与 `GG+GW+WW` 的配对样本 `t test` 显著性（`ns`、`*`、`**`、`***`）。
 
-- 左侧半边小提琴图展示分布形状
-- 右侧窄箱线图展示四分位数和中位数
-- 单 feature（GG/GW/WW）与 merged feature 之间用竖虚线分隔
+默认输出 3 张图：
 
-默认行为：
-
-- age：为 `HCPD`、`CCNP`、`EFNY`、`PNC` 各输出 1 张图
-- ABCD cognition：为 `nihtbx_cryst_uncorrected`、`nihtbx_fluidcomp_uncorrected`、`nihtbx_totalcomp_uncorrected` 各输出 1 张图
-- ABCD pfactor：为 `General`、`Ext`、`ADHD`、`Int` 各输出 1 张图
+- age：`HCPD`、`CCNP`、`EFNY`、`PNC` 4 个数据集绘制在同一张图
+- cognition：`Crystal`、`Fluid`、`Total` 3 个指标绘制在同一张图
+- pfactor：`General`、`External`、`ADHD`、`Int` 4 个指标绘制在同一张图
 
 运行示例：
 
@@ -119,12 +110,17 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_featu
 默认输出路径：
 
 ```text
-code/WM_prediction/results/V_feature_merge/age/
-code/WM_prediction/results/V_feature_merge/ABCD/cognition/
-code/WM_prediction/results/V_feature_merge/ABCD/pfactor/
+code/WM_prediction/results/V_feature_merge/age/age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.png
+code/WM_prediction/results/V_feature_merge/ABCD/cognition/cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.png
+code/WM_prediction/results/V_feature_merge/ABCD/pfactor/pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.png
 code/WM_prediction/results/V_feature_merge/feature_merge_distribution_summary.csv
-code/WM_prediction/results/V_feature_merge/paired_ttest_pvalues/
+code/WM_prediction/results/V_feature_merge/feature_merge_distribution_significance.csv
 ```
+
+其中：
+
+- `feature_merge_distribution_summary.csv` 汇总每个分组中 `GG` 与 `GG+GW+WW` 的 `n_runs`、`median_corr`、`mean_corr`、`std_corr`、`min_corr`、`max_corr`
+- `feature_merge_distribution_significance.csv` 汇总每个分组的配对样本 `t test` 结果，包括 `p_value`、`t_stat`、`mean_delta_corr`、`median_delta_corr` 和显著性标签
 
 ## pfactor permutation 显著性
 
