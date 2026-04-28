@@ -279,6 +279,14 @@ def add_shifted_boxplot(ax, values, position, color, shift, width):
     return position + shift
 
 
+def get_half_violin_visible_center(position, side, width):
+    if side == 'left':
+        return position - width / 4.0
+    if side == 'right':
+        return position + width / 4.0
+    raise ValueError(f'Unsupported violin side: {side}')
+
+
 def compute_significance(group_df):
     gg_df = (
         group_df.loc[group_df['feature_name'] == 'GGFC', ['time_id', 'corr']]
@@ -350,7 +358,12 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
                 shift=box_shifts[feature_name],
                 width=geometry['box_width'],
             )
-            feature_marker_x.append((group_label, feature_name, (position + box_center) / 2))
+            violin_center = get_half_violin_visible_center(
+                position=position,
+                side=violin_sides[feature_name],
+                width=geometry['violin_width'],
+            )
+            feature_marker_x.append((group_label, feature_name, (violin_center + box_center) / 2))
 
     all_values = plot_df['corr'].dropna().to_numpy()
     y_min = float(np.min(all_values))
@@ -401,7 +414,9 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     ax.set_xticks(centers)
     ax.set_xticklabels(group_labels, fontsize=14)
     ax.set_ylabel('Prediction Accuracy', fontsize=14)
-    ax.grid(axis='y', linestyle='--', alpha=0.25)
+    # ax.grid(axis='y', linestyle='--', alpha=0.25)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)   
     ax.legend(
         handles=[
             Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
