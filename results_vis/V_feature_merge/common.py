@@ -161,7 +161,7 @@ def get_significance_label(p_value):
 
 def add_significance_bar(ax, x1, x2, y, h, label):
     ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], color='black', linewidth=1.2)
-    ax.text((x1 + x2) / 2, y + h, label, ha='center', va='bottom', fontsize=11)
+    ax.text((x1 + x2) / 2, y + h, label, ha='center', va='bottom', fontsize=11, fontweight='bold')
 
 
 def plot_boxplot_with_points(

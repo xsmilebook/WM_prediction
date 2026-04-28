@@ -54,7 +54,7 @@ FEATURE_COLOR_MAP = {
 
 
 def get_figure_width(group_count):
-    return max(9.0, 2.35 * group_count + 1.0)
+    return max(4.5, 2.35 * group_count + 1.0)
 
 
 def get_horizontal_geometry(group_count):
@@ -279,12 +279,12 @@ def add_shifted_boxplot(ax, values, position, color, shift, width):
     return position + shift
 
 
-def get_half_violin_visible_center(position, side, width):
-    if side == 'left':
-        return position - width / 4.0
-    if side == 'right':
-        return position + width / 4.0
-    raise ValueError(f'Unsupported violin side: {side}')
+def get_feature_significance_x(box_center, shift, box_width):
+    if shift > 0:
+        return box_center - box_width / 2.0
+    if shift < 0:
+        return box_center + box_width / 2.0
+    return box_center
 
 
 def compute_significance(group_df):
@@ -316,6 +316,23 @@ def compute_significance(group_df):
     }
 
 
+def get_paired_corr_dataframe(group_df):
+    gg_df = (
+        group_df.loc[group_df['feature_name'] == 'GGFC', ['time_id', 'corr']]
+        .rename(columns={'corr': 'corr_gg'})
+        .sort_values('time_id')
+    )
+    merged_df = (
+        group_df.loc[group_df['feature_name'] == 'GG_GW_WW_MergedFC', ['time_id', 'corr']]
+        .rename(columns={'corr': 'corr_merged'})
+        .sort_values('time_id')
+    )
+    paired_df = gg_df.merge(merged_df, on='time_id', how='inner').dropna(subset=['corr_gg', 'corr_merged'])
+    if paired_df.empty:
+        raise ValueError('No paired observations available for GG vs GG_GW_WW_MergedFC.')
+    return paired_df
+
+
 def get_plot_significance_label(p_value):
     if p_value < 0.005:
         return '**'
@@ -325,6 +342,7 @@ def get_plot_significance_label(p_value):
 
 
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
+    plot_name = plot_df['plot_name'].iloc[0]
     fig_width = get_figure_width(len(group_labels))
     fig, ax = plt.subplots(figsize=(fig_width, 7.0))
     centers = np.arange(1, len(group_labels) + 1)
@@ -339,6 +357,36 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
 
     for center, group_label in zip(centers, group_labels):
         group_df = plot_df.loc[plot_df['group_label'] == group_label]
+        gg_box_center = center + feature_offsets['GGFC'] + box_shifts['GGFC']
+        merged_box_center = center + feature_offsets['GG_GW_WW_MergedFC'] + box_shifts['GG_GW_WW_MergedFC']
+        paired_df = get_paired_corr_dataframe(group_df)
+        for _, paired_row in paired_df.iterrows():
+            ax.plot(
+                [gg_box_center, merged_box_center],
+                [paired_row['corr_gg'], paired_row['corr_merged']],
+                color='#9a9a9a',
+                alpha=0.35,
+                linewidth=0.6,
+                zorder=1,
+            )
+        ax.scatter(
+            np.full(len(paired_df), gg_box_center),
+            paired_df['corr_gg'].to_numpy(),
+            s=10,
+            color='#5f5f5f',
+            alpha=0.5,
+            linewidths=0,
+            zorder=2,
+        )
+        ax.scatter(
+            np.full(len(paired_df), merged_box_center),
+            paired_df['corr_merged'].to_numpy(),
+            s=10,
+            color='#5f5f5f',
+            alpha=0.5,
+            linewidths=0,
+            zorder=2,
+        )
         for feature_name in PLOTTED_FEATURES:
             values = group_df.loc[group_df['feature_name'] == feature_name, 'corr'].dropna().to_numpy()
             position = center + feature_offsets[feature_name]
@@ -358,12 +406,17 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
                 shift=box_shifts[feature_name],
                 width=geometry['box_width'],
             )
-            violin_center = get_half_violin_visible_center(
-                position=position,
-                side=violin_sides[feature_name],
-                width=geometry['violin_width'],
+            feature_marker_x.append(
+                (
+                    group_label,
+                    feature_name,
+                    get_feature_significance_x(
+                        box_center=box_center,
+                        shift=box_shifts[feature_name],
+                        box_width=geometry['box_width'],
+                    ),
+                )
             )
-            feature_marker_x.append((group_label, feature_name, (violin_center + box_center) / 2))
 
     all_values = plot_df['corr'].dropna().to_numpy()
     y_min = float(np.min(all_values))
@@ -371,6 +424,13 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     y_range = y_max - y_min
     if y_range == 0:
         y_range = max(abs(y_max), 1.0) * 0.1 if y_max != 0 else 0.1
+    axis_y_min = y_min - 0.08 * y_range
+    axis_y_max = None
+    annotation_range = y_range
+    if plot_name == 'pfactor':
+        axis_y_min = 0.0
+        axis_y_max = 0.12
+        annotation_range = axis_y_max - axis_y_min
 
     feature_max_map = (
         plot_df.groupby(['group_label', 'feature_name'])['corr']
@@ -378,13 +438,17 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         .to_dict()
     )
     for group_label, feature_name, marker_x in feature_marker_x:
+        marker_y = float(feature_max_map[(group_label, feature_name)]) + 0.01 * annotation_range
+        if axis_y_max is not None:
+            marker_y = min(marker_y, axis_y_max - 0.02 * annotation_range)
         ax.text(
             marker_x,
-            float(feature_max_map[(group_label, feature_name)]) + 0.01 * y_range,
+            marker_y,
             FEATURE_SELF_SIGNIFICANCE_LABEL,
             ha='center',
             va='bottom',
             fontsize=11,
+            fontweight='bold',
         )
 
     significance_rows = []
@@ -396,8 +460,10 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         significance_rows.append(stats_row)
 
         group_max = float(group_df['corr'].max())
-        bar_y = group_max + 0.05 * y_range
-        bar_height = 0.015 * y_range
+        bar_y = group_max + 0.05 * annotation_range
+        bar_height = 0.015 * annotation_range
+        if axis_y_max is not None:
+            bar_y = min(bar_y, axis_y_max - 0.04 * annotation_range)
         bar_tops.append(bar_y + bar_height)
         add_significance_bar(
             ax,
@@ -409,8 +475,10 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         )
 
     upper_ylim = max(bar_tops) + 0.07 * y_range if bar_tops else y_max + 0.16 * y_range
+    if axis_y_max is not None:
+        upper_ylim = axis_y_max
     ax.set_xlim(0.5, len(group_labels) + 0.5)
-    ax.set_ylim(y_min - 0.08 * y_range, upper_ylim)
+    ax.set_ylim(axis_y_min, upper_ylim)
     ax.set_xticks(centers)
     ax.set_xticklabels(group_labels, fontsize=14)
     ax.set_ylabel('Prediction Accuracy', fontsize=14)
