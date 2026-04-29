@@ -42,6 +42,8 @@ REFERENCE_BOX_SHIFTS = {
 }
 FEATURE_SELF_SIGNIFICANCE_LABEL = '**'
 SIGNIFICANCE_FONT_FAMILY = 'DejaVu Sans'
+FIGURE_HEIGHT = 3.2
+LEGEND_FONT_SIZE = 8
 TARGET_TITLE_MAP = {
     'age': 'Age',
     'nihtbx_cryst_uncorrected': 'Crystal',
@@ -274,12 +276,12 @@ def add_half_violin(ax, values, position, color, side, width):
 
 def add_shifted_boxplot(ax, values, position, color, shift, width):
     flier_style = dict(
-        marker='o',           
-        markerfacecolor=color, 
-        markersize=3,         
+        marker='o',
+        markerfacecolor=color,
+        markersize=3,
         markeredgecolor='black',
         markeredgewidth=0.5,
-        alpha=0.5
+        alpha=1.0,
     )
     
     box = ax.boxplot(
@@ -373,7 +375,7 @@ def add_significance_bar(ax, x1, x2, y, h, label):
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     plot_name = plot_df['plot_name'].iloc[0]
     fig_width = get_figure_width(len(group_labels), plot_name=plot_name)
-    fig, ax = plt.subplots(figsize=(fig_width, 4.0))
+    fig, ax = plt.subplots(figsize=(fig_width, FIGURE_HEIGHT))
     centers = np.arange(1, len(group_labels) + 1)
     geometry = get_horizontal_geometry(len(group_labels), plot_name=plot_name)
     feature_offsets = geometry['feature_offsets']
@@ -428,7 +430,7 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     annotation_range = y_range
     if plot_name == 'pfactor':
         axis_y_min = 0.03
-        axis_y_max = 0.125
+        axis_y_max = 0.145
         annotation_range = axis_y_max - axis_y_min
 
     feature_max_map = (
@@ -482,36 +484,30 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     elif plot_name == 'cognition':
         ax.set_ylabel('Prediction Accuracy of Cognition', fontsize=10)
     else:
-        ax.set_ylabel('Prediction Accuracy of Psychopathology', fontsize=10, rotation=90, va='center')
+        ax.set_ylabel('Prediction Accuracy of Psychopathology', fontsize=10)
     ax.set_xticks(centers)
     ax.set_xticklabels(group_labels, fontsize=10)
     # ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)   
-    if plot_name == 'pfactor':
-        ax.spines["left"].set_visible(False)
-        ax.spines["right"].set_visible(True)
-        ax.yaxis.set_ticks_position('right')
-        ax.yaxis.set_label_position('right')
-        ax.tick_params(axis='y', left=False, labelleft=False, right=True, labelright=True, labelsize=8)
     ax.tick_params(axis='y', labelsize=8)
-    if plot_name == 'age':
-        ax.legend(
-            title="Legend",
-            alignment="left",
-            handles=[
-                Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
-                Patch(
-                    facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
-                    edgecolor='black',
-                    alpha=0.5,
-                    label='G-G,G-W,W-W',
-                ),
-            ],
-            loc='upper right',
-            frameon=True,
-            fontsize=10,
-        )
+    ax.legend(
+        title="Legend",
+        alignment="left",
+        handles=[
+            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
+            Patch(
+                facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
+                edgecolor='black',
+                alpha=0.5,
+                label='G-G,G-W,W-W',
+            ),
+        ],
+        loc='upper right',
+        frameon=True,
+        fontsize=LEGEND_FONT_SIZE,
+        title_fontsize=LEGEND_FONT_SIZE,
+    )
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
