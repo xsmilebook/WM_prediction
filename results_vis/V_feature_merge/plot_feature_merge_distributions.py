@@ -43,7 +43,7 @@ REFERENCE_BOX_SHIFTS = {
 FEATURE_SELF_SIGNIFICANCE_LABEL = '**'
 SIGNIFICANCE_FONT_FAMILY = 'DejaVu Sans'
 FIGURE_HEIGHT = 3.2
-LEGEND_FONT_SIZE = 8
+LEGEND_FONT_SIZE = 7
 TARGET_TITLE_MAP = {
     'age': 'Age',
     'nihtbx_cryst_uncorrected': 'Crystal',
@@ -61,6 +61,8 @@ FEATURE_COLOR_MAP = {
 
 
 def get_figure_width(group_count, plot_name=None):
+    if plot_name == 'age':
+        return max(4.5, 1.2 * 3 + 1.0) + 2.2
     if plot_name == 'pfactor':
         return 2.2
     return max(4.5, 1.2 * group_count + 1.0)
@@ -492,10 +494,8 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     ax.spines["right"].set_visible(False)   
     ax.tick_params(axis='y', labelsize=8)
     ax.legend(
-        title="Legend",
-        alignment="left",
         handles=[
-            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
+            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor='black', alpha=0.5, label='G-G'),
             Patch(
                 facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
                 edgecolor='black',
