@@ -53,15 +53,15 @@ TARGET_TITLE_MAP = {
     'Int': 'Int',
 }
 FEATURE_COLOR_MAP = {
-    'GGFC': '#4C78A8',
-    'GG_GW_WW_MergedFC': '#F58518',
+    'GGFC': '#A3C1E4',
+    'GG_GW_WW_MergedFC': '#EB9C9F',
 }
 
 
 def get_figure_width(group_count, plot_name=None):
     if plot_name == 'pfactor':
-        return 3.4
-    return max(4.5, 2.35 * group_count + 1.0)
+        return 2.2
+    return max(4.5, 1.2 * group_count + 1.0)
 
 
 def get_horizontal_geometry(group_count, plot_name=None):
@@ -69,7 +69,12 @@ def get_horizontal_geometry(group_count, plot_name=None):
     current_figure_width = get_figure_width(group_count, plot_name=plot_name)
     reference_scale = reference_figure_width / REFERENCE_GROUP_COUNT
     current_scale = current_figure_width / group_count
-    width_scale = reference_scale / current_scale
+    
+    if plot_name == 'pfactor':
+        width_scale = 1.0
+    else:
+        width_scale = reference_scale / current_scale
+
 
     return {
         'violin_width': REFERENCE_VIOLIN_WIDTH * width_scale,
@@ -263,17 +268,27 @@ def add_half_violin(ax, values, position, color, side, width):
             raise ValueError(f'Unsupported violin side: {side}')
         body.set_facecolor(color)
         body.set_edgecolor('black')
-        body.set_alpha(0.5)
-        body.set_linewidth(1.2)
+        # body.set_alpha(0.5)
+        body.set_linewidth(0.5)
 
 
 def add_shifted_boxplot(ax, values, position, color, shift, width):
+    flier_style = dict(
+        marker='o',           
+        markerfacecolor=color, 
+        markersize=3,         
+        markeredgecolor='black',
+        markeredgewidth=0.5,
+        alpha=0.5
+    )
+    
     box = ax.boxplot(
         [values],
         positions=[position + shift],
         widths=width,
         patch_artist=True,
         showfliers=True,
+        flierprops=flier_style,
         medianprops={'color': 'black', 'linewidth': 1.4},
         whiskerprops={'color': 'black', 'linewidth': 1.0},
         capprops={'color': 'black', 'linewidth': 1.0},
@@ -344,21 +359,21 @@ def draw_significance_label(ax, x, y, label):
         label,
         ha='center',
         va='bottom',
-        fontsize=10,
+        fontsize=7,
         fontweight='bold',
         fontfamily=SIGNIFICANCE_FONT_FAMILY,
     )
 
 
 def add_significance_bar(ax, x1, x2, y, h, label):
-    ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], color='black', linewidth=1.2)
+    ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], color='black', linewidth=0.5)
     draw_significance_label(ax, (x1 + x2) / 2, y + h, label)
 
 
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     plot_name = plot_df['plot_name'].iloc[0]
     fig_width = get_figure_width(len(group_labels), plot_name=plot_name)
-    fig, ax = plt.subplots(figsize=(fig_width, 5.0))
+    fig, ax = plt.subplots(figsize=(fig_width, 4.0))
     centers = np.arange(1, len(group_labels) + 1)
     geometry = get_horizontal_geometry(len(group_labels), plot_name=plot_name)
     feature_offsets = geometry['feature_offsets']
@@ -422,7 +437,8 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         .to_dict()
     )
     for group_label, feature_name, marker_x in feature_marker_x:
-        marker_y = float(feature_max_map[(group_label, feature_name)]) + 0.01 * annotation_range
+        # marker_y = float(feature_max_map[(group_label, feature_name)]) - 0.005 * annotation_range
+        marker_y = float(feature_max_map[(group_label, feature_name)])
         if axis_y_max is not None:
             marker_y = min(marker_y, axis_y_max - 0.02 * annotation_range)
         draw_significance_label(ax, marker_x, marker_y, FEATURE_SELF_SIGNIFICANCE_LABEL)
@@ -466,7 +482,7 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     elif plot_name == 'cognition':
         ax.set_ylabel('Prediction Accuracy of Cognition', fontsize=10)
     else:
-        ax.set_ylabel('Prediction Accuracy of Psychopathology', fontsize=10)
+        ax.set_ylabel('Prediction Accuracy of Psychopathology', fontsize=10, rotation=90, va='center')
     ax.set_xticks(centers)
     ax.set_xticklabels(group_labels, fontsize=10)
     # ax.grid(axis='y', linestyle='--', alpha=0.25)
@@ -477,8 +493,8 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         ax.spines["right"].set_visible(True)
         ax.yaxis.set_ticks_position('right')
         ax.yaxis.set_label_position('right')
-        ax.tick_params(axis='y', left=False, labelleft=False, right=True, labelright=True, labelsize=14)
-    ax.tick_params(axis='y', labelsize=14)
+        ax.tick_params(axis='y', left=False, labelleft=False, right=True, labelright=True, labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
     if plot_name == 'age':
         ax.legend(
             title="Legend",
@@ -499,6 +515,8 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+    output_png_path = output_path.replace("tiff", "png")
+    fig.savefig(output_png_path, dpi=dpi, bbox_inches='tight')
     plt.close(fig)
     return pd.DataFrame(significance_rows)
 
