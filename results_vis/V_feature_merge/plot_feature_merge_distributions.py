@@ -4,6 +4,8 @@ import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+from matplotlib.ticker import MultipleLocator
 import numpy as np
 import pandas as pd
 from matplotlib.patches import Patch
@@ -18,8 +20,11 @@ from common import (
     load_target_feature_data,
 )
 
+AVAILABLE_FONT_NAMES = {font.name for font in font_manager.fontManager.ttflist}
+PREFERRED_FONT_FAMILY = 'Arial' if 'Arial' in AVAILABLE_FONT_NAMES else 'DejaVu Sans'
+
 plt.rcParams.update({
-    'font.family': 'sans-serif'
+    'font.family': PREFERRED_FONT_FAMILY
 })
 
 AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
@@ -53,13 +58,15 @@ FEATURE_COLOR_MAP = {
 }
 
 
-def get_figure_width(group_count):
+def get_figure_width(group_count, plot_name=None):
+    if plot_name == 'pfactor':
+        return 3.4
     return max(4.5, 2.35 * group_count + 1.0)
 
 
-def get_horizontal_geometry(group_count):
-    reference_figure_width = get_figure_width(REFERENCE_GROUP_COUNT)
-    current_figure_width = get_figure_width(group_count)
+def get_horizontal_geometry(group_count, plot_name=None):
+    reference_figure_width = get_figure_width(REFERENCE_GROUP_COUNT, plot_name='age')
+    current_figure_width = get_figure_width(group_count, plot_name=plot_name)
     reference_scale = reference_figure_width / REFERENCE_GROUP_COUNT
     current_scale = current_figure_width / group_count
     width_scale = reference_scale / current_scale
@@ -287,7 +294,7 @@ def get_feature_significance_x(box_center, shift, box_width):
     return box_center
 
 
-def compute_significance(group_df):
+def get_paired_corr_arrays(group_df):
     gg_df = (
         group_df.loc[group_df['feature_name'] == 'GGFC', ['time_id', 'corr']]
         .rename(columns={'corr': 'corr_gg'})
@@ -299,42 +306,31 @@ def compute_significance(group_df):
         .sort_values('time_id')
     )
     paired_df = gg_df.merge(merged_df, on='time_id', how='inner').dropna(subset=['corr_gg', 'corr_merged'])
-    if paired_df.empty:
+    gg_values = paired_df['corr_gg'].to_numpy()
+    merged_values = paired_df['corr_merged'].to_numpy()
+    if len(gg_values) == 0:
         raise ValueError('No paired observations available for GG vs GG_GW_WW_MergedFC.')
+    return gg_values, merged_values
 
-    t_stat, p_value = stats.ttest_rel(paired_df['corr_merged'], paired_df['corr_gg'])
-    delta = paired_df['corr_merged'] - paired_df['corr_gg']
+
+def compute_significance(group_df):
+    gg_values, merged_values = get_paired_corr_arrays(group_df)
+    t_stat, p_value = stats.ttest_rel(merged_values, gg_values)
+    delta = merged_values - gg_values
     return {
-        'n_pairs': len(paired_df),
-        'gg_median_corr': paired_df['corr_gg'].median(),
-        'gg_gw_ww_median_corr': paired_df['corr_merged'].median(),
+        'n_pairs': len(gg_values),
+        'gg_median_corr': float(np.median(gg_values)),
+        'gg_gw_ww_median_corr': float(np.median(merged_values)),
         'mean_delta_corr': delta.mean(),
-        'median_delta_corr': delta.median(),
+        'median_delta_corr': float(np.median(delta)),
         't_stat': float(t_stat),
         'p_value': float(p_value),
         'significance_label': get_plot_significance_label(p_value),
     }
 
 
-def get_paired_corr_dataframe(group_df):
-    gg_df = (
-        group_df.loc[group_df['feature_name'] == 'GGFC', ['time_id', 'corr']]
-        .rename(columns={'corr': 'corr_gg'})
-        .sort_values('time_id')
-    )
-    merged_df = (
-        group_df.loc[group_df['feature_name'] == 'GG_GW_WW_MergedFC', ['time_id', 'corr']]
-        .rename(columns={'corr': 'corr_merged'})
-        .sort_values('time_id')
-    )
-    paired_df = gg_df.merge(merged_df, on='time_id', how='inner').dropna(subset=['corr_gg', 'corr_merged'])
-    if paired_df.empty:
-        raise ValueError('No paired observations available for GG vs GG_GW_WW_MergedFC.')
-    return paired_df
-
-
 def get_plot_significance_label(p_value):
-    if p_value < 0.005:
+    if p_value < 0.001:
         return '**'
     if p_value < 0.05:
         return '*'
@@ -343,10 +339,10 @@ def get_plot_significance_label(p_value):
 
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     plot_name = plot_df['plot_name'].iloc[0]
-    fig_width = get_figure_width(len(group_labels))
+    fig_width = get_figure_width(len(group_labels), plot_name=plot_name)
     fig, ax = plt.subplots(figsize=(fig_width, 7.0))
     centers = np.arange(1, len(group_labels) + 1)
-    geometry = get_horizontal_geometry(len(group_labels))
+    geometry = get_horizontal_geometry(len(group_labels), plot_name=plot_name)
     feature_offsets = geometry['feature_offsets']
     box_shifts = geometry['box_shifts']
     violin_sides = {
@@ -357,36 +353,6 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
 
     for center, group_label in zip(centers, group_labels):
         group_df = plot_df.loc[plot_df['group_label'] == group_label]
-        gg_box_center = center + feature_offsets['GGFC'] + box_shifts['GGFC']
-        merged_box_center = center + feature_offsets['GG_GW_WW_MergedFC'] + box_shifts['GG_GW_WW_MergedFC']
-        paired_df = get_paired_corr_dataframe(group_df)
-        for _, paired_row in paired_df.iterrows():
-            ax.plot(
-                [gg_box_center, merged_box_center],
-                [paired_row['corr_gg'], paired_row['corr_merged']],
-                color='#9a9a9a',
-                alpha=0.35,
-                linewidth=0.6,
-                zorder=1,
-            )
-        ax.scatter(
-            np.full(len(paired_df), gg_box_center),
-            paired_df['corr_gg'].to_numpy(),
-            s=10,
-            color='#5f5f5f',
-            alpha=0.5,
-            linewidths=0,
-            zorder=2,
-        )
-        ax.scatter(
-            np.full(len(paired_df), merged_box_center),
-            paired_df['corr_merged'].to_numpy(),
-            s=10,
-            color='#5f5f5f',
-            alpha=0.5,
-            linewidths=0,
-            zorder=2,
-        )
         for feature_name in PLOTTED_FEATURES:
             values = group_df.loc[group_df['feature_name'] == feature_name, 'corr'].dropna().to_numpy()
             position = center + feature_offsets[feature_name]
@@ -428,8 +394,8 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     axis_y_max = None
     annotation_range = y_range
     if plot_name == 'pfactor':
-        axis_y_min = 0.0
-        axis_y_max = 0.12
+        axis_y_min = 0.03
+        axis_y_max = 0.125
         annotation_range = axis_y_max - axis_y_min
 
     feature_max_map = (
@@ -477,28 +443,35 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     upper_ylim = max(bar_tops) + 0.07 * y_range if bar_tops else y_max + 0.16 * y_range
     if axis_y_max is not None:
         upper_ylim = axis_y_max
-    ax.set_xlim(0.5, len(group_labels) + 0.5)
+    if plot_name == 'pfactor':
+        ax.set_xlim(0.72, 1.28)
+    else:
+        ax.set_xlim(0.5, len(group_labels) + 0.5)
     ax.set_ylim(axis_y_min, upper_ylim)
+    if plot_name == 'age':
+        ax.yaxis.set_major_locator(MultipleLocator(0.05))
     ax.set_xticks(centers)
     ax.set_xticklabels(group_labels, fontsize=14)
     ax.set_ylabel('Prediction Accuracy', fontsize=14)
     # ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)   
-    ax.legend(
-        handles=[
-            Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
-            Patch(
-                facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
-                edgecolor='black',
-                alpha=0.5,
-                label='G-G,G-W,W-W',
-            ),
-        ],
-        loc='upper right',
-        frameon=True,
-        fontsize=11,
-    )
+    if plot_name == 'age':
+        ax.legend(
+            title="Legend",
+            handles=[
+                Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
+                Patch(
+                    facecolor=FEATURE_COLOR_MAP['GG_GW_WW_MergedFC'],
+                    edgecolor='black',
+                    alpha=0.5,
+                    label='G-G,G-W,W-W',
+                ),
+            ],
+            loc='upper right',
+            frameon=True,
+            fontsize=11,
+        )
 
     fig.tight_layout()
     fig.savefig(output_path, dpi=dpi, bbox_inches='tight')

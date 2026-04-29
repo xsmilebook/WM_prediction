@@ -96,17 +96,17 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 - `GG`：蓝色
 - `GG+GW+WW`：橘色（沿用原 `GG+GW` 的配色）
 
+图中字体优先使用 `Arial`；若当前运行环境未安装 `Arial`，则自动回退到可用的 sans-serif 字体。
+
 为保证不同任务图之间的视觉一致性，脚本以 `age` 图作为参考，按分组数量动态换算半边小提琴图、箱线图及组内左右偏移的横向参数。也就是说，不同任务使用的不是固定数据坐标宽度，而是固定视觉宽度；同时整张图的画布宽度也会随分组数量缩放，因此只包含 `ADHD` 的 `pfactor` 图会比 `age` 图明显更窄。
 
-图形形式为组内配对的半边小提琴图加箱线图，图例固定放在右上角，并在每个分组上方标注 `GG` 与 `GG+GW+WW` 的配对样本 `t test` 显著性。其中显著性规则为：
+图形形式为组内对照的半边小提琴图加箱线图。`age` 图保留右上角图例，`cognition` 与 `pfactor` 图不显示图例；每个分组上方标注 `GG` 与 `GG+GW+WW` 的配对 `t test` 显著性。其中显著性规则为：
 
-- `p < 0.005`：`**`
-- `0.005 <= p < 0.05`：`*`
+- `p < 0.001`：`**`
+- `0.001 <= p < 0.05`：`*`
 - `p >= 0.05`：`ns`
 
 显著性标记连接线使用较短的竖直端点，以减少对箱线图上方留白的占用。
-
-箱线图上还会叠加每组 `101` 次 random CV 的配对观测：`GG` 与 `GG+GW+WW` 各自的观测点分别落在对应箱线图中心，并用细灰线按 `time_id` 一一连接，用于直观展示配对样本 `t test` 的逐次对比关系。
 
 另外，每个 feature 自身的半边小提琴图与箱线图之间上方固定添加 `**` 标记，用于表示该 feature 的预测性能本身已确认显著；其纵向位置按该 feature 自身分布的最高值自适应确定，不与同组另一 feature 共用高度，横向位置则由箱线图中心加减半个箱线图宽度确定，放在更靠近半边小提琴的一侧。
 
@@ -116,7 +116,8 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 - cognition：按 `Total`、`Crystal`、`Fluid` 的顺序在同一张图中绘制 3 个指标
 - pfactor：只绘制 `ADHD`
 
-其中 `pfactor` 图的 y 轴固定为 `0~0.12`，不再随数据范围自适应变化。
+其中 `age` 图的 y 轴主刻度间隔固定为 `0.05`。
+其中 `pfactor` 图的 y 轴固定为 `0~0.12`，不再随数据范围自适应变化；同时单组 `ADHD` 图会进一步缩窄，并压缩左右空白区间。
 
 运行示例：
 
@@ -139,7 +140,7 @@ code/WM_prediction/results/V_feature_merge/feature_merge_distribution_significan
 其中：
 
 - `feature_merge_distribution_summary.csv` 汇总每个分组中 `GG` 与 `GG+GW+WW` 的 `n_runs`、`median_corr`、`mean_corr`、`std_corr`、`min_corr`、`max_corr`
-- `feature_merge_distribution_significance.csv` 汇总每个分组的配对样本 `t test` 结果，包括 `p_value`、`t_stat`、`mean_delta_corr`、`median_delta_corr` 和显著性标签
+- `feature_merge_distribution_significance.csv` 汇总每个分组的配对 `t test` 结果，包括 `n_pairs`、`p_value`、`t_stat`、`mean_delta_corr`、`median_delta_corr` 和显著性标签
 
 ## pfactor permutation 显著性
 
