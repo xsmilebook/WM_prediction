@@ -289,10 +289,10 @@ def add_shifted_boxplot(ax, values, position, color, shift, width):
         patch_artist=True,
         showfliers=True,
         flierprops=flier_style,
-        medianprops={'color': 'black', 'linewidth': 1.4},
-        whiskerprops={'color': 'black', 'linewidth': 1.0},
-        capprops={'color': 'black', 'linewidth': 1.0},
-        boxprops={'edgecolor': 'black', 'linewidth': 1.0},
+        medianprops={'color': 'black', 'linewidth': 0.7},
+        whiskerprops={'color': 'black', 'linewidth': 0.5},
+        capprops={'color': 'black', 'linewidth': 0.5},
+        boxprops={'edgecolor': 'black', 'linewidth': 0.5},
     )
     for patch in box['boxes']:
         patch.set_facecolor(color)
