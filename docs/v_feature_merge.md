@@ -96,7 +96,9 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 - `GG`：蓝色
 - `GG+GW+WW`：橘色（沿用原 `GG+GW` 的配色）
 
-图中字体优先使用 `Arial`；若当前运行环境未安装 `Arial`，则自动回退到可用的 sans-serif 字体。
+图中常规文本优先使用 `Arial`；若当前运行环境未安装 `Arial`，则自动回退到可用的 sans-serif 字体。显著性标记 `* / ** / ns` 单独使用 `Liberation Sans`。
+
+图像导出格式为 `TIFF`，默认分辨率为 `300 DPI`。
 
 为保证不同任务图之间的视觉一致性，脚本以 `age` 图作为参考，按分组数量动态换算半边小提琴图、箱线图及组内左右偏移的横向参数。也就是说，不同任务使用的不是固定数据坐标宽度，而是固定视觉宽度；同时整张图的画布宽度也会随分组数量缩放，因此只包含 `ADHD` 的 `pfactor` 图会比 `age` 图明显更窄。
 
@@ -117,7 +119,7 @@ data/<dataset>/prediction/feature_merge_summary_<task>.csv
 - pfactor：只绘制 `ADHD`
 
 其中 `age` 图的 y 轴主刻度间隔固定为 `0.05`。
-其中 `pfactor` 图的 y 轴固定为 `0~0.12`，不再随数据范围自适应变化；同时单组 `ADHD` 图会进一步缩窄，并压缩左右空白区间。
+其中 `pfactor` 图的 y 轴固定为 `0~0.12`，不再随数据范围自适应变化；同时单组 `ADHD` 图会进一步缩窄，并压缩左右空白区间。`pfactor` 的 y 轴绘制在右侧，左侧 y 轴不显示，且不设置 `Prediction Accuracy` 标题。
 
 运行示例：
 
@@ -130,9 +132,9 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_featu
 默认输出路径：
 
 ```text
-code/WM_prediction/results/V_feature_merge/age/age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.png
-code/WM_prediction/results/V_feature_merge/ABCD/cognition/cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.png
-code/WM_prediction/results/V_feature_merge/ABCD/pfactor/pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.png
+code/WM_prediction/results/V_feature_merge/age/age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.tiff
+code/WM_prediction/results/V_feature_merge/ABCD/cognition/cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.tiff
+code/WM_prediction/results/V_feature_merge/ABCD/pfactor/pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.tiff
 code/WM_prediction/results/V_feature_merge/feature_merge_distribution_summary.csv
 code/WM_prediction/results/V_feature_merge/feature_merge_distribution_significance.csv
 ```

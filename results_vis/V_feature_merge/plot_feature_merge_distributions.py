@@ -15,7 +15,6 @@ from common import (
     DEFAULT_PROJECT_ROOT,
     DEFAULT_RESULTS_ROOT,
     FEATURE_DISPLAY_MAP,
-    add_significance_bar,
     ensure_dir,
     load_target_feature_data,
 )
@@ -31,8 +30,8 @@ AGE_DATASETS = ['HCPD', 'CCNP', 'EFNY', 'PNC']
 ABCD_DATASET = 'ABCD'
 PLOTTED_FEATURES = ['GGFC', 'GG_GW_WW_MergedFC']
 REFERENCE_GROUP_COUNT = 4
-REFERENCE_VIOLIN_WIDTH = 0.3
-REFERENCE_BOX_WIDTH = 0.12
+REFERENCE_VIOLIN_WIDTH = 0.2
+REFERENCE_BOX_WIDTH = 0.1
 REFERENCE_FEATURE_OFFSETS = {
     'GGFC': -0.18,
     'GG_GW_WW_MergedFC': 0.18,
@@ -42,6 +41,7 @@ REFERENCE_BOX_SHIFTS = {
     'GG_GW_WW_MergedFC': -0.08,
 }
 FEATURE_SELF_SIGNIFICANCE_LABEL = '**'
+SIGNIFICANCE_FONT_FAMILY = 'DejaVu Sans'
 TARGET_TITLE_MAP = {
     'age': 'Age',
     'nihtbx_cryst_uncorrected': 'Crystal',
@@ -151,7 +151,7 @@ def get_plot_specifications(args):
                     if dataset in args.age_datasets
                 ],
                 'output_dir': os.path.join(args.output_root, 'age'),
-                'filename': 'age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.png',
+                'filename': 'age_all_datasets_GG_vs_GG_GW_WW_half_violin_box.tiff',
             }
         )
 
@@ -176,7 +176,7 @@ def get_plot_specifications(args):
                     for target in cognition_targets
                 ],
                 'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'cognition'),
-                'filename': 'cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.png',
+                'filename': 'cognition_all_targets_GG_vs_GG_GW_WW_half_violin_box.tiff',
             }
         )
         specs.append(
@@ -192,7 +192,7 @@ def get_plot_specifications(args):
                     for target in pfactor_targets
                 ],
                 'output_dir': os.path.join(args.output_root, args.abcd_dataset, 'pfactor'),
-                'filename': 'pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.png',
+                'filename': 'pfactor_all_targets_GG_vs_GG_GW_WW_half_violin_box.tiff',
             }
         )
 
@@ -337,10 +337,28 @@ def get_plot_significance_label(p_value):
     return 'ns'
 
 
+def draw_significance_label(ax, x, y, label):
+    ax.text(
+        x,
+        y,
+        label,
+        ha='center',
+        va='bottom',
+        fontsize=10,
+        fontweight='bold',
+        fontfamily=SIGNIFICANCE_FONT_FAMILY,
+    )
+
+
+def add_significance_bar(ax, x1, x2, y, h, label):
+    ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], color='black', linewidth=1.2)
+    draw_significance_label(ax, (x1 + x2) / 2, y + h, label)
+
+
 def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     plot_name = plot_df['plot_name'].iloc[0]
     fig_width = get_figure_width(len(group_labels), plot_name=plot_name)
-    fig, ax = plt.subplots(figsize=(fig_width, 7.0))
+    fig, ax = plt.subplots(figsize=(fig_width, 5.0))
     centers = np.arange(1, len(group_labels) + 1)
     geometry = get_horizontal_geometry(len(group_labels), plot_name=plot_name)
     feature_offsets = geometry['feature_offsets']
@@ -407,15 +425,7 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
         marker_y = float(feature_max_map[(group_label, feature_name)]) + 0.01 * annotation_range
         if axis_y_max is not None:
             marker_y = min(marker_y, axis_y_max - 0.02 * annotation_range)
-        ax.text(
-            marker_x,
-            marker_y,
-            FEATURE_SELF_SIGNIFICANCE_LABEL,
-            ha='center',
-            va='bottom',
-            fontsize=11,
-            fontweight='bold',
-        )
+        draw_significance_label(ax, marker_x, marker_y, FEATURE_SELF_SIGNIFICANCE_LABEL)
 
     significance_rows = []
     bar_tops = []
@@ -443,22 +453,36 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
     upper_ylim = max(bar_tops) + 0.07 * y_range if bar_tops else y_max + 0.16 * y_range
     if axis_y_max is not None:
         upper_ylim = axis_y_max
-    if plot_name == 'pfactor':
-        ax.set_xlim(0.72, 1.28)
-    else:
-        ax.set_xlim(0.5, len(group_labels) + 0.5)
+    # if plot_name == 'pfactor':
+    #     ax.set_xlim(0.72, 1.28)
+    # else:
+    #     ax.set_xlim(0.5, len(group_labels) + 0.5)
+    ax.set_xlim(0.5, len(group_labels) + 0.5)
+    
     ax.set_ylim(axis_y_min, upper_ylim)
     if plot_name == 'age':
         ax.yaxis.set_major_locator(MultipleLocator(0.05))
+        ax.set_ylabel('Prediction Accuracy of Brain Age', fontsize=10)
+    elif plot_name == 'cognition':
+        ax.set_ylabel('Prediction Accuracy of Cognition', fontsize=10)
+    else:
+        ax.set_ylabel('Prediction Accuracy of Psychopathology', fontsize=10)
     ax.set_xticks(centers)
-    ax.set_xticklabels(group_labels, fontsize=14)
-    ax.set_ylabel('Prediction Accuracy', fontsize=14)
+    ax.set_xticklabels(group_labels, fontsize=10)
     # ax.grid(axis='y', linestyle='--', alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)   
+    if plot_name == 'pfactor':
+        ax.spines["left"].set_visible(False)
+        ax.spines["right"].set_visible(True)
+        ax.yaxis.set_ticks_position('right')
+        ax.yaxis.set_label_position('right')
+        ax.tick_params(axis='y', left=False, labelleft=False, right=True, labelright=True, labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
     if plot_name == 'age':
         ax.legend(
             title="Legend",
+            alignment="left",
             handles=[
                 Patch(facecolor=FEATURE_COLOR_MAP['GGFC'], edgecolor=FEATURE_COLOR_MAP['GGFC'], alpha=0.5, label='G-G'),
                 Patch(
@@ -470,7 +494,7 @@ def plot_half_violin_box(plot_df, group_labels, output_path, dpi):
             ],
             loc='upper right',
             frameon=True,
-            fontsize=11,
+            fontsize=10,
         )
 
     fig.tight_layout()
