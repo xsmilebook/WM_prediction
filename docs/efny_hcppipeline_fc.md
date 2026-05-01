@@ -67,6 +67,57 @@ python src/conn_matrix/efny_hcppipeline/compare_subject_fc.py \
   --subject_id sub-THU20231118133GYC
 ```
 
+### 3. Slurm 批量提交 FC
+
+新增批量脚本：
+
+- `conn_matrix/batch_run_hcppipeline_fc.sh`
+
+该脚本按被试列表逐个调用 `run_subject_fc.py`，默认读取：
+
+- `data/EFNY/table/sublist_xcpd_ready505.txt`
+
+默认 `#SBATCH --array=1-505%200` 也对应这份 `505` 人名单。若后续名单长度变化，需要同步修改脚本中的 array 范围。
+
+当前仓库中这份名单已生成：
+
+- `data/EFNY/table/sublist_xcpd_ready505.txt`
+
+推荐先准备一份只包含“已完成 HCP + XCP-D、准备进入 FC 计算”的被试列表，再提交：
+
+```bash
+python - <<'PY' > /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_xcpd_ready505.txt
+from pathlib import Path
+
+project = Path('/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction')
+source_list = project / 'data/EFNY/table/sublist_new_left521.txt'
+study_root = project / 'data/EFNY/hcp_studyfolder'
+xcpd_root = project / 'data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal'
+
+for line in source_list.read_text().splitlines():
+    subj = line.strip()
+    if not subj:
+        continue
+    if not (study_root / subj / 'MNINonLinear/Results').exists():
+        continue
+    func_dir = xcpd_root / subj / 'func'
+    func_files = list(func_dir.glob(f'{subj}_task-rest_run-*_space-MNI152NLin6Asym_res-2_desc-denoised_bold.nii.gz'))
+    if func_files:
+        print(subj)
+PY
+```
+
+提交命令：
+
+```bash
+sbatch conn_matrix/batch_run_hcppipeline_fc.sh \
+  /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_xcpd_ready505.txt
+```
+
+日志目录：
+
+- `log/conn_matrix/hcppipeline_fc/`
+
 ## 已生成的 133 被试结果
 
 `sub-THU20231118133GYC` 已完成新 FC 生成与比对。
@@ -101,3 +152,4 @@ python src/conn_matrix/efny_hcppipeline/compare_subject_fc.py \
 - 当前新流程不依赖旧 `rest_fd_summary.csv`，因此会直接使用 `xcpd_hcp` 目录下当前存在的 `task-rest_run-1/2/3` 输出
 - `task-rest_run-4` 在 133 被试的 `xcpd_hcp` 目录中不存在，因此不会参与 FC 计算
 - 新流程仅复用旧 FC 计算逻辑，不改写旧结果目录
+- 批量提交时，建议只对已完成 HCP + XCP-D 的被试列表提交，避免把缺少 `desc-denoised_bold` 的被试一并送入 array

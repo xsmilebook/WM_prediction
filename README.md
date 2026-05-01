@@ -7,6 +7,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `process_dataset_unified.py`: Unified script that, per-dataset, performs valid-run selection → locate dseg and functional files → build GM/WM masks → extract atlas ROI time series → compute FC (GG/GW/WW) → apply Fisher Z → save outputs.
   - `generate_mask.py`, `compute_individual_fc.py`, `apply_fisher_z.py`: Single-subject tools for masking, FC computation, and Fisher Z transform.
   - `efny_hcppipeline/run_subject_fc.py`, `efny_hcppipeline/compare_subject_fc.py`: Reuse the existing EFNY FC logic on HCP-pipeline + XCP-D outputs and compare the new matrices against the legacy EFNY `individual_z` results.
+  - `batch_run_hcppipeline_fc.sh`: Slurm array entry for batch-generating EFNY HCP-pipeline FC matrices from a ready subject list.
   - `convert_matrices_to_vectors.py`: Vectorizes the upper triangle of FC matrices to feature vectors for prediction.
   - `reslice_atlases.py`: Reslices atlases to target space/resolution.
   - `batch_run_unified_*.sh`: Cluster batch scripts to run the unified pipeline.
@@ -43,6 +44,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Generate FC matrices from EFNY HCP-pipeline XCP-D outputs:
   - `python src/conn_matrix/efny_hcppipeline/run_subject_fc.py --subject_id sub-THU20231118133GYC`
   - The script builds a compatibility tissue `dseg` from HCP `ribbon.nii.gz` and `aparc+aseg.nii.gz`, then reuses the existing `DatasetProcessor` logic to write independent outputs under `data/EFNY/hcppipeline_fc/`.
+- Batch-submit EFNY HCP-pipeline FC generation:
+  - `sbatch src/conn_matrix/batch_run_hcppipeline_fc.sh /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_xcpd_ready505.txt`
+  - The batch script expects a subject list containing only FC-ready subjects and writes Slurm logs to `log/conn_matrix/hcppipeline_fc/`.
 - Compare the new HCP-pipeline FC matrices against legacy EFNY results:
   - `python src/conn_matrix/efny_hcppipeline/compare_subject_fc.py --subject_id sub-THU20231118133GYC`
   - Comparison figures and vector correlations are written to `data/EFNY/hcppipeline_fc/comparison/`.
