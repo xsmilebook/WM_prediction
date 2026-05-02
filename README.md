@@ -17,6 +17,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and provides five HCP-style batch entry scripts for structural and resting-state preprocessing stages.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
+  - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
@@ -61,6 +62,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/predict_age_RandomCV.py`
   - `python src/prediction/predict_cognition_RandomCV.py`
   - `python src/prediction/predict_pfactor_RandomCV.py`
+- Run EFNY HCP-pipeline age prediction:
+  - `python src/prediction/V_hcppipeline/predict_age_RandomCV.py`
 - Run merged-feature prediction (examples):
   - `python src/prediction/V_feature_merge/predict_age_RandomCV.py`
   - `python src/prediction/V_feature_merge/predict_cognition_RandomCV.py`

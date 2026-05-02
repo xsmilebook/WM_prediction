@@ -40,6 +40,8 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── predict_cognition_RandomCV.py     # 认知指标预测入口脚本
 │   ├── predict_pfactor_RandomCV.py       # p-factor 预测入口脚本
 │   ├── cluster_run_predict.sh            # 集群批量提交预测任务
+│   ├── V_hcppipeline/                    # EFNY HCP pipeline FC 的预测脚本
+│   │   └── predict_age_RandomCV.py       # 使用 hcppipeline FC 和 xcpd_ready505 子样本进行年龄预测
 │   └── V_feature_merge/                  # merged FC 组合预测脚本
 │       ├── common.py                     # merged 特征组合与 RandIndex 路径构建
 │       ├── PLSr1_CZ_Random_RegressCovariates.py # merged FC 使用的本地 PLS 管线
