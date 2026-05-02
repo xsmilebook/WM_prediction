@@ -122,7 +122,7 @@ if dimention not in label_files_all.columns:
     print(f"可用列: {list(label_files_all.columns)}")
 
 # 3. covariates - 需要根据 sublist 过滤
-covariatespath = f'{base_path}/table/subid_meanFD_age_sex.csv'
+covariatespath = f'{base_path}/table/subid_meanFD_age_sex_new.csv'
 
 # 检查协变量文件是否存在
 if not os.path.exists(covariatespath):
