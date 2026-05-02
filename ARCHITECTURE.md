@@ -8,6 +8,7 @@ WM_prediction/src/                        # 当前仓库根目录
 ├── ARCHITECTURE.md                       # 结构说明（本文）
 ├── docs/                                 # 补充文档
 │   ├── architecture_update.md            # 本次架构文档同步说明
+│   ├── efny_hcppipeline_similarity.md    # EFNY HCP pipeline FC 与旧 EFNY / HCPD 的相似性分析
 │   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
