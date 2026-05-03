@@ -92,6 +92,80 @@ data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Pe
 - `Time_i/GG_GW_WW_MergedFC/` 保存第 `i` 次 permutation 下 `GG_GW_WW_MergedFC` 的结果
 - `Time_i/PermutationIndex.mat` 记录该次 permutation 中每个 outer fold 的训练集 `target` 打乱顺序
 
+## GG 与 All permutation 差值汇总
+
+新增脚本 `results_vis/V_feature_merge/compute_gg_all_permutation_significance.py`，用于汇总共享 target permutation 下的：
+
+- `GGFC`
+- `GG_GW_WW_MergedFC`
+
+并直接计算：
+
+- 每次 permutation 的 `all_corr - gg_corr`
+- 实际观测值 `median(all_corr) - median(gg_corr)`
+- 该观测差值相对于 permutation null 的右尾经验 `p` 值
+
+统计口径：
+
+- 观测值来自实际 `101` 次 random CV
+- null 分布来自 `RegressCovariates_RandomCV_Permutation_GG_All/` 下 `1000` 次 permutation
+- permutation 统计量为每个 `Time_i` 的 `Mean_Corr(all) - Mean_Corr(gg)`
+- observed 统计量为 `median(Mean_Corr(all)) - median(Mean_Corr(gg))`
+- 显著性使用右尾经验 `p` 值：`(count(null >= observed) + 1) / (n_perm + 1)`
+
+运行示例：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_feature_merge/compute_gg_all_permutation_significance.py \
+  --dataset ABCD \
+  --task pfactor
+```
+
+默认输出路径：
+
+```text
+code/WM_prediction/results/V_feature_merge/<dataset>_<task>_gg_all_permutation_detail.csv
+code/WM_prediction/results/V_feature_merge/<dataset>_<task>_gg_all_permutation_significance.csv
+```
+
+其中：
+
+- `*_detail.csv` 同时保存 observed `101` 次 random CV 和 permutation `1000` 次的逐次 `gg_corr`、`all_corr`、`delta_corr`
+- `*_significance.csv` 汇总每个 target 的 `observed_median_delta_corr`、null 分布均值/中位数/标准差，以及经验 `p` 值和显著性标签
+
+## GG 与 All detail 分布图
+
+新增脚本 `results_vis/V_feature_merge/plot_gg_all_permutation_detail.py`，用于直接读取 `*_gg_all_permutation_detail.csv`，并绘制 observed 与 permutation 的分布图。
+
+图像包含 3 个面板：
+
+- `GG corr`
+- `GG+GW+WW corr`
+- `All-GG corr`
+
+每个面板都会同时叠加：
+
+- observed `101` 次 random CV 的分布
+- permutation `1000` 次 null 的分布
+- 两者各自的 median 竖线
+
+运行示例：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_feature_merge/plot_gg_all_permutation_detail.py \
+  --input_csv /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/results/V_feature_merge/PNC_age_gg_all_permutation_detail.csv
+```
+
+默认输出路径：
+
+```text
+code/WM_prediction/results/V_feature_merge/<dataset>_<task>_gg_all_permutation_detail_distribution.tiff
+```
+
 ## 结果汇总
 
 新增脚本 `results_vis/compare_feature_merge_performance.py` 可将基线模型与 merged 模型的 `Res_NFold.mat` 汇总为一张表，输出每个 target 的：

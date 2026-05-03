@@ -81,6 +81,10 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/plot_feature_merge_distributions.py`
 - Evaluate ABCD pfactor features against permutation null correlations:
   - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/compute_pfactor_permutation_significance.py`
+- Summarize the shared permutation null for `GGFC` vs `GG_GW_WW_MergedFC`:
+  - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/compute_gg_all_permutation_significance.py --dataset ABCD --task pfactor`
+- Plot observed/permutation distributions from a GG-All detail CSV:
+  - `/GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/envs/ML/bin/python src/results_vis/V_feature_merge/plot_gg_all_permutation_detail.py --input_csv /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/results/V_feature_merge/PNC_age_gg_all_permutation_detail.csv`
 
 ## Merged Feature Evaluation
 The `prediction/V_feature_merge/` workflow concatenates the original GG, GW, and WW vectors into four combinations:
@@ -108,6 +112,9 @@ Merged-feature statistical summaries and figures are written to:
 - `results/V_feature_merge/ABCD/cognition/`
 - `results/V_feature_merge/ABCD/pfactor/`
 - `results/V_feature_merge/feature_merge_distribution_summary.csv`
+- `results/V_feature_merge/<dataset>_<task>_gg_all_permutation_detail.csv`
+- `results/V_feature_merge/<dataset>_<task>_gg_all_permutation_significance.csv`
+- `results/V_feature_merge/<dataset>_<task>_gg_all_permutation_detail_distribution.tiff`
 - `results/V_feature_merge/ABCD_pfactor_permutation_significance.csv`
 
 ## Key Results Overview

@@ -54,7 +54,7 @@ def filter_data_by_sublist(data_df, sublist, subid_col='subid'):
     return filtered_data
 
 # 配置参数 - 可以轻松修改为其他数据集
-dataset = 'EFNY'
+dataset = 'CCNP'
 targetStr = 'age'
 
 # 基础路径配置
