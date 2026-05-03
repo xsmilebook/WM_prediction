@@ -189,6 +189,24 @@ bash preprocess/hcp_pipeline/batch_xcpd.sh /path/to/subjects.txt
 
 对 `fMRIVolume` 和 `fMRISurface`，日志进一步分到 run 子目录。
 
+## 各阶段失败被试列表
+
+当前已根据 `hcp_studyfolder` 实际输出是否完整，导出 4 个阶段的失败被试列表到：
+
+- `data/EFNY/table/sublist_prefreesurfer.txt`
+- `data/EFNY/table/sublist_freesurfer.txt`
+- `data/EFNY/table/sublist_postfreesurfer.txt`
+- `data/EFNY/table/sublist_fmrivolume.txt`
+
+判定口径为：
+
+- `prefreesurfer`：缺少 `T1w/T1w_acpc_dc_restore.nii.gz`
+- `freesurfer`：缺少 `T1w/<subject>/mri/aparc+aseg.mgz`
+- `postfreesurfer`：缺少 `MNINonLinear/Native/*.sphere.MSMSulc.native.surf.gii`
+- `fmrivolume`：任一已提交 `rfMRI_*` run 缺少 `MNINonLinear/Results/<run>/<run>.nii.gz`
+
+这些列表用于快速重跑与失败原因排查；若上游阶段已失败，则下游列表可能包含同一被试的级联失败。
+
 ## 批量提交
 
 ### 1. 准备被试列表

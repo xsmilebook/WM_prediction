@@ -47,6 +47,51 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_featur
 
 这些脚本会读取原始单模态结果中的 `Time_0` 到 `Time_100` 的 `RandIndex.mat`。如果基线结果不存在，脚本会直接报错停止。
 
+## GG 与 All 的共享 target permutation
+
+如果要做 `1000` 次 permutation，并且在每一次中同时比较：
+
+- `GGFC`
+- `GG_GW_WW_MergedFC`
+
+当前实现使用的是“打乱训练折内 `target`”的 null。
+
+具体规则：
+
+- 每个 `Time_i` 会同时拟合 `GGFC` 和 `GG_GW_WW_MergedFC`
+- 两个模型在同一个 `Time_i` 下共用同一次 outer CV split
+- 每个 outer fold 内，两者共用同一次打乱后的 `subjects_score_train`
+- 因此可直接在每次 permutation 后计算 `all_acc - gg_acc`
+
+三个入口脚本 `predict_age_RandomCV.py`、`predict_cognition_RandomCV.py`、`predict_pfactor_RandomCV.py` 中都新增了以下开关：
+
+```python
+RUN_GG_ALL_TARGET_PERMUTATION = True
+GG_ALL_PERMUTATION_TIMES = 1000
+```
+
+默认值中 `RUN_GG_ALL_TARGET_PERMUTATION = False`，避免误提交大批量作业。需要运行时，将其改为 `True` 后执行对应脚本即可。
+
+示例：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_feature_merge/predict_pfactor_RandomCV.py
+```
+
+默认输出目录：
+
+```text
+data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Permutation_GG_All/
+```
+
+其中：
+
+- `Time_i/GGFC/` 保存第 `i` 次 permutation 下 `GGFC` 的结果
+- `Time_i/GG_GW_WW_MergedFC/` 保存第 `i` 次 permutation 下 `GG_GW_WW_MergedFC` 的结果
+- `Time_i/PermutationIndex.mat` 记录该次 permutation 中每个 outer fold 的训练集 `target` 打乱顺序
+
 ## 结果汇总
 
 新增脚本 `results_vis/compare_feature_merge_performance.py` 可将基线模型与 merged 模型的 `Res_NFold.mat` 汇总为一张表，输出每个 target 的：
@@ -159,7 +204,8 @@ code/WM_prediction/results/V_feature_merge/feature_merge_distribution_significan
 当前数据限制：
 
 - `GG`、`GW`、`WW` 可直接使用各自已有的 permutation 结果计算 p 值
-- `GG+GW`、`GW+WW`、`GG+WW`、`GG+GW+WW` 目前没有独立的 `V_feature_merge` permutation 目录，因此结果表中这几项会保留 `NA`，并在 `status` 列标记 `missing_merged_permutation_dir`
+- `GG+GW`、`GW+WW`、`GG+WW` 目前仍没有独立的 `V_feature_merge` permutation 目录
+- `GG+GW+WW` 可通过 `RegressCovariates_RandomCV_Permutation_GG_All/` 生成，但只有在实际运行该流程后才可用于显著性评估
 
 运行示例：
 

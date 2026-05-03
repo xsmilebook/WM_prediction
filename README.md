@@ -68,6 +68,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/V_feature_merge/predict_age_RandomCV.py`
   - `python src/prediction/V_feature_merge/predict_cognition_RandomCV.py`
   - `python src/prediction/V_feature_merge/predict_pfactor_RandomCV.py`
+  - To submit the shared target-permutation null for `GGFC` vs `GG_GW_WW_MergedFC`, set `RUN_GG_ALL_TARGET_PERMUTATION = True` in the corresponding script. This submits `1000` outer jobs by default and writes results to `data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Permutation_GG_All/`.
 - Summarize merged-feature performance against baseline:
   - `python src/results_vis/compare_feature_merge_performance.py --dataset HCPD --task age`
   - `python src/results_vis/compare_feature_merge_performance.py --dataset ABCD --task cognition`
@@ -92,6 +93,10 @@ The `prediction/V_feature_merge/` workflow concatenates the original GG, GW, and
 All other modeling steps remain unchanged. The merged scripts reuse the existing baseline `Time_i/RandIndex.mat` files so performance differences are attributable to feature composition rather than a new random split. Results are written to:
 
 - `data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV`
+
+For the paired null that compares `GGFC` against `GG_GW_WW_MergedFC`, the `V_feature_merge` scripts also support a shared target-permutation mode. In each permutation, the two models share the same outer split and the same shuffled training labels within each fold. The submitted results are written to:
+
+- `data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Permutation_GG_All`
 
 Merged-feature statistical summaries and figures are written to:
 

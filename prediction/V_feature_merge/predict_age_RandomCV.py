@@ -10,7 +10,11 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(script_dir)
 
 import PLSr1_CZ_Random_RegressCovariates
-from common import build_merged_feature_sets, build_randindex_file_list
+from common import (
+    build_gg_and_gg_gw_ww_feature_sets,
+    build_merged_feature_sets,
+    build_randindex_file_list,
+)
 
 def load_sublist(sublist_path):
     """加载sublist文件"""
@@ -174,6 +178,9 @@ ComponentNumber_Range = np.arange(10) + 1
 FoldQuantity = 5
 Parallel_Quantity = 1
 CVtimes = 101
+RUN_MAIN_ANALYSIS = False
+RUN_GG_ALL_TARGET_PERMUTATION = True
+GG_ALL_PERMUTATION_TIMES = 1000
 
 print(f"数据集: {dataset}")
 print(f"目标变量: {targetStr}")
@@ -183,29 +190,45 @@ print(f"组件数量范围: {ComponentNumber_Range}")
 print(f"交叉验证次数: {CVtimes}")
 print(f"最终样本数量: {len(OverallPsyFactor)}")
 
-RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
+if RUN_MAIN_ANALYSIS:
+    RandIndex_File_List = build_randindex_file_list(target_prediction_folder, CVtimes)
+    ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
+    print(f"结果文件夹: {ResultantFolder}")
+    os.makedirs(ResultantFolder, exist_ok=True)
 
-# # Predict
-ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
-print(f"结果文件夹: {ResultantFolder}")
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        SubjectsData,
+        OverallPsyFactor,
+        Covariates,
+        FoldQuantity,
+        ComponentNumber_Range,
+        CVtimes,
+        ResultantFolder,
+        Parallel_Quantity,
+        0,
+        Feature_Name_List,
+        RandIndex_File_List,
+    )
 
-# 确保输出目录存在
-os.makedirs(ResultantFolder, exist_ok=True)
+if RUN_GG_ALL_TARGET_PERMUTATION:
+    permutation_feature_names, permutation_subjects_data = build_gg_and_gg_gw_ww_feature_sets(
+        GG_data_files,
+        GW_data_files,
+        WW_data_files,
+    )
+    permutation_resultant_folder = outFolder + '/RegressCovariates_RandomCV_Permutation_GG_All'
+    print(f"GG 与 GG_GW_WW 共享 target permutation 结果文件夹: {permutation_resultant_folder}")
+    os.makedirs(permutation_resultant_folder, exist_ok=True)
 
-PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-    SubjectsData,
-    OverallPsyFactor,
-    Covariates,
-    FoldQuantity,
-    ComponentNumber_Range,
-    CVtimes,
-    ResultantFolder,
-    Parallel_Quantity,
-    0,
-    Feature_Name_List,
-    RandIndex_File_List,
-)
-
-# Permutation
-# ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';
-# PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        permutation_subjects_data,
+        OverallPsyFactor,
+        Covariates,
+        FoldQuantity,
+        ComponentNumber_Range,
+        GG_ALL_PERMUTATION_TIMES,
+        permutation_resultant_folder,
+        Parallel_Quantity,
+        1,
+        permutation_feature_names,
+    )

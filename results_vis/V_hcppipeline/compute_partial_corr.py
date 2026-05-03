@@ -71,7 +71,7 @@ for i_str in range(num_targets):
     print(f"\n[{i_str+1}/{num_targets}] Processing target: {target_str}")
 
     # Define path
-    base_folder = os.path.join(ProjectFolder, target_str, 'RegressCovariates_RandomCV')
+    base_folder = os.path.join(ProjectFolder, target_str, 'V_hcppipeline', 'RegressCovariates_RandomCV')
     
     # Check if folder exists
     if not os.path.exists(base_folder):

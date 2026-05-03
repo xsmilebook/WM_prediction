@@ -8,6 +8,11 @@ FEATURE_NAME_LIST = [
     'GG_GW_WW_MergedFC',
 ]
 
+GG_ALL_FEATURE_NAME_LIST = [
+    'GGFC',
+    'GG_GW_WW_MergedFC',
+]
+
 
 def build_merged_feature_sets(gg_data, gw_data, ww_data):
     sample_sizes = {gg_data.shape[0], gw_data.shape[0], ww_data.shape[0]}
@@ -21,6 +26,18 @@ def build_merged_feature_sets(gg_data, gw_data, ww_data):
         np.concatenate([gg_data, gw_data, ww_data], axis=1),
     ]
     return FEATURE_NAME_LIST.copy(), subjects_data
+
+
+def build_gg_and_gg_gw_ww_feature_sets(gg_data, gw_data, ww_data):
+    sample_sizes = {gg_data.shape[0], gw_data.shape[0], ww_data.shape[0]}
+    if len(sample_sizes) != 1:
+        raise ValueError('GG, GW, and WW feature matrices must have the same number of subjects.')
+
+    subjects_data = [
+        gg_data,
+        np.concatenate([gg_data, gw_data, ww_data], axis=1),
+    ]
+    return GG_ALL_FEATURE_NAME_LIST.copy(), subjects_data
 
 
 def build_randindex_file_list(base_prediction_folder, cv_times):

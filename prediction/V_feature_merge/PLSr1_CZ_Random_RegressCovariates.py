@@ -41,6 +41,72 @@ def _save_configuration(
     )
 
 
+def _submit_time_i_job(
+    time_index,
+    subjects_data_mat_path_list,
+    subjects_score,
+    covariates,
+    fold_quantity,
+    component_number_range,
+    resultant_folder_time_i,
+    parallel_quantity,
+    permutation_flag,
+    feature_name_list,
+    randindex_file,
+):
+    config_path = os.path.join(resultant_folder_time_i, 'configuration.npz')
+    _save_configuration(
+        config_path,
+        subjects_data_mat_path_list,
+        subjects_score,
+        covariates,
+        fold_quantity,
+        component_number_range,
+        resultant_folder_time_i,
+        parallel_quantity,
+        permutation_flag,
+        feature_name_list,
+        randindex_file,
+    )
+
+    python_cmd = (
+        "import sys; "
+        f"sys.path.insert(0, {CODE_PATH!r}); "
+        "import numpy as np; "
+        "from PLSr1_CZ_Random_RegressCovariates import PLSr1_KFold_RandomCV_MultiTimes_Sub; "
+        f"config = np.load({config_path!r}, allow_pickle=True); "
+        "PLSr1_KFold_RandomCV_MultiTimes_Sub("
+        "config[\"Subjects_Data_Mat_Path_List\"].tolist(), "
+        "config[\"Subjects_Score\"], "
+        "config[\"Covariates\"], "
+        "int(config[\"Fold_Quantity\"][0]), "
+        "config[\"ComponentNumber_Range\"], "
+        f"{INNER_CV_REPEAT_TIMES}, "
+        "config[\"ResultantFolder_TimeI\"].tolist()[0], "
+        "int(config[\"Parallel_Quantity\"][0]), "
+        "int(config[\"Permutation_Flag\"][0]), "
+        "config[\"Feature_Name_List\"].tolist(), "
+        "config[\"RandIndex_File\"].tolist()[0])"
+    )
+    system_cmd = f"python3 -c {shlex.quote(python_cmd)}"
+    system_cmd = f'{system_cmd} > "{os.path.join(resultant_folder_time_i, f"Time_{time_index}.log")}" 2>&1\n'
+
+    script_path = os.path.join(resultant_folder_time_i, 'script.sh')
+    with open(script_path, 'w') as script:
+        script.write('#!/bin/bash\n')
+        script.write(f'#SBATCH --job-name=prediction{time_index}\n')
+        script.write('#SBATCH --nodes=1\n')
+        script.write('#SBATCH --ntasks=1\n')
+        script.write('#SBATCH --cpus-per-task=3\n')
+        script.write('#SBATCH -p q_cn\n')
+        script.write(f'#SBATCH -o {os.path.join(resultant_folder_time_i, "job.%j.out")}\n')
+        script.write(f'#SBATCH -e {os.path.join(resultant_folder_time_i, "job.%j.error.txt")}\n\n')
+        script.write(system_cmd)
+
+    os.system(f'chmod +x {script_path}')
+    os.system(f'sbatch {script_path}')
+
+
 def PLSr1_KFold_RandomCV_MultiTimes(
     Subjects_Data_List,
     Subjects_Score,
@@ -76,9 +142,8 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             os.makedirs(resultant_folder_time_i)
 
         randindex_file = RandIndex_File_List[i] if RandIndex_File_List else ''
-        config_path = os.path.join(resultant_folder_time_i, 'configuration.npz')
-        _save_configuration(
-            config_path,
+        _submit_time_i_job(
+            i,
             Subjects_Data_Mat_Path_List,
             Subjects_Score,
             Covariates,
@@ -90,45 +155,6 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             Feature_Name_List,
             randindex_file,
         )
-
-        python_cmd = (
-            "import sys; "
-            f"sys.path.insert(0, {CODE_PATH!r}); "
-            "import numpy as np; "
-            "from PLSr1_CZ_Random_RegressCovariates import PLSr1_KFold_RandomCV_MultiTimes_Sub; "
-            f"config = np.load({config_path!r}, allow_pickle=True); "
-            "PLSr1_KFold_RandomCV_MultiTimes_Sub("
-            "config[\"Subjects_Data_Mat_Path_List\"].tolist(), "
-            "config[\"Subjects_Score\"], "
-            "config[\"Covariates\"], "
-            "int(config[\"Fold_Quantity\"][0]), "
-            "config[\"ComponentNumber_Range\"], "
-            f"{INNER_CV_REPEAT_TIMES}, "
-            "config[\"ResultantFolder_TimeI\"].tolist()[0], "
-            "int(config[\"Parallel_Quantity\"][0]), "
-            "int(config[\"Permutation_Flag\"][0]), "
-            "config[\"Feature_Name_List\"].tolist(), "
-            "config[\"RandIndex_File\"].tolist()[0])"
-        )
-        system_cmd = f"python3 -c {shlex.quote(python_cmd)}"
-        system_cmd = f'{system_cmd} > "{os.path.join(resultant_folder_time_i, f"Time_{i}.log")}" 2>&1\n'
-
-        script_path = os.path.join(resultant_folder_time_i, 'script.sh')
-        with open(script_path, 'w') as script:
-            script.write('#!/bin/bash\n')
-            script.write(f'#SBATCH --job-name=prediction{i}\n')
-            script.write('#SBATCH --nodes=1\n')
-            script.write('#SBATCH --ntasks=1\n')
-            script.write('#SBATCH --cpus-per-task=4\n')
-            script.write('#SBATCH -p q_cn\n')
-            script.write(f'#SBATCH -o {os.path.join(resultant_folder_time_i, "job.%j.out")}\n')
-            script.write(f'#SBATCH -e {os.path.join(resultant_folder_time_i, "job.%j.error.txt")}\n\n')
-            script.write(system_cmd)
-
-        os.system(f'chmod +x {script_path}')
-        os.system(f'sbatch {script_path}')
-
-
 def PLSr1_KFold_RandomCV_MultiTimes_Sub(
     Subjects_Data_Mat_Path_List,
     Subjects_Score,
