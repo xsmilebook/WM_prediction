@@ -71,7 +71,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(Subjects_Data_List, Subjects_Score, Covariat
         script.write('#!/bin/bash\n');
         #script.write('#SBATCH --job-name=PLSca' + str(i) + '\n');
         script.write('#SBATCH --job-name=prediction' + str(i) + '\n');
-        script.write('#SBATCH --cpus-per-task=2\n');
+        script.write('#SBATCH --cpus-per-task=3\n');
         # script.write('#SBATCH --mem-per-cpu 5G\n');
         script.write('#SBATCH -p q_cn\n');
         # script.write('#SBATCH -q high_c\n');

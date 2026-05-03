@@ -104,13 +104,13 @@ for targetStr in targetStr_list:
     print(f"交叉验证次数: {CVtimes}")
 
     # # Predict
-    # ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
-    # print(f"结果文件夹: {ResultantFolder}")
+    ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
+    print(f"结果文件夹: {ResultantFolder}")
 
-    # # 确保输出目录存在
-    # os.makedirs(ResultantFolder, exist_ok=True)
+    # 确保输出目录存在
+    os.makedirs(ResultantFolder, exist_ok=True)
 
-    # PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
 
     # Permutation
     ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation'
