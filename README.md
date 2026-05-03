@@ -14,10 +14,12 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - `preprocess/`
   - `screen_head_motion_*.py`: Computes `framewise_displacement` per dataset and writes `rest_fd_summary.csv` used to select valid runs.
   - `generate_*_covariates.py`, `generate_sublists.py`: Builds covariates and subject lists.
+  - `V_siblings/generate_familywise_sublists.py`: For ABCD cognition/pfactor analyses, removes siblings/twins by keeping only the first subject per `rel_family_id` in the current task-specific sublist order.
   - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and provides five HCP-style batch entry scripts for structural and resting-state preprocessing stages.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
+  - `V_siblilngs/`: Re-run ABCD cognition and p-factor prediction after removing siblings/twins from the existing sublists while keeping the original PLS workflow unchanged.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
@@ -62,8 +64,13 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/predict_age_RandomCV.py`
   - `python src/prediction/predict_cognition_RandomCV.py`
   - `python src/prediction/predict_pfactor_RandomCV.py`
+- Generate family-wise ABCD sublists for siblings/twins control:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/preprocess/V_siblings/generate_familywise_sublists.py`
 - Run EFNY HCP-pipeline age prediction:
   - `python src/prediction/V_hcppipeline/predict_age_RandomCV.py`
+- Run ABCD cognition/pfactor prediction after siblings/twins control:
+  - `python src/prediction/V_siblilngs/predict_cognition_RandomCV.py`
+  - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`
 - Run merged-feature prediction (examples):
   - `python src/prediction/V_feature_merge/predict_age_RandomCV.py`
   - `python src/prediction/V_feature_merge/predict_cognition_RandomCV.py`
@@ -116,6 +123,18 @@ Merged-feature statistical summaries and figures are written to:
 - `results/V_feature_merge/<dataset>_<task>_gg_all_permutation_significance.csv`
 - `results/V_feature_merge/<dataset>_<task>_gg_all_permutation_detail_distribution.tiff`
 - `results/V_feature_merge/ABCD_pfactor_permutation_significance.csv`
+
+## Siblings/Twins Controlled ABCD Evaluation
+The `prediction/V_siblilngs/` workflow keeps the modeling code unchanged and only swaps in a family-wise unique subject subset for ABCD cognition and p-factor analyses.
+
+- `src/preprocess/V_siblings/generate_familywise_sublists.py` reads `data/ABCD/table/abcd_y_lt.csv`, uses the baseline `rel_family_id`, and keeps the first subject per family according to the current task-specific sublist order.
+- It writes:
+  - `data/ABCD/table/cognition_sublist_unique_family.txt`
+  - `data/ABCD/table/pfactor_sublist_unique_family.txt`
+- The prediction scripts then use those new sublists to slice GG/GW/WW feature matrices row-wise before loading labels and covariates, so sample counts stay aligned with the original `.npy` row order.
+- Results are written to:
+  - `data/ABCD/prediction/<target>/V_siblilngs/RegressCovariates_RandomCV`
+  - `data/ABCD/prediction/<target>/V_siblilngs/RegressCovariates_RandomCV_Permutation`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.

@@ -10,6 +10,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── architecture_update.md            # 本次架构文档同步说明
 │   ├── efny_hcppipeline_similarity.md    # EFNY HCP pipeline FC 与旧 EFNY / HCPD 的相似性分析
 │   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
+│   ├── v_siblings.md                     # ABCD siblings/twins 控制后的 family-wise sublist 与预测说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
 ├── conn_matrix/                          # 功能连接矩阵生成、变换与批处理脚本
@@ -42,6 +43,11 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── cluster_run_predict.sh            # 集群批量提交预测任务
 │   ├── V_hcppipeline/                    # EFNY HCP pipeline FC 的预测脚本
 │   │   └── predict_age_RandomCV.py       # 使用 hcppipeline FC 和 xcpd_ready505 子样本进行年龄预测
+│   ├── V_siblilngs/                      # ABCD siblings/twins 控制版预测脚本
+│   │   ├── familywise_inputs.py          # 读取 family-wise sublist，并同步裁剪 GG/GW/WW 特征、标签与协变量
+│   │   ├── PLSr1_CZ_Random_RegressCovariates.py # siblings/twins 控制版沿用的本地 PLS 管线
+│   │   ├── predict_cognition_RandomCV.py # 使用 family-wise cognition 子样本运行随机 CV 预测
+│   │   └── predict_pfactor_RandomCV.py   # 使用 family-wise pfactor 子样本运行随机 CV / permutation 预测
 │   └── V_feature_merge/                  # merged FC 组合预测脚本
 │       ├── common.py                     # merged 特征组合与 RandIndex 路径构建
 │       ├── PLSr1_CZ_Random_RegressCovariates.py # merged FC 使用的本地 PLS 管线
@@ -51,6 +57,8 @@ WM_prediction/src/                        # 当前仓库根目录
 │
 ├── preprocess/                           # 数据预处理与样本筛选脚本
 │   ├── abcd_preprocess_final.py          # ABCD 认知与 p-factor 样本预处理
+│   ├── V_siblings/                       # ABCD siblings/twins 控制的 family-wise sublist 生成脚本
+│   │   └── generate_familywise_sublists.py # 基于 rel_family_id 为 cognition / pfactor 子样本保留每家唯一被试
 │   ├── compare_sublists.py               # 对比不同筛选得到的 sublist
 │   ├── generate_abcd_covariates.py       # 生成 ABCD 协变量表
 │   ├── generate_pnc_covariates.py        # 生成 PNC 协变量表
