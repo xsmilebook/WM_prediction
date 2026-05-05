@@ -13,7 +13,7 @@ import numpy as np
 
 RIBBON_GM_LABELS = {3, 42}
 RIBBON_WM_LABELS = {2, 41}
-WMPARC_WM_LABELS = {7, 46}
+WMPARC_WM_LABELS = {7, 16, 46}
 CSF_LABELS = {4, 5, 14, 15, 24, 31, 43, 44, 63}
 
 
@@ -51,9 +51,9 @@ def build_tissue_dseg(
     tissue_dseg[np.isin(ribbon_data, list(RIBBON_GM_LABELS))] = 1
     tissue_dseg[np.isin(ribbon_data, list(RIBBON_WM_LABELS))] = 2
 
-    # wmparc supplements cerebellar white matter that is outside the cortical ribbon.
-    cerebellar_wm_mask = np.isin(wmparc_data, list(WMPARC_WM_LABELS))
-    tissue_dseg[cerebellar_wm_mask] = 2
+    # wmparc supplements white matter-like structures that are outside the cortical ribbon.
+    wmparc_wm_mask = np.isin(wmparc_data, list(WMPARC_WM_LABELS))
+    tissue_dseg[wmparc_wm_mask] = 2
 
     csf_mask = np.isin(wmparc_data, list(CSF_LABELS)) & (tissue_dseg == 0)
     tissue_dseg[csf_mask] = 3

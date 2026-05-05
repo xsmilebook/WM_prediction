@@ -18,7 +18,7 @@
 当前 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/` 下的 `dseg` 为 HCP/FreeSurfer 风格的多标签分割，不能直接给旧 EFNY FC 流程使用。为复用旧逻辑，`run_subject_fc.py` 会在独立输出目录中生成兼容性 `dseg`。新逻辑统一使用 `ribbon + wmparc`，并直接生成到 `wmparc.2` 的 `2 mm` 网格：
 
 - GM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `3` 和 `42`
-- WM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `2` 和 `41`，并额外纳入 `MNINonLinear/ROIs/wmparc.2.nii.gz` 的小脑白质标签 `7` 和 `46`
+- WM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `2` 和 `41`，并额外纳入 `MNINonLinear/ROIs/wmparc.2.nii.gz` 的小脑白质标签 `7`、`46` 以及脑干标签 `16`
 - CSF：来自 `MNINonLinear/ROIs/wmparc.2.nii.gz` 的标签 `4, 5, 14, 15, 24, 31, 43, 44, 63`
 
 输出文件位置：

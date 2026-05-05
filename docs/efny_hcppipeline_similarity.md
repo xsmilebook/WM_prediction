@@ -129,7 +129,7 @@
 新流程没有直接使用旧 `fmriprep` 的 `dseg`，而是用：
 
 - `MNINonLinear/ribbon.nii.gz` 提取大脑 GM 和 WM
-- `MNINonLinear/ROIs/wmparc.2.nii.gz` 补入小脑白质，并提取 CSF
+- `MNINonLinear/ROIs/wmparc.2.nii.gz` 补入小脑白质与脑干，并提取 CSF
 
 再生成兼容旧逻辑的三类 `dseg`。这一步会改变：
 

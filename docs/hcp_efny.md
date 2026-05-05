@@ -142,7 +142,7 @@ bash preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC
 - 在 `data/EFNY/xcpd_hcp/fmriprep_bridge/` 下为当前被试创建临时 bridge
 - 用 `build_hcp_tissue_dseg.py` 基于 `MNINonLinear/ribbon.nii.gz` 和 `MNINonLinear/ROIs/wmparc.2.nii.gz` 生成 bridge 所需的三类 `dseg`
   - GM：`ribbon` 的 `3, 42`
-  - WM：`ribbon` 的 `2, 41`，并额外纳入 `wmparc` 的小脑白质 `7, 46`
+  - WM：`ribbon` 的 `2, 41`，并额外纳入 `wmparc` 的小脑白质 `7, 46` 与脑干 `16`
   - CSF：`wmparc` 的 `4, 5, 14, 15, 24, 31, 43, 44, 63`
 - 用 `extract_confounds_by_title.py` 生成两类 TSV
   - bridge 所需的 `desc-confounds_timeseries.tsv`
