@@ -9,46 +9,33 @@ import sys
 from pathlib import Path
 
 import nibabel as nib
-import numpy as np
 
-# Entry script lives one level below conn_matrix/, so add the parent directory
-# in order to import the existing unified pipeline without changing its logic.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+SCRIPT_PATH = Path(__file__).resolve()
+# Entry script lives below src/, so expose both src/ and conn_matrix/ for imports
+# without changing the existing unified pipeline layout.
+sys.path.insert(0, str(SCRIPT_PATH.parents[2]))
+sys.path.insert(0, str(SCRIPT_PATH.parents[1]))
+from preprocess.hcp_pipeline.build_hcp_tissue_dseg import build_tissue_dseg  # noqa: E402
 from process_dataset_unified import DatasetProcessor  # noqa: E402
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-
-RIBBON_GM_LABELS = {3, 42}
-RIBBON_WM_LABELS = {2, 41}
-CSF_LABELS = {4, 5, 14, 15, 24, 31, 43, 44, 63}
-
-
 def build_compatibility_dseg(subject_id: str, hcp_subject_dir: Path, output_root: Path) -> Path:
     """Create a minimal 3-class tissue dseg compatible with the existing EFNY FC pipeline."""
     ribbon_path = hcp_subject_dir / "MNINonLinear" / "ribbon.nii.gz"
-    aseg_path = hcp_subject_dir / "MNINonLinear" / "aparc+aseg.nii.gz"
-
-    ribbon_img = nib.load(str(ribbon_path))
-    ribbon_data = np.asanyarray(ribbon_img.dataobj).astype(np.int16)
-    aseg_data = np.asanyarray(nib.load(str(aseg_path)).dataobj).astype(np.int16)
-
-    tissue_dseg = np.zeros(ribbon_data.shape, dtype=np.int16)
-    tissue_dseg[np.isin(ribbon_data, list(RIBBON_GM_LABELS))] = 1
-    tissue_dseg[np.isin(ribbon_data, list(RIBBON_WM_LABELS))] = 2
-    csf_mask = np.isin(aseg_data, list(CSF_LABELS)) & (tissue_dseg == 0)
-    tissue_dseg[csf_mask] = 3
+    wmparc_path = hcp_subject_dir / "MNINonLinear" / "ROIs" / "wmparc.2.nii.gz"
 
     anat_dir = output_root / "compat_fmriprep" / subject_id / "anat"
     anat_dir.mkdir(parents=True, exist_ok=True)
     out_path = anat_dir / f"{subject_id}_space-MNI152NLin6Asym_dseg.nii.gz"
-    nib.save(nib.Nifti1Image(tissue_dseg, ribbon_img.affine, ribbon_img.header), str(out_path))
+    build_tissue_dseg(ribbon_path=ribbon_path, wmparc_path=wmparc_path, output_path=out_path)
 
-    gm_voxels = int((tissue_dseg == 1).sum())
-    wm_voxels = int((tissue_dseg == 2).sum())
-    csf_voxels = int((tissue_dseg == 3).sum())
+    dseg_data = nib.load(str(out_path)).get_fdata()
+    gm_voxels = int((dseg_data == 1).sum())
+    wm_voxels = int((dseg_data == 2).sum())
+    csf_voxels = int((dseg_data == 3).sum())
     logger.info(
         "Saved compatibility dseg to %s (GM=%d, WM=%d, CSF=%d)",
         out_path,

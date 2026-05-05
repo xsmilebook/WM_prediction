@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu 20G
 #SBATCH -p q_fat_c
 #SBATCH --qos=high_c
@@ -100,9 +100,10 @@ link_file \
 link_file \
     "$HCP_SUBJECT_DIR/MNINonLinear/brainmask_fs.2.nii.gz" \
     "$FMRIPREP_BRIDGE_ANAT/${subj}_desc-brain_mask.nii.gz"
-link_file \
-    "$HCP_SUBJECT_DIR/MNINonLinear/ROIs/wmparc.2.nii.gz" \
-    "$FMRIPREP_BRIDGE_ANAT/${subj}_dseg.nii.gz"
+python3 "$SCRIPT_DIR/build_hcp_tissue_dseg.py" \
+    --ribbon-file "$HCP_SUBJECT_DIR/MNINonLinear/ribbon.nii.gz" \
+    --wmparc-file "$HCP_SUBJECT_DIR/MNINonLinear/ROIs/wmparc.2.nii.gz" \
+    --output "$FMRIPREP_BRIDGE_ANAT/${subj}_dseg.nii.gz"
 write_identity_xfm "$FMRIPREP_BRIDGE_ANAT/${subj}_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.txt"
 write_identity_xfm "$FMRIPREP_BRIDGE_ANAT/${subj}_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.txt"
 
@@ -137,7 +138,7 @@ for run_dir in "${run_dirs[@]}"; do
         --bold-file "$bold_file" \
         --motion-file "$motion_file" \
         --rmsd-file "$rmsd_file" \
-        --seg-file "$HCP_SUBJECT_DIR/MNINonLinear/ROIs/wmparc.2.nii.gz" \
+        --seg-file "$FMRIPREP_BRIDGE_ANAT/${subj}_dseg.nii.gz" \
         --brain-mask-file "$mask_file" \
         --base-confounds-out "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-confounds_timeseries.tsv" \
         --base-confounds-json-out "$FMRIPREP_BRIDGE_FUNC/${prefix}_desc-confounds_timeseries.json" \

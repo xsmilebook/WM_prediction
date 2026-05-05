@@ -43,10 +43,10 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
 - Run XCP-D after EFNY HCP `fMRIVolume`:
   - `bash src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC`
-  - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates Python-based bridge/custom confounds, and writes XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.
+  - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates a 3-class tissue `dseg` from HCP `ribbon.nii.gz` and `wmparc.2.nii.gz` (including cerebellar WM), writes bridge/custom confounds, and saves XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.
 - Generate FC matrices from EFNY HCP-pipeline XCP-D outputs:
   - `python src/conn_matrix/efny_hcppipeline/run_subject_fc.py --subject_id sub-THU20231118133GYC`
-  - The script builds a compatibility tissue `dseg` from HCP `ribbon.nii.gz` and `aparc+aseg.nii.gz`, then reuses the existing `DatasetProcessor` logic to write independent outputs under `data/EFNY/hcppipeline_fc/`.
+  - The script builds a compatibility tissue `dseg` from HCP `ribbon.nii.gz` and `wmparc.2.nii.gz` on the 2 mm functional grid, includes cerebellar WM in label `2`, and then reuses the existing `DatasetProcessor` logic to write independent outputs under `data/EFNY/hcppipeline_fc/`.
 - Batch-submit EFNY HCP-pipeline FC generation:
   - `sbatch src/conn_matrix/batch_run_hcppipeline_fc.sh /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_xcpd_ready505.txt`
   - The batch script expects a subject list containing only FC-ready subjects and writes Slurm logs to `log/conn_matrix/hcppipeline_fc/`.

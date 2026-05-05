@@ -21,6 +21,7 @@
 - `fMRIVolume` 入口：`preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh`
 - `fMRISurface` 入口：`preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh`
 - HCP 到 XCP-D 的 confounds helper：`preprocess/hcp_pipeline/extract_confounds_by_title.py`
+- HCP ribbon + wmparc 生成三类 tissue `dseg`：`preprocess/hcp_pipeline/build_hcp_tissue_dseg.py`
 - 单被试 XCP-D 入口：`preprocess/hcp_pipeline/xcpd_24p_csf_global.sh`
 - 批量提交 XCP-D：`preprocess/hcp_pipeline/batch_xcpd.sh`
 - Slurm 数组提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh`
@@ -139,12 +140,17 @@ bash preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC
 
 - 从 `data/EFNY/hcp_studyfolder/sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST*_*/` 发现已完成的 `fMRIVolume` run
 - 在 `data/EFNY/xcpd_hcp/fmriprep_bridge/` 下为当前被试创建临时 bridge
+- 用 `build_hcp_tissue_dseg.py` 基于 `MNINonLinear/ribbon.nii.gz` 和 `MNINonLinear/ROIs/wmparc.2.nii.gz` 生成 bridge 所需的三类 `dseg`
+  - GM：`ribbon` 的 `3, 42`
+  - WM：`ribbon` 的 `2, 41`，并额外纳入 `wmparc` 的小脑白质 `7, 46`
+  - CSF：`wmparc` 的 `4, 5, 14, 15, 24, 31, 43, 44, 63`
 - 用 `extract_confounds_by_title.py` 生成两类 TSV
   - bridge 所需的 `desc-confounds_timeseries.tsv`
   - 仅包含 `csf` 与 `global_signal` 及其导数/平方项的 custom confounds TSV
 - helper 还会为 bridge confounds 与 custom confounds 同步生成同名 `.json` sidecar，满足 XCP-D 对 `confounds_json` 的读取要求
 - bridge confounds 会额外写入 `rmsd`，该列直接读取 HCP run 目录中的 `Movement_RelativeRMS.txt`，用于满足 XCP-D QC/report 对相对 RMS 头动指标的读取要求
 - bridge 的 `func/` 仍保持 `space-MNI152NLin6Asym_res-2` 命名；`anat/` 改为无 `space` 的 fMRIPrep 风格命名，例如 `sub-*_desc-preproc_T1w.nii.gz`、`sub-*_desc-brain_mask.nii.gz`、`sub-*_dseg.nii.gz`
+- 新的 bridge `dseg` 输出在 `wmparc.2.nii.gz` 的 `2 mm` 网格上，直接与 HCP `fMRIVolume` 的 BOLD / brain mask 对齐
 - `Movement_Regressors.txt` 中的旋转参数在 HCP 输出里使用角度制，helper 会先转换为弧度，再写入 bridge confounds 和基于这些参数计算的 `framewise_displacement`
 - 运行 XCP-D，并将结果写到 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/`
 

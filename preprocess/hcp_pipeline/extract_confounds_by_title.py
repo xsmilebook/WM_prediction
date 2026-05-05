@@ -43,6 +43,14 @@ def compute_mean_signal(data_4d: np.ndarray, mask_3d: np.ndarray, name: str) -> 
     return voxels.mean(axis=0)
 
 
+def build_csf_mask(seg_data: np.ndarray) -> np.ndarray:
+    seg_int = np.rint(seg_data).astype(np.int32)
+    labels = set(np.unique(seg_int).tolist())
+    if labels.issubset({0, 1, 2, 3}):
+        return seg_int == 3
+    return np.isin(seg_int, list(CSF_LABELS))
+
+
 def derivative(values: np.ndarray) -> np.ndarray:
     out = np.zeros_like(values, dtype=np.float64)
     if values.shape[0] > 1:
@@ -146,8 +154,7 @@ def main() -> None:
         brain_mask_data = np.squeeze(brain_mask_data)
 
     brain_mask = brain_mask_data > 0
-    seg_int = np.rint(seg_data).astype(np.int32)
-    csf_mask = np.isin(seg_int, list(CSF_LABELS))
+    csf_mask = build_csf_mask(seg_data)
 
     global_signal = compute_mean_signal(bold_data, brain_mask, "brain")
     csf_signal = compute_mean_signal(bold_data, csf_mask, "CSF")

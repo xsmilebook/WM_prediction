@@ -15,17 +15,17 @@
 
 ## 兼容性 dseg
 
-当前 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/` 下的 `dseg` 为 HCP/FreeSurfer 风格的多标签分割，不能直接给旧 EFNY FC 流程使用。为复用旧逻辑，`run_subject_fc.py` 会在独立输出目录中生成兼容性 `dseg`：
+当前 `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal/` 下的 `dseg` 为 HCP/FreeSurfer 风格的多标签分割，不能直接给旧 EFNY FC 流程使用。为复用旧逻辑，`run_subject_fc.py` 会在独立输出目录中生成兼容性 `dseg`。新逻辑统一使用 `ribbon + wmparc`，并直接生成到 `wmparc.2` 的 `2 mm` 网格：
 
 - GM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `3` 和 `42`
-- WM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `2` 和 `41`
-- CSF：来自 `MNINonLinear/aparc+aseg.nii.gz` 的标签 `4, 5, 14, 15, 24, 31, 43, 44, 63`
+- WM：来自 `MNINonLinear/ribbon.nii.gz` 的标签 `2` 和 `41`，并额外纳入 `MNINonLinear/ROIs/wmparc.2.nii.gz` 的小脑白质标签 `7` 和 `46`
+- CSF：来自 `MNINonLinear/ROIs/wmparc.2.nii.gz` 的标签 `4, 5, 14, 15, 24, 31, 43, 44, 63`
 
 输出文件位置：
 
 - `data/EFNY/hcppipeline_fc/compat_fmriprep/sub-<id>/anat/sub-<id>_space-MNI152NLin6Asym_dseg.nii.gz`
 
-该文件仅用于让旧 unified FC 逻辑继续按 `gm_label=1`、`wm_label=2` 工作，不覆盖原始 HCP/XCP-D 结果。
+该文件仅用于让旧 unified FC 逻辑继续按 `gm_label=1`、`wm_label=2` 工作，不覆盖原始 HCP/XCP-D 结果。由于输出已经位于 `2 mm` 功能像网格，`wm_postproc` 不再需要额外把这个兼容 `dseg` 从 `0.7 mm` 重采样到 BOLD。
 
 ## 输出目录
 
