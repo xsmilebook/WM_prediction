@@ -114,6 +114,11 @@ sbatch conn_matrix/batch_run_hcppipeline_fc.sh \
   /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_xcpd_ready505.txt
 ```
 
+注意：
+
+- `batch_run_hcppipeline_fc.sh` 现使用 `conda.sh` 再 `conda activate ML`，因此可以安全传入被试列表路径作为第一个脚本参数
+- 若更换名单文件，需要同时确认脚本头部的 `#SBATCH --array` 范围覆盖该名单的行数
+
 日志目录：
 
 - `log/conn_matrix/hcppipeline_fc/`

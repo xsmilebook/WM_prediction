@@ -2,7 +2,7 @@
 #SBATCH --job-name=hcppipeline_fc
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat,q_fat_c,q_fat_l
-#SBATCH --array=1-505%200
+#SBATCH --array=1-505
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.err
 
@@ -14,7 +14,7 @@ PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/efny_hcppipeline/run_subject_fc.p
 OUTPUT_ROOT="${PROJECT_ROOT}/data/EFNY/hcppipeline_fc"
 LOG_DIR="${PROJECT_ROOT}/log/conn_matrix/hcppipeline_fc"
 
-source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/etc/profile.d/conda.sh
 conda activate ML
 
 mkdir -p "$LOG_DIR"

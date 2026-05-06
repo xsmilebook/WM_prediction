@@ -102,8 +102,11 @@ data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Pe
 并直接计算：
 
 - 每次 permutation 的 `all_corr - gg_corr`
+- 每次 permutation 的 `gg_corr - all_corr`
 - 实际观测值 `median(all_corr) - median(gg_corr)`
-- 该观测差值相对于 permutation null 的右尾经验 `p` 值
+- 实际观测值 `median(gg_corr) - median(all_corr)`
+- `all > gg` 方向的右尾经验 `p` 值
+- `gg > all` 方向的右尾经验 `p` 值
 
 统计口径：
 
@@ -112,6 +115,7 @@ data/<dataset>/prediction/<target>/V_feature_merge/RegressCovariates_RandomCV_Pe
 - permutation 统计量为每个 `Time_i` 的 `Mean_Corr(all) - Mean_Corr(gg)`
 - observed 统计量为 `median(Mean_Corr(all)) - median(Mean_Corr(gg))`
 - 显著性使用右尾经验 `p` 值：`(count(null >= observed) + 1) / (n_perm + 1)`
+- 对 `gg > all` 方向，脚本单独使用 `Mean_Corr(gg) - Mean_Corr(all)` 的 null 分布，并输出对应的右尾经验 `p` 值：`(count(null >= observed) + 1) / (n_perm + 1)`
 
 运行示例：
 
@@ -133,7 +137,7 @@ code/WM_prediction/results/V_feature_merge/<dataset>_<task>_gg_all_permutation_s
 其中：
 
 - `*_detail.csv` 同时保存 observed `101` 次 random CV 和 permutation `1000` 次的逐次 `gg_corr`、`all_corr`、`delta_corr`
-- `*_significance.csv` 汇总每个 target 的 `observed_median_delta_corr`、null 分布均值/中位数/标准差，以及经验 `p` 值和显著性标签
+- `*_significance.csv` 汇总每个 target 的 `observed_median_delta_corr`、`observed_median_gg_minus_all_corr`、null 分布均值/中位数/标准差，以及 `all > gg` 的右尾经验 `p` 值和 `gg > all` 的右尾经验 `p` 值
 
 ## GG 与 All detail 分布图
 

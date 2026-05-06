@@ -283,11 +283,12 @@ for idx, res in enumerate(results_summary):
 df_results = pd.DataFrame(results_summary)
 print("\nFinal Results Table:")
 print(df_results)
+df_results.to_csv(os.path.join(ProjectFolder, 'V_hcp_partial_results_total_multi_targets.csv'), index=False)
 
 # Save
 # Note: Saving to ProjectFolder root instead of specific target folder since it contains multiple
-output_file = os.path.join(ProjectFolder, 'partial_results_total_multi_targets.mat')
-boxplot_file = os.path.join(ProjectFolder, 'partial_results_forBoxplot_multi_targets.mat')
+output_file = os.path.join(ProjectFolder, 'V_hcp_partial_results_total_multi_targets.mat')
+boxplot_file = os.path.join(ProjectFolder, 'V_hcp_partial_results_forBoxplot_multi_targets.mat')
 
 mat_dict = {
     'R_gg_totalStr': cell_R_gg,

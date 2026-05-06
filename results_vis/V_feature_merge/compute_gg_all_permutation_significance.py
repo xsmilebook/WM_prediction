@@ -30,6 +30,7 @@ def build_observed_delta_df(baseline_dir, merged_dir):
     if observed_df.empty:
         raise ValueError('No paired observed runs available for GGFC and GG_GW_WW_MergedFC.')
     observed_df['delta_corr'] = observed_df['all_corr'] - observed_df['gg_corr']
+    observed_df['gg_minus_all_corr'] = observed_df['gg_corr'] - observed_df['all_corr']
     return observed_df.sort_values('time_id').reset_index(drop=True)
 
 
@@ -40,6 +41,7 @@ def build_permutation_delta_df(permutation_dir):
     if permutation_df.empty:
         raise ValueError('No paired permutation runs available for GGFC and GG_GW_WW_MergedFC.')
     permutation_df['delta_corr'] = permutation_df['all_corr'] - permutation_df['gg_corr']
+    permutation_df['gg_minus_all_corr'] = permutation_df['gg_corr'] - permutation_df['all_corr']
     return permutation_df.sort_values('time_id').reset_index(drop=True)
 
 
@@ -72,6 +74,7 @@ def main():
         if not os.path.exists(permutation_dir):
             observed_median_gg = float(np.median(observed_df['gg_corr'].to_numpy(dtype=float)))
             observed_median_all = float(np.median(observed_df['all_corr'].to_numpy(dtype=float)))
+            observed_gg_minus_all = observed_median_gg - observed_median_all
             summary_rows.append(
                 pd.DataFrame(
                     [
@@ -89,6 +92,10 @@ def main():
                                 np.mean(observed_df['delta_corr'].to_numpy(dtype=float))
                             ),
                             'observed_median_delta_corr': observed_median_all - observed_median_gg,
+                            'observed_mean_gg_minus_all_corr': float(
+                                np.mean(observed_df['gg_minus_all_corr'].to_numpy(dtype=float))
+                            ),
+                            'observed_median_gg_minus_all_corr': observed_gg_minus_all,
                             'n_permutation_runs': np.nan,
                             'permutation_mean_delta_corr': np.nan,
                             'permutation_median_delta_corr': np.nan,
@@ -97,7 +104,9 @@ def main():
                             'permutation_max_delta_corr': np.nan,
                             'z_score_vs_permutation': np.nan,
                             'empirical_p_right_tail': np.nan,
+                            'empirical_p_right_tail_for_gg_gt_all': np.nan,
                             'significance_label': np.nan,
+                            'significance_label_right_tail_for_gg_gt_all': np.nan,
                             'permutation_dir': permutation_dir,
                             'status': 'missing_permutation_dir',
                         }
@@ -110,6 +119,7 @@ def main():
         observed_median_gg = float(np.median(observed_df['gg_corr'].to_numpy(dtype=float)))
         observed_median_all = float(np.median(observed_df['all_corr'].to_numpy(dtype=float)))
         observed_delta = observed_median_all - observed_median_gg
+        observed_gg_minus_all = observed_median_gg - observed_median_all
 
         permutation_df['dataset'] = args.dataset
         permutation_df['target'] = target
@@ -121,9 +131,14 @@ def main():
         detail_rows.append(permutation_df)
 
         null_values = permutation_df['delta_corr'].to_numpy(dtype=float)
+        gg_minus_all_null_values = permutation_df['gg_minus_all_corr'].to_numpy(dtype=float)
         permutation_mean = float(np.mean(null_values))
         permutation_std = float(np.std(null_values, ddof=1))
-        p_value = compute_empirical_right_tail_p(observed_delta, null_values)
+        p_value_right = compute_empirical_right_tail_p(observed_delta, null_values)
+        p_value_right_for_gg_gt_all = compute_empirical_right_tail_p(
+            observed_gg_minus_all,
+            gg_minus_all_null_values,
+        )
 
         summary_rows.append(
             pd.DataFrame(
@@ -142,6 +157,10 @@ def main():
                             np.mean(observed_df['delta_corr'].to_numpy(dtype=float))
                         ),
                         'observed_median_delta_corr': observed_delta,
+                        'observed_mean_gg_minus_all_corr': float(
+                            np.mean(observed_df['gg_minus_all_corr'].to_numpy(dtype=float))
+                        ),
+                        'observed_median_gg_minus_all_corr': observed_gg_minus_all,
                         'n_permutation_runs': int(len(permutation_df)),
                         'permutation_mean_delta_corr': permutation_mean,
                         'permutation_median_delta_corr': float(np.median(null_values)),
@@ -153,8 +172,12 @@ def main():
                             if permutation_std > 0
                             else np.nan
                         ),
-                        'empirical_p_right_tail': p_value,
-                        'significance_label': get_significance_label(p_value),
+                        'empirical_p_right_tail': p_value_right,
+                        'empirical_p_right_tail_for_gg_gt_all': p_value_right_for_gg_gt_all,
+                        'significance_label': get_significance_label(p_value_right),
+                        'significance_label_right_tail_for_gg_gt_all': get_significance_label(
+                            p_value_right_for_gg_gt_all
+                        ),
                         'permutation_dir': permutation_dir,
                         'status': 'ok',
                     }
