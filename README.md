@@ -16,6 +16,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `generate_*_covariates.py`, `generate_sublists.py`: Builds covariates and subject lists.
   - `V_siblings/generate_familywise_sublists.py`: For ABCD cognition/pfactor analyses, removes siblings/twins by keeping only the first subject per `rel_family_id` in the current task-specific sublist order.
   - `hcp_pipeline/`: Stages EFNY BIDS inputs into an HCP-style StudyFolder and provides five HCP-style batch entry scripts for structural and resting-state preprocessing stages.
+  - `hcp_pipeline/cleanup_hcp_stage_outputs.sh`: Removes old per-stage HCP outputs for a subject list before rerunning a stage.
 - `prediction/`
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
@@ -41,6 +42,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC`
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
+- Remove old HCP stage outputs for a subject list before rerunning:
+  - `bash src/preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh freesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt --dry-run`
+  - `bash src/preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh freesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt`
 - Run XCP-D after EFNY HCP `fMRIVolume`:
   - `bash src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC`
   - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates a 3-class tissue `dseg` from HCP `ribbon.nii.gz` and `wmparc.2.nii.gz` (including cerebellar WM and brainstem in WM), writes bridge/custom confounds, and saves XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.

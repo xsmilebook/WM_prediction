@@ -22,6 +22,7 @@
 - `fMRISurface` 入口：`preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh`
 - HCP 到 XCP-D 的 confounds helper：`preprocess/hcp_pipeline/extract_confounds_by_title.py`
 - HCP ribbon + wmparc 生成三类 tissue `dseg`：`preprocess/hcp_pipeline/build_hcp_tissue_dseg.py`
+- 按阶段清理旧 HCP 输出：`preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh`
 - 单被试 XCP-D 入口：`preprocess/hcp_pipeline/xcpd_24p_csf_global.sh`
 - 批量提交 XCP-D：`preprocess/hcp_pipeline/batch_xcpd.sh`
 - Slurm 数组提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh`
@@ -258,6 +259,60 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 ### 4. `SLURM_ARRAY_TASK_ID` 驱动
 
 脚本支持 Slurm array。若设置了 `SLURM_ARRAY_TASK_ID`，则会读取 `--subject-list` 的第 N 行作为当前被试；若没有设置，则会顺序处理列表中的全部被试。
+
+## 按阶段清理旧输出
+
+当某个 HCP 阶段需要重跑时，可先按阶段名和被试列表清理旧输出，避免旧文件与新结果混用。脚本位置：
+
+`preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh`
+
+基本用法：
+
+```bash
+bash preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh \
+  freesurfer \
+  /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt \
+  --dry-run
+
+bash preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh \
+  freesurfer \
+  /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt
+```
+
+支持阶段：
+
+- `prefreesurfer`
+- `freesurfer`
+- `postfreesurfer`
+- `fmrivolume`
+- `fmrisurface`
+
+当前脚本的删除范围按“从该阶段重新运行所需的最小安全范围”定义：
+
+- `prefreesurfer`
+  - 删除 `<sub>/T1w`
+  - 删除 `<sub>/MNINonLinear`
+- `freesurfer`
+  - 删除 `<sub>/T1w/<sub>`
+  - 删除 `<sub>/T1w/Native`
+  - 删除 `<sub>/T1w/fsaverage_LR32k`
+  - 删除 `<sub>/T1w/Results`
+  - 删除 `<sub>/MNINonLinear`
+- `postfreesurfer`
+  - 删除 `<sub>/T1w/Native`
+  - 删除 `<sub>/T1w/fsaverage_LR32k`
+  - 删除 `<sub>/T1w/Results`
+  - 删除 `<sub>/MNINonLinear`
+- `fmrivolume`
+  - 删除 `<sub>/T1w/Results`
+  - 删除 `<sub>/MNINonLinear/Results`
+- `fmrisurface`
+  - 删除 `<sub>/MNINonLinear/Results`
+
+说明：
+
+- `--dry-run` 只打印将要删除的路径，不实际执行删除。
+- `fmrisurface` 的最终 run 级输出与 `fmrivolume` 输出同样位于 `MNINonLinear/Results` 下，因此该清理方式会同时移除 run 级体积结果；清理后应先重跑 `fmrivolume`，再重跑 `fmrisurface`。
 
 ## 常见失败点
 
