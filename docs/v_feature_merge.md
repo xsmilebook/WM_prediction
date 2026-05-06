@@ -303,7 +303,7 @@ code/WM_prediction/results/V_feature_merge/ABCD_pfactor_permutation_significance
 
 新增目录 `results_vis/V_feature_merge/`，用于在已有 `Res_NFold.mat` 基础上直接对 101 次 random CV 的 `Mean_Corr` 序列进行统计检验与可视化。
 
-### 1. merged FC 与最佳子 feature 的配对 t 检验
+### 1. GG 与 GG+GW+WW 的配对 t 检验
 
 脚本：
 
@@ -314,13 +314,51 @@ code/WM_prediction/results/V_feature_merge/ABCD_pfactor_permutation_significance
   --task age
 ```
 
-该脚本对每个 merged feature：
+该脚本当前固定只比较：
 
-- 读取其 101 次 `Mean_Corr`
-- 读取对应子 feature 的 101 次 `Mean_Corr`
-- 按子 feature 的整体 `median_corr` 选择表现更好的 baseline
-- 对 merged 与该最佳子 feature 做配对样本 t 检验
+- `GGFC`
+- `GG_GW_WW_MergedFC`
+
+不再对其它 merged 组合或“最佳子 feature”做配对检验。
+
+分组规则为：
+
+- `age`
+  - 固定使用 `HCPD`、`CCNP`、`EFNY`、`PNC` 四个数据集
+  - 这 4 个比较作为一组做 FDR
+  - 因此 `age` 任务下命令行中的 `--dataset` 仅保留为兼容参数，不改变实际比较范围
+- `cognition`
+  - 固定使用当前数据集下的 `Total`、`Crystal`、`Fluid` 3 个指标
+  - 这 3 个比较作为一组做 FDR
+- `pfactor`
+  - 固定只使用 `ADHD`
+  - 因此 FDR 只作用于这 1 个比较
+
+对每个比较：
+
+- 读取 `GGFC` 的 101 次 `Mean_Corr`
+- 读取 `GG_GW_WW_MergedFC` 的 101 次 `Mean_Corr`
+- 计算 3 套配对统计
+  - 基于 101 次 `Mean_Corr` 的配对样本 `t test`
+  - 基于 505 个 outer fold `Corr` 的配对样本 `t test`
+  - 基于 505 个 outer fold `Corr` 差值的 corrected resampled `t test`
+- 对 corrected resampled `p` 值按上述分组进一步做 FDR 校正
 - 输出 before-after 箱线图，并在图中添加显著性标记
+
+corrected resampled `t test` 当前使用的参数为：
+
+- `R = 101`
+- `k = 5`
+- `J = R x k = 505`
+- `n2 / n1 = 1 / 4`
+
+若记每个 paired fold 的差值为 `delta = corr_merged - corr_child`，其均值为 `mean`，样本标准差为 `sigma`，则当前实现采用：
+
+```text
+t = mean / (sqrt(1 / J + n2 / n1) * sigma)
+```
+
+并使用双尾 `t` 分布、`df = J - 1 = 504` 计算 `p` 值。
 
 输出路径：
 
@@ -328,6 +366,28 @@ code/WM_prediction/results/V_feature_merge/ABCD_pfactor_permutation_significance
 data/<dataset>/prediction/<target>/V_feature_merge/statistics/paired_ttest_best_child.csv
 data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_ttest/
 ```
+
+`paired_ttest_best_child.csv` 当前至少包含以下字段：
+
+- `dataset`
+- `target`
+- `baseline_feature`
+- `merged_feature`
+- `n_pairs_101`
+- `n_pairs_505`
+- `merged_median_corr`
+- `gg_median_corr`
+- `mean_delta_corr_101`
+- `median_delta_corr_101`
+- `mean_delta_corr_505`
+- `median_delta_corr_505`
+- `t_stat_101`
+- `p_value_101`
+- `t_stat_505`
+- `p_value_505`
+- `corrected_resampled_t_stat`
+- `corrected_resampled_p_value`
+- `corrected_resampled_p_value_fdr`
 
 ### 2. merged FC 与全部子 feature 的普通单因素 ANOVA
 
