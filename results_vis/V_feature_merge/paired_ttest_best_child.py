@@ -5,6 +5,7 @@ import scipy.io as sio
 from scipy import stats
 
 from common import (
+    DEFAULT_RESULTS_ROOT,
     ensure_dir,
     format_float,
     get_output_dir,
@@ -29,6 +30,11 @@ R_OUTER = 101
 K_FOLD = 5
 J_TOTAL = R_OUTER * K_FOLD
 N2_OVER_N1 = 1 / 4
+
+
+def get_summary_output_path(task):
+    summary_dir = ensure_dir(os.path.join(DEFAULT_RESULTS_ROOT, 'paired_ttest_pvalues'))
+    return os.path.join(summary_dir, f'{task}.csv')
 
 
 def load_fold_corr_series(result_dir, feature_name):
@@ -207,18 +213,15 @@ def main():
         'corrected_resampled_p_value_fdr'
     ].map(get_significance_label)
 
-    output_paths = []
-    for _, row in combined_df.iterrows():
-        key = (row['dataset'], row['target'])
-        output_dir = output_dirs[key]
-        output_csv = os.path.join(output_dir, 'paired_ttest_best_child.csv')
-        row.to_frame().T.to_csv(output_csv, index=False)
-        output_paths.append(output_csv)
+    summary_output_path = get_summary_output_path(args.task)
+    combined_df.to_csv(summary_output_path, index=False)
 
     print(combined_df.to_string(index=False))
-    print('Per-target outputs:')
-    for output_csv in output_paths:
-        print(f'  {output_csv}')
+    print('Summary output:')
+    print(f'  {summary_output_path}')
+    print('Per-target figure directories:')
+    for key in sorted(output_dirs):
+        print(f'  {output_dirs[key]}')
 
 
 if __name__ == '__main__':

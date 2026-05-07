@@ -363,11 +363,20 @@ t = mean / (sqrt(1 / J + n2 / n1) * sigma)
 输出路径：
 
 ```text
-data/<dataset>/prediction/<target>/V_feature_merge/statistics/paired_ttest_best_child.csv
+code/WM_prediction/results/V_feature_merge/paired_ttest_pvalues/age.csv
+code/WM_prediction/results/V_feature_merge/paired_ttest_pvalues/cognition.csv
+code/WM_prediction/results/V_feature_merge/paired_ttest_pvalues/pfactor.csv
 data/<dataset>/prediction/<target>/V_feature_merge/statistics/figures/paired_ttest/
 ```
 
-`paired_ttest_best_child.csv` 当前至少包含以下字段：
+其中：
+
+- `age.csv` 汇总 `HCPD`、`CCNP`、`EFNY`、`PNC` 四个年龄数据集
+- `cognition.csv` 汇总当前 `dataset` 下 `Total`、`Crystal`、`Fluid` 三个认知指标
+- `pfactor.csv` 汇总当前 `dataset` 下 `ADHD` 指标
+- before-after 图仍保存在各自 `target` 的 `figures/paired_ttest/` 目录
+
+上述按任务汇总的 CSV 当前至少包含以下字段：
 
 - `dataset`
 - `target`
