@@ -41,6 +41,7 @@
 - workbench 依赖的 `LD_LIBRARY_PATH` 只在 `wb_command` 的局部 wrapper 中设置，不再全局污染 shell 环境
 - `MSMBINDIR` 解析到 `/ibmgpfs/cuizaixu_lab/xuhaoshu/packages/msm_centos_v3_bin`
 - wrapper 目录中的 `wb_command` 必须是单独生成的普通脚本文件，不能先对 `wb_command` 建软链接再写入，否则会反向覆盖 workbench 安装目录中的目标文件
+- wrapper 目录现在按进程唯一创建在 `${TMPDIR:-/tmp}` 下，不能再让多个并发作业共享同一个 wrapper 目录；否则 `PostFreeSurfer` 或 `fMRIVolume` 可能互相删除 `wb_command` 包装脚本，表现为 `Permission denied` 或 `No such file or directory`
 
 注意：当前默认使用官网预编译的 `msm_centos_v3`，需确保 `msm_centos_v3_bin/msm` 链接存在，并且 `module load openblas/0.3.7` 后可正常执行。
 
@@ -320,6 +321,8 @@ bash preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh \
   - 检查 workbench 是否完整，尤其是 `exe_rh_linux64/wb_command`
 - `PostFreeSurfer` 长时间停在 `wmparc` 附近且 `MNINonLinear/Native` 没有继续产出
   - 优先检查环境脚本是否错误解析到了 `bin_rh_linux64/wb_command` 的包装脚本；当前应使用 `exe_rh_linux64/wb_command`
+- `PostFreeSurfer` 或 `fMRIVolume` 报 `/tmp/hcp_workbench_wrapper_<user>/wb_command: No such file or directory` 或 `Permission denied`
+  - 说明并发作业之间共享了 workbench wrapper 目录；当前环境脚本应为每个进程单独创建 wrapper 目录，修复后需从失败的 `PostFreeSurfer` 重新运行，再重跑 `fMRIVolume`
 - `wb_command` 报 `libglapi.so.0` 或 OpenGL 相关动态库缺失
   - 先确认 `ML` 环境已安装 `mesa-libglapi-cos7-x86_64`，并重新 `source .../activate && conda activate ML`
 - `msm` 找不到

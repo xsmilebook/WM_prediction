@@ -41,6 +41,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - The staging script automatically includes all available EFNY rest runs for a subject, with the current dataset convention constrained to `run-1` through `run-4`.
 - Run one HCP stage for EFNY:
   - `bash src/preprocess/hcp_pipeline/PreFreeSurferPipelineBatch.sh --StudyFolder=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --Session=sub-THU20231118133GYC`
+  - `src/preprocess/hcp_pipeline/hcp_efny_env.sh` now creates a per-process Workbench wrapper directory under `${TMPDIR:-/tmp}` so concurrent `PostFreeSurfer` and `fMRIVolume` jobs do not delete each other’s `wb_command` wrapper.
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
 - Remove old HCP stage outputs for a subject list before rerunning:

@@ -15,7 +15,7 @@ TASK_TARGETS = {
         'nihtbx_fluidcomp_uncorrected',
         'nihtbx_totalcomp_uncorrected',
     ],
-    'pfactor': ['General', 'Ext', 'ADHD'],
+    'pfactor': ['General', 'ADHD', 'Ext'],
 }
 
 BASELINE_FEATURES = ['GGFC', 'GWFC', 'WWFC']

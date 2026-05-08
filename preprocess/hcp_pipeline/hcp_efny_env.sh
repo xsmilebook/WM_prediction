@@ -58,7 +58,10 @@ setup_workbench_runtime() {
     local ogl_lib="$root/libs_rh_linux64_software_opengl"
     local conda_lib=""
     local conda_sysroot_lib=""
-    local wrapper_dir="${TMPDIR:-/tmp}/hcp_workbench_wrapper_${USER}"
+    local tmp_root="${TMPDIR:-/tmp}"
+    local wrapper_prefix="${tmp_root}/hcp_workbench_wrapper_${USER}"
+    local wrapper_suffix=""
+    local wrapper_dir=""
     local wrapper_path="$wrapper_dir/wb_command"
     local library_path_parts=()
     local entry
@@ -91,9 +94,12 @@ setup_workbench_runtime() {
         library_path_parts+=("$LD_LIBRARY_PATH")
     fi
 
-    mkdir -p "$wrapper_dir"
+    if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+        wrapper_suffix="_${SLURM_JOB_ID}"
+    fi
+    wrapper_dir=$(mktemp -d "${wrapper_prefix}${wrapper_suffix}_${BASHPID}_XXXXXX")
+    wrapper_path="$wrapper_dir/wb_command"
 
-    find "$wrapper_dir" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
     for entry in "$bindir"/*; do
         [[ -e "$entry" ]] || continue
         if [[ "$(basename "$entry")" == "wb_command" ]]; then
