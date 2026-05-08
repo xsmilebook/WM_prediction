@@ -96,4 +96,7 @@ WM_prediction/src/                        # 当前仓库根目录
         ├── plot_feature_merge_distributions.py # 绘制 7 组 feature 的 101 次 median corr 半边小提琴图与箱线图
         ├── paired_ttest_best_child.py    # merged FC 与最佳子 feature 的配对 t 检验和 before-after 图
         └── rm_anova_all_children.py      # merged FC 与全部子 feature 的普通单因素 ANOVA 和箱线图
+    └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本
+        ├── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关结果
+        └── compute_permutation_significance.py # 基于 1000 次 permutation 计算 GG/GW/WW/GW/GG/WW/GG 的经验 p 值
 ```

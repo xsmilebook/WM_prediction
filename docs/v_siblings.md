@@ -83,6 +83,72 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_siblil
 data/ABCD/prediction/<target>/V_siblilngs/
 ```
 
+## permutation 显著性
+
+新增脚本：
+
+```text
+src/results_vis/V_siblings/compute_permutation_significance.py
+```
+
+用途：
+
+- 对 `GG`、`GW`、`WW` 三个基线 feature，比较实际 `101` 次 random CV 的 `Mean_Corr` 中位数与 `1000` 次 permutation `Mean_Corr` null 分布
+- 对 `GW/GG`、`WW/GG` 两个指标，先在每个 `Time_i` 内拼接 5 个 fold 的测试样本，再分别计算：
+  - `GW/GG`：`GW` 预测与真实标签的偏相关，控制变量为同一 `Time_i` 的 `GG` 预测
+  - `WW/GG`：`WW` 预测与真实标签的偏相关，控制变量为同一 `Time_i` 的 `GG` 预测
+- 对上述两个偏相关指标，同样以实际 `101` 次结果的中位数对比 `1000` 次 permutation null 分布，计算右尾经验 `p` 值
+
+经验 `p` 值定义为：
+
+```text
+p = (count(null >= observed_median) + 1) / (n_perm + 1)
+```
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_siblings/compute_permutation_significance.py --task cognition
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor
+```
+
+默认目标列表：
+
+- `cognition`
+  - `nihtbx_cryst_uncorrected`
+  - `nihtbx_fluidcomp_uncorrected`
+  - `nihtbx_totalcomp_uncorrected`
+- `pfactor`
+  - `General`
+  - `Ext`
+  - `ADHD`
+
+输出文件：
+
+```text
+results/V_siblings/ABCD_cognition_permutation_significance.csv
+results/V_siblings/ABCD_pfactor_permutation_significance.csv
+```
+
+输出字段包括：
+
+- `dataset`
+- `task`
+- `target`
+- `metric_name`
+- `n_actual_runs`
+- `observed_mean`
+- `observed_median`
+- `n_permutation_runs`
+- `permutation_mean`
+- `permutation_median`
+- `permutation_std`
+- `z_score_vs_permutation`
+- `empirical_p_right_tail`
+- `significance_label`
+
 ## 验证结果
 
 本次实现已完成以下静态检查：
@@ -99,3 +165,4 @@ data/ABCD/prediction/<target>/V_siblilngs/
 - family-wise 标签与协变量维度分别为：
   - cognition: `labels (3883, 121)`, `covariates (3883, 5)`
   - pfactor: `labels (3950, 6)`, `covariates (3950, 5)`
+- `compute_permutation_significance.py` 已通过 `py_compile` 语法检查

@@ -25,6 +25,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
   - `V_feature_merge/`: Distribution plotting, paired t-test, and one-way ANOVA scripts for merged-feature result comparison.
+  - `V_siblings/compute_permutation_significance.py`: Computes empirical permutation p-values for `GG`, `GW`, `WW`, and the GG-controlled `GW/GG`, `WW/GG` metrics in the ABCD siblings/twins-controlled workflow.
 
 ## Unified Pipeline Highlights (HCPD example)
 - Valid run selection: Read `table/rest_fd_summary.csv` and select `REST1_acq-AP/PA`, `REST2_acq-AP/PA` under thresholds (e.g., FD ≤ 0.5 and low-motion ratio > 0.4).
@@ -75,6 +76,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run ABCD cognition/pfactor prediction after siblings/twins control:
   - `python src/prediction/V_siblilngs/predict_cognition_RandomCV.py`
   - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`
+- Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task cognition`
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor`
 - Run merged-feature prediction (examples):
   - `python src/prediction/V_feature_merge/predict_age_RandomCV.py`
   - `python src/prediction/V_feature_merge/predict_cognition_RandomCV.py`
@@ -139,6 +143,8 @@ The `prediction/V_siblilngs/` workflow keeps the modeling code unchanged and onl
 - Results are written to:
   - `data/ABCD/prediction/<target>/V_siblilngs/RegressCovariates_RandomCV`
   - `data/ABCD/prediction/<target>/V_siblilngs/RegressCovariates_RandomCV_Permutation`
+  - `results/V_siblings/ABCD_cognition_permutation_significance.csv`
+  - `results/V_siblings/ABCD_pfactor_permutation_significance.csv`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.
