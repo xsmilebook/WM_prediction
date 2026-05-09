@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
-SUBJ_LIST=${1:-"$PROJECT_ROOT/data/EFNY/table/sublist_new_left521.txt"}
+SUBJ_LIST=${1:-"$PROJECT_ROOT/data/EFNY/table/sublist_new.txt"}
 LOG_DIR="$PROJECT_ROOT/log/hcp_pipeline/xcpd"
 
 mkdir -p "$LOG_DIR"

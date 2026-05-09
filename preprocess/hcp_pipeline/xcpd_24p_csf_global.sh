@@ -1,10 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu 20G
-#SBATCH -p q_fat_c
-#SBATCH --qos=high_c
+#SBATCH --cpus-per-task=4
+#SBATCH -p q_cn,q_fat,q_fat_l
 
 set -euo pipefail
 
