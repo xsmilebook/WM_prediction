@@ -10,6 +10,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── architecture_update.md            # 本次架构文档同步说明
 │   ├── efny_hcppipeline_similarity.md    # EFNY HCP pipeline FC 与旧 EFNY / HCPD 的相似性分析
 │   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
+│   ├── v_holdout.md                      # ABCD 单次 holdout（8:1:1）复现脚本说明
 │   ├── v_siblings.md                     # ABCD siblings/twins 控制后的 family-wise sublist 与预测说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
@@ -48,6 +49,10 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── PLSr1_CZ_Random_RegressCovariates.py # siblings/twins 控制版沿用的本地 PLS 管线
 │   │   ├── predict_cognition_RandomCV.py # 使用 family-wise cognition 子样本运行随机 CV 预测
 │   │   └── predict_pfactor_RandomCV.py   # 使用 family-wise pfactor 子样本运行随机 CV / permutation 预测
+│   ├── V_holdout/                        # ABCD holdout 复现脚本
+│   │   ├── PLSr1_CZ_Random_RegressCovariates.py # 单次 holdout PLS 管线，按 8:1:1 划分 train/validation/test
+│   │   ├── predict_cognition_RandomCV.py # 使用 ABCD cognition 子样本运行单次 holdout 预测
+│   │   └── predict_pfactor_RandomCV.py   # 使用 ABCD pfactor 子样本运行单次 holdout 预测
 │   └── V_feature_merge/                  # merged FC 组合预测脚本
 │       ├── common.py                     # merged 特征组合与 RandIndex 路径构建
 │       ├── PLSr1_CZ_Random_RegressCovariates.py # merged FC 使用的本地 PLS 管线

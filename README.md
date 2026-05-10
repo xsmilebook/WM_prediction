@@ -21,6 +21,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
   - `V_siblilngs/`: Re-run ABCD cognition and p-factor prediction after removing siblings/twins from the existing sublists while keeping the original PLS workflow unchanged.
+  - `V_holdout/`: Re-run ABCD cognition and p-factor prediction with a single stratified holdout split (`train/validation/test = 8:1:1`) while keeping the original PLS workflow as intact as possible.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
@@ -77,6 +78,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run ABCD cognition/pfactor prediction after siblings/twins control:
   - `python src/prediction/V_siblilngs/predict_cognition_RandomCV.py`
   - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`
+- Run ABCD cognition/pfactor prediction with a single holdout split:
+  - `python src/prediction/V_holdout/predict_cognition_RandomCV.py`
+  - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py`
 - Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task cognition`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor`
@@ -146,6 +150,18 @@ The `prediction/V_siblilngs/` workflow keeps the modeling code unchanged and onl
   - `data/ABCD/prediction/<target>/V_siblilngs/RegressCovariates_RandomCV_Permutation`
   - `results/V_siblings/ABCD_cognition_permutation_significance.csv`
   - `results/V_siblings/ABCD_pfactor_permutation_significance.csv`
+
+## Holdout ABCD Evaluation
+The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a single stratified holdout split for ABCD cognition and p-factor analyses.
+
+- The scripts keep the original file names for minimal diff, but the outer evaluation is no longer repeated random CV.
+- The outer split is generated from a stratified 10-way ordering of the target, then combined into `8` parts training, `1` part validation, and `1` part test.
+- Component selection is performed on the validation split.
+- After selecting the component number, the model is re-fit on the combined training+validation subjects and evaluated once on the held-out test split.
+- Results are written to:
+  - `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
+  - `Time_0/SplitIndex.mat` stores the train/validation/test indices
+  - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.

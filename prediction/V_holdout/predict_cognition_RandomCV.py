@@ -18,7 +18,7 @@ sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset
 for targetStr in targetStr_list:
     # 基础路径配置
     base_path = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}'
-    outFolder = f'{base_path}/prediction/{targetStr}'
+    outFolder = f'{base_path}/prediction/{targetStr}/V_holdout'
     os.makedirs(outFolder, exist_ok=True)
     # Import data
     # 1. atlas loading
@@ -138,19 +138,20 @@ for targetStr in targetStr_list:
     # subID,age,sex,meanFD
     # Range of parameters
     ComponentNumber_Range = np.arange(10) + 1
-    FoldQuantity = 5
+    FoldQuantity = 10
     Parallel_Quantity = 1
-    CVtimes = 101
+    CVtimes = 1
 
     print(f"数据集: {dataset}")
     print(f"目标变量: {targetStr}")
     print(f"数据路径: {base_path}")
     print(f"输出路径: {outFolder}")
     print(f"组件数量范围: {ComponentNumber_Range}")
-    print(f"交叉验证次数: {CVtimes}")
+    print("Holdout 划分: train/validation/test = 8:1:1")
+    print(f"重复次数: {CVtimes}")
 
     # # Predict
-    ResultantFolder = outFolder + '/RegressCovariates_RandomCV'
+    ResultantFolder = outFolder + '/RegressCovariates_Holdout'
     print(f"结果文件夹: {ResultantFolder}")
 
     # 确保输出目录存在
@@ -159,5 +160,5 @@ for targetStr in targetStr_list:
     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
 
     # Permutation
-    # ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';
-    # PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
+    ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
