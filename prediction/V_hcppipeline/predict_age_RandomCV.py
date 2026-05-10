@@ -98,7 +98,7 @@ hcppipeline_base_path = f'{base_path}/hcppipeline_fc'
 outFolder = f'{base_path}/prediction/{targetStr}/V_hcppipeline'
 os.makedirs(outFolder, exist_ok=True)
 
-sublist_path = f'{base_path}/table/sublist_xcpd_ready505.txt'
+sublist_path = f'{base_path}/table/sublist_new.txt'
 
 # 先读取目标 sublist，再用标签表确定最终可用被试
 sublist = load_sublist(sublist_path)
@@ -216,5 +216,5 @@ os.makedirs(ResultantFolder, exist_ok=True)
 PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
 
 # Permutation
-# ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation';
-# PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
+ResultantFolder = outFolder + '/RegressCovariates_RandomCV_Permutation'
+PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)

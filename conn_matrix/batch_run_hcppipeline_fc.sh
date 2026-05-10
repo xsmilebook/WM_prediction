@@ -1,15 +1,15 @@
 #!/bin/bash
 #SBATCH --job-name=hcppipeline_fc
 #SBATCH --cpus-per-task=1
-#SBATCH --partition=q_fat,q_fat_c,q_fat_l
-#SBATCH --array=1-505
+#SBATCH --partition=q_fat_c
+#SBATCH --array=1-522
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.err
 
 set -euo pipefail
 
 PROJECT_ROOT="/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction"
-SUBJ_LIST="${1:-${PROJECT_ROOT}/data/EFNY/table/sublist_xcpd_ready505.txt}"
+SUBJ_LIST="${1:-${PROJECT_ROOT}/data/EFNY/table/sublist_new.txt}"
 PYTHON_SCRIPT="${PROJECT_ROOT}/src/conn_matrix/efny_hcppipeline/run_subject_fc.py"
 OUTPUT_ROOT="${PROJECT_ROOT}/data/EFNY/hcppipeline_fc"
 LOG_DIR="${PROJECT_ROOT}/log/conn_matrix/hcppipeline_fc"
