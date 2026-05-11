@@ -75,6 +75,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/preprocess/V_siblings/generate_familywise_sublists.py`
 - Run EFNY HCP-pipeline age prediction:
   - `python src/prediction/V_hcppipeline/predict_age_RandomCV.py`
+- Summarize EFNY HCP-pipeline partial correlations and permutation significance:
+  - `python src/results_vis/V_hcppipeline/compute_partial_corr.py`
 - Run ABCD cognition/pfactor prediction after siblings/twins control:
   - `python src/prediction/V_siblilngs/predict_cognition_RandomCV.py`
   - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`

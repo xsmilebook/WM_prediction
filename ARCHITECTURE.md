@@ -93,7 +93,7 @@ WM_prediction/src/                        # 当前仓库根目录
     ├── compute_haufe_median.py           # 计算 Haufe 权重中位数并重建矩阵/作图
     ├── compute_partial_corr.py           # 计算结果相关性的偏相关统计
     ├── compare_feature_merge_performance.py # 汇总基线与 merged FC 预测结果
-    └── V_feature_merge/                  # merged FC 统计比较脚本
+    ├── V_feature_merge/                  # merged FC 统计比较脚本
         ├── common.py                     # merged 结果读取、目标映射与作图辅助函数
         ├── compute_gg_all_permutation_significance.py # 汇总 GG 与 GG+GW+WW 的共享 permutation 差值分布，并计算 observed median delta 的经验 p 值
         ├── compute_pfactor_permutation_significance.py # 评估 ABCD pfactor 的实际 median corr 相对 permutation null 的经验 p 值
@@ -101,6 +101,8 @@ WM_prediction/src/                        # 当前仓库根目录
         ├── plot_feature_merge_distributions.py # 绘制 7 组 feature 的 101 次 median corr 半边小提琴图与箱线图
         ├── paired_ttest_best_child.py    # merged FC 与最佳子 feature 的配对 t 检验和 before-after 图
         └── rm_anova_all_children.py      # merged FC 与全部子 feature 的普通单因素 ANOVA 和箱线图
+    ├── V_hcppipeline/                    # EFNY HCP pipeline 结果统计脚本
+    │   └── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关，并汇总相对 permutation 的 median corr 显著性
     └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本
         ├── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关结果
         └── compute_permutation_significance.py # 基于 1000 次 permutation 计算 GG/GW/WW/GW/GG/WW/GG 的经验 p 值

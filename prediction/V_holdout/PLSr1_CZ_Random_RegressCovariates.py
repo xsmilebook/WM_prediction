@@ -85,7 +85,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(
         script.write('#!/bin/bash\n')
         script.write('#SBATCH --job-name=prediction' + str(i) + '\n')
         script.write('#SBATCH --cpus-per-task=1\n')
-        script.write('#SBATCH -p q_fat_c\n')
+        script.write('#SBATCH -p q_fat_c,q_fat,q_fat_l\n')
         script.write('#SBATCH -o ' + ResultantFolder_TimeI + '/job.%j.out\n')
         script.write('#SBATCH -e ' + ResultantFolder_TimeI + '/job.%j.error.txt\n\n')
         script.write(system_cmd)

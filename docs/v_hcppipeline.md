@@ -51,6 +51,10 @@
 
 `data/EFNY/prediction/age/V_hcppipeline/RegressCovariates_RandomCV/`
 
+对应的 permutation 结果目录为：
+
+`data/EFNY/prediction/age/V_hcppipeline/RegressCovariates_RandomCV_Permutation/`
+
 ## 运行命令
 
 ```bash
@@ -60,8 +64,18 @@ conda activate ML
 python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_hcppipeline/predict_age_RandomCV.py
 ```
 
+偏相关与 permutation 显著性汇总：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_hcppipeline/compute_partial_corr.py
+```
+
 ## 说明
 
 - 预测逻辑本身未改动，仍复用 `prediction/PLSr1_CZ_Random_RegressCovariates.py`
 - 只调整了输入来源、被试对齐方式和输出目录
 - 脚本内部新增了对上一级 `prediction/` 目录的导入路径，以保证能够正确加载 `PLSr1_CZ_Random_RegressCovariates.py`
+- `results_vis/V_hcppipeline/compute_partial_corr.py` 现会同时读取 observed 与 permutation 目录，输出 `GG/GW/WW` 及 `GW_partial/WW_partial` 的 observed median、permutation 均值，以及相对 permutation null 的右尾经验 `p` 值和显著性标签
