@@ -78,4 +78,4 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_hcppi
 - 预测逻辑本身未改动，仍复用 `prediction/PLSr1_CZ_Random_RegressCovariates.py`
 - 只调整了输入来源、被试对齐方式和输出目录
 - 脚本内部新增了对上一级 `prediction/` 目录的导入路径，以保证能够正确加载 `PLSr1_CZ_Random_RegressCovariates.py`
-- `results_vis/V_hcppipeline/compute_partial_corr.py` 现会同时读取 observed 与 permutation 目录，输出 `GG/GW/WW` 及 `GW_partial/WW_partial` 的 observed median、permutation 均值，以及相对 permutation null 的右尾经验 `p` 值和显著性标签
+- `results_vis/V_hcppipeline/compute_partial_corr.py` 现会同时读取 observed 与 permutation 目录，并按同一个 `Time_i` 内的 `GG/GW/WW` 预测结果计算一次 `GW_partial` / `WW_partial`；最终再对全部 `Time_i` 的 partial corr 取 median，并输出相对 permutation null 的右尾经验 `p` 值和显著性标签
