@@ -80,6 +80,8 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── cleanup_hcp_stage_outputs.sh # 按 HCP 阶段和被试列表清理旧输出，供对应阶段重新运行前使用
 │   │   ├── extract_confounds_by_title.py # 从 HCP fMRIVolume 结果生成桥接 confounds 和 csf/global custom confounds
 │   │   ├── prepare_hcp_studyfolder_efny.py # 将 EFNY BIDS 数据整理为 HCP StudyFolder 结构并生成 manifest
+│   │   ├── screen_head_motion_efny_hcppipeline.py # 从 HCP fMRIVolume 的 Movement_Regressors.txt 计算 EFNY rest FD 汇总表
+│   │   ├── update_efny_covariates_with_hcppipeline_motion.py # 用 HCP pipeline 版 rest FD 汇总更新 EFNY 协变量表，并输出独立新表
 │   │   ├── submit_hcp_efny_chain.sh   # 在登录节点串行提交 prefreesurfer→freesurfer→postfreesurfer→fmrivolume，并用 afterok 依赖串联
 │   │   ├── xcpd_24p_csf_global.sh        # EFNY HCP 结果单被试桥接到最小 fMRIPrep 风格后运行 XCP-D
 │   │   ├── batch_xcpd.sh                 # 读取 EFNY 被试列表并逐个 sbatch 提交 XCP-D 作业

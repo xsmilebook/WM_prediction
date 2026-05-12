@@ -53,6 +53,10 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run XCP-D after EFNY HCP `fMRIVolume`:
   - `bash src/preprocess/hcp_pipeline/xcpd_24p_csf_global.sh sub-THU20231118133GYC`
   - The script builds a per-subject temporary fMRIPrep-style bridge from `data/EFNY/hcp_studyfolder/<sub>/MNINonLinear/Results`, generates a 3-class tissue `dseg` from HCP `ribbon.nii.gz` and `wmparc.2.nii.gz` (including cerebellar WM and brainstem in WM), writes bridge/custom confounds, and saves XCP-D results to `data/EFNY/xcpd_hcp/step_2nd_24PcsfGlobal`.
+- Summarize EFNY HCP-pipeline head motion directly from `fMRIVolume` outputs:
+  - `python src/preprocess/hcp_pipeline/screen_head_motion_efny_hcppipeline.py --hcp-studyfolder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary_hcppipeline.csv`
+- Build an independent EFNY covariates table updated with HCP-pipeline motion:
+  - `python src/preprocess/hcp_pipeline/update_efny_covariates_with_hcppipeline_motion.py --base-covariates /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/subid_meanFD_age_sex_new.csv --motion-summary /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary_hcppipeline.csv --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/subid_meanFD_age_sex_hcppipeline.csv`
 - Generate FC matrices from EFNY HCP-pipeline XCP-D outputs:
   - `python src/conn_matrix/efny_hcppipeline/run_subject_fc.py --subject_id sub-THU20231118133GYC`
   - The script builds a compatibility tissue `dseg` from HCP `ribbon.nii.gz` and `wmparc.2.nii.gz` on the 2 mm functional grid, includes cerebellar WM and brainstem in label `2`, and then reuses the existing `DatasetProcessor` logic to write independent outputs under `data/EFNY/hcppipeline_fc/`.

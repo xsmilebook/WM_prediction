@@ -21,6 +21,8 @@
 - `fMRIVolume` 入口：`preprocess/hcp_pipeline/GenericfMRIVolumeProcessingPipelineBatch.sh`
 - `fMRISurface` 入口：`preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh`
 - HCP 到 XCP-D 的 confounds helper：`preprocess/hcp_pipeline/extract_confounds_by_title.py`
+- HCP pipeline 版头动汇总：`preprocess/hcp_pipeline/screen_head_motion_efny_hcppipeline.py`
+- HCP pipeline 版协变量表更新：`preprocess/hcp_pipeline/update_efny_covariates_with_hcppipeline_motion.py`
 - HCP ribbon + wmparc 生成三类 tissue `dseg`：`preprocess/hcp_pipeline/build_hcp_tissue_dseg.py`
 - 按阶段清理旧 HCP 输出：`preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh`
 - 单被试 XCP-D 入口：`preprocess/hcp_pipeline/xcpd_24p_csf_global.sh`
@@ -128,6 +130,57 @@ bash preprocess/hcp_pipeline/GenericfMRISurfaceProcessingPipelineBatch.sh \
   - `.../sub-THU20231118133GYC/MNINonLinear/Results/rfMRI_REST*_*/`
 - `fMRISurface`
   - 相同 `Results/rfMRI_REST*_*/` 目录下的 surface/CIFTI 输出
+
+### 4. 提取 HCP pipeline 头动
+
+若希望在 `fMRIVolume` 结束后直接提取 EFNY 的头动汇总，而不依赖临时的 XCP-D bridge，可运行：
+
+```bash
+python preprocess/hcp_pipeline/screen_head_motion_efny_hcppipeline.py \
+  --hcp-studyfolder /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/hcp_studyfolder \
+  --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary_hcppipeline.csv
+```
+
+该脚本会：
+
+- 扫描 `sub-*/MNINonLinear/Results/rfMRI_REST*_*`
+- 对每个 run 读取 `Movement_Regressors.txt`
+- 复用 HCP->XCP-D bridge 中相同的 FD 公式：
+  - 平移导数取绝对值后求和
+  - 旋转导数先转成弧度，再乘以 `50 mm` 半径后取绝对值求和
+- 输出与 `screen_head_motion_efny.py` 相同结构的汇总表，包括：
+  - `rest1_frame` 到 `rest4_frame`
+  - `rest1_fd` 到 `rest4_fd`
+  - `rest1_low_ratio` 到 `rest4_low_ratio`
+  - `valid_num`
+  - `valid_subject`
+
+当前有效 run 的判定口径与原 EFNY 脚本保持一致：
+
+- `frame_num == 180`
+- `mean_fd <= 0.5`
+- `FD < 0.2` 的比例 `> 0.4`
+
+### 5. 用 HCP pipeline 头动更新 EFNY 协变量表
+
+若希望在保留原始 `subid_meanFD_age_sex_new.csv` 的同时，生成一份使用 HCP pipeline 头动的新协变量表，可运行：
+
+```bash
+python preprocess/hcp_pipeline/update_efny_covariates_with_hcppipeline_motion.py \
+  --base-covariates /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/subid_meanFD_age_sex_new.csv \
+  --motion-summary /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/rest_fd_summary_hcppipeline.csv \
+  --out /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/subid_meanFD_age_sex_hcppipeline.csv
+```
+
+该脚本会：
+
+- 读取原始协变量表中的 `subid`、`age`、`sex`、`mean_FD`
+- 读取 `rest_fd_summary_hcppipeline.csv`
+- 对 `rest*_valid == 1` 的 run 按 frame 数加权平均 `rest*_fd`，得到 `mean_FD_hcppipeline`
+- 生成一份新的独立表，列结构与原始协变量表保持一致
+- `mean_FD` 优先使用 HCP pipeline 的头动值；若某个被试缺少 HCP pipeline 头动，则回退到原表中的 `mean_FD`
+
+这样生成的新表可直接替换 `V_hcppipeline/predict_age_RandomCV.py` 中当前使用的协变量路径，而不需要手工修改原始 CSV。
 
 ## HCP 结果继续接 XCP-D
 
