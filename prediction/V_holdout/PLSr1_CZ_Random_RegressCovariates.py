@@ -84,8 +84,8 @@ def PLSr1_KFold_RandomCV_MultiTimes(
         script = open(ResultantFolder_TimeI + '/script.sh', 'w')
         script.write('#!/bin/bash\n')
         script.write('#SBATCH --job-name=prediction' + str(i) + '\n')
-        script.write('#SBATCH --cpus-per-task=1\n')
-        script.write('#SBATCH -p q_fat_c,q_fat,q_fat_l\n')
+        script.write('#SBATCH --cpus-per-task=3\n')
+        script.write('#SBATCH -p q_cn\n')
         script.write('#SBATCH -o ' + ResultantFolder_TimeI + '/job.%j.out\n')
         script.write('#SBATCH -e ' + ResultantFolder_TimeI + '/job.%j.error.txt\n\n')
         script.write(system_cmd)
@@ -425,6 +425,15 @@ def _generate_stratified_randindex(subjects_score, split_quantity):
             randindex[(num_bins - 1) * split_quantity + k] = shuffled_bins[-1][k]
 
     return randindex.astype(int)
+
+
+def save_stratified_randindex(subjects_score, split_quantity, output_file):
+    randindex = _generate_stratified_randindex(subjects_score, split_quantity)
+    output_dir = os.path.dirname(output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    sio.savemat(output_file, {'RandIndex': randindex})
+    return randindex
 
 
 def _build_split_indices(randindex, subjects_quantity, split_quantity):

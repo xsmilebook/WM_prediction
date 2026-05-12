@@ -13,6 +13,7 @@
 - 将样本先按目标变量排序，再按原脚本的分层随机思路生成 `10` 份近似均衡的 split。
 - 其中前 `8` 份合并为训练集，倒数第 `2` 份作为验证集，最后 `1` 份作为测试集。
 - 因此外层比例固定为 `train/validation/test = 8:1:1`。
+- 每个 target 会先在 `V_holdout/SharedRandIndex.mat` 中生成并保存一份固定的分层 `RandIndex`，observed 与全部 permutation 共用这同一份 split。
 
 ## 建模流程
 
@@ -32,6 +33,7 @@ data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout/
 
 其中：
 
+- `SharedRandIndex.mat` 保存该 target 的固定 holdout 划分顺序，供 observed 与 permutation 共同复用。
 - `Time_0/RandIndex.mat` 保存分层随机后的 10-way 顺序。
 - `Time_0/SplitIndex.mat` 保存训练集、验证集、测试集索引。
 - `Time_0/GGFC/Holdout_Score.mat`
@@ -68,3 +70,37 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 ```
 
 这两个入口脚本会各自提交 `1` 个 Slurm 作业，因此默认只产生一次 holdout 结果，而不是 `101` 次 random CV 结果。
+
+## 结果汇总脚本
+
+`results_vis/V_holdout/compute_partial_corr.py` 用于汇总已经完成的 holdout 与 permutation 结果。
+
+- 脚本会自动扫描 `data/ABCD/prediction/` 下实际存在 `V_holdout/RegressCovariates_Holdout` 的 target。
+- observed 部分直接读取 `Time_*/<GGFC|GWFC|WWFC>/Holdout_Score.mat` 中的 `Corr`、`MAE`、`Test_Index`、`Predict_Score` 与 `Test_Score`。
+- `GW_partial_corr` 和 `WW_partial_corr` 按同一个 `Time_i` 内的测试集预测计算，而不是跨 `Time_i` 重新配对。
+- 由于 permutation 复用 `SharedRandIndex.mat`，因此 null 分布只反映标签置换带来的变化，不再混入额外的 holdout split 变化。
+- permutation 部分读取 `V_holdout/RegressCovariates_Holdout_Permutation` 下所有 `Time_i`，并以右尾经验分布计算显著性：
+  `p = (count(null >= observed) + 1) / (n_perm + 1)`。
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/compute_partial_corr.py
+```
+
+输出文件写入：
+
+```text
+data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv
+data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat
+data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat
+```
+
+其中 CSV 的主要列包括：
+
+- `GG_corr`、`GW_corr`、`WW_corr`
+- `GW_partial_corr`、`WW_partial_corr`
+- `GG_empirical_p`、`GW_empirical_p`、`WW_empirical_p`
+- `GW_partial_empirical_p`、`WW_partial_empirical_p`

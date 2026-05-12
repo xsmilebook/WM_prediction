@@ -63,77 +63,85 @@ def list_time_ids(base_folder):
     )
 
 
-def load_all_folds(base_folder, run_id, fc_type, num_folds):
-    idx, pred, test = [], [], []
-    for k in range(num_folds):
-        f_path = os.path.join(base_folder, f'Time_{run_id}', fc_type, f'Fold_{k}_Score.mat')
-        if not os.path.isfile(f_path):
-            return None, None, None
-        try:
-            mat = sio.loadmat(f_path)
-            idx.extend(mat['Index'].flatten())
-            pred.extend(mat['Predict_Score'].flatten())
-            test.extend(mat['Test_Score'].flatten())
-        except Exception:
-            return None, None, None
-    return np.array(idx), np.array(pred), np.array(test)
+def list_target_ids(project_folder):
+    target_ids = []
+    for item in sorted(os.listdir(project_folder)):
+        holdout_folder = os.path.join(
+            project_folder,
+            item,
+            'V_holdout',
+            'RegressCovariates_Holdout',
+        )
+        if os.path.isdir(holdout_folder):
+            target_ids.append(item)
+    return target_ids
+
+
+def load_holdout_score(base_folder, run_id, fc_type):
+    score_file = os.path.join(base_folder, f'Time_{run_id}', fc_type, 'Holdout_Score.mat')
+    if not os.path.isfile(score_file):
+        return None
+
+    try:
+        mat = sio.loadmat(score_file)
+        return {
+            'index': mat['Test_Index'].flatten().astype(int),
+            'predict': mat['Predict_Score'].flatten().astype(float),
+            'test': mat['Test_Score'].flatten().astype(float),
+            'corr': float(mat['Corr'].item()),
+            'mae': float(mat['MAE'].item()),
+        }
+    except Exception:
+        return None
 
 
 def load_corr_mae_arrays(base_folder, fc_type, time_ids):
     corr_values = np.full(len(time_ids), np.nan)
     mae_values = np.full(len(time_ids), np.nan)
+
     for idx, run_id in enumerate(time_ids):
-        res_file = os.path.join(base_folder, f'Time_{run_id}', fc_type, 'Res_NFold.mat')
-        if os.path.isfile(res_file):
-            try:
-                mat = sio.loadmat(res_file)
-                corr_values[idx] = mat['Mean_Corr'].item()
-                mae_values[idx] = mat['Mean_MAE'].item()
-            except Exception:
-                pass
+        score = load_holdout_score(base_folder, run_id, fc_type)
+        if score is None:
+            continue
+        corr_values[idx] = score['corr']
+        mae_values[idx] = score['mae']
+
     return corr_values, mae_values
 
 
-def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw, corr_actual_ww, num_folds):
+def compute_partial_series(base_folder, time_ids):
     partial_r_gw_total = np.full(len(time_ids), np.nan)
     partial_r_ww_total = np.full(len(time_ids), np.nan)
 
-    for rank_idx, run_id in enumerate(time_ids):
-        if (
-            np.isnan(corr_actual_gg[rank_idx])
-            or np.isnan(corr_actual_gw[rank_idx])
-            or np.isnan(corr_actual_ww[rank_idx])
-        ):
+    for run_idx, run_id in enumerate(time_ids):
+        gg_score = load_holdout_score(base_folder, run_id, 'GGFC')
+        gw_score = load_holdout_score(base_folder, run_id, 'GWFC')
+        ww_score = load_holdout_score(base_folder, run_id, 'WWFC')
+
+        if gg_score is None or gw_score is None or ww_score is None:
             continue
 
-        gg_idx, gg_pred, _ = load_all_folds(base_folder, run_id, 'GGFC', num_folds)
-        gw_idx, gw_pred, gw_test = load_all_folds(base_folder, run_id, 'GWFC', num_folds)
-        ww_idx, ww_pred, ww_test = load_all_folds(base_folder, run_id, 'WWFC', num_folds)
-
-        if gg_idx is None or gw_idx is None or ww_idx is None:
-            continue
-
-        sort_gg = np.argsort(gg_idx)
-        sort_gw = np.argsort(gw_idx)
-        sort_ww = np.argsort(ww_idx)
+        sort_gg = np.argsort(gg_score['index'])
+        sort_gw = np.argsort(gw_score['index'])
+        sort_ww = np.argsort(ww_score['index'])
 
         if not (
-            np.array_equal(gg_idx[sort_gg], gw_idx[sort_gw])
-            and np.array_equal(gg_idx[sort_gg], ww_idx[sort_ww])
+            np.array_equal(gg_score['index'][sort_gg], gw_score['index'][sort_gw])
+            and np.array_equal(gg_score['index'][sort_gg], ww_score['index'][sort_ww])
         ):
-            warnings.warn(f'Index mismatch at Time_{run_id}. Skipping.')
+            warnings.warn(f'Test index mismatch at Time_{run_id}. Skipping.')
             continue
 
         try:
-            partial_r_gw_total[rank_idx] = partial_corr(
-                gw_pred[sort_gw],
-                gw_test[sort_gw].astype(float),
-                gg_pred[sort_gg],
+            partial_r_gw_total[run_idx] = partial_corr(
+                gw_score['predict'][sort_gw],
+                gw_score['test'][sort_gw],
+                gg_score['predict'][sort_gg],
             )
-            partial_r_ww_total[rank_idx] = partial_corr(
-                ww_pred[sort_ww],
-                ww_test[sort_ww].astype(float),
-                gg_pred[sort_gg],
+            partial_r_ww_total[run_idx] = partial_corr(
+                ww_score['predict'][sort_ww],
+                ww_score['test'][sort_ww],
+                gg_score['predict'][sort_gg],
             )
         except Exception:
             pass
@@ -148,13 +156,15 @@ def summarize_metric(observed_values, permutation_values):
     valid_observed = observed_values[~np.isnan(observed_values)]
     valid_permutation = permutation_values[~np.isnan(permutation_values)]
 
+    observed_value = float(valid_observed[0]) if valid_observed.size == 1 else np.nan
     observed_median = float(np.nanmedian(valid_observed)) if valid_observed.size else np.nan
     permutation_mean = float(np.mean(valid_permutation)) if valid_permutation.size else np.nan
     permutation_median = float(np.median(valid_permutation)) if valid_permutation.size else np.nan
     permutation_std = float(np.std(valid_permutation, ddof=1)) if valid_permutation.size > 1 else np.nan
-    p_value = compute_empirical_right_tail_p(observed_median, valid_permutation)
+    p_value = compute_empirical_right_tail_p(observed_value, valid_permutation)
 
     return {
+        'observed_value': observed_value,
         'observed_median': observed_median,
         'n_observed': int(valid_observed.size),
         'n_permutation': int(valid_permutation.size),
@@ -166,12 +176,9 @@ def summarize_metric(observed_values, permutation_values):
     }
 
 
-targetStr_List = ['age']
-targetStr_total = targetStr_List
+ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/prediction'
+targetStr_total = list_target_ids(ProjectFolder)
 num_targets = len(targetStr_total)
-
-ProjectFolder = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/prediction'
-num_folds = 5
 
 results_summary = []
 all_data = {
@@ -187,34 +194,26 @@ all_data = {
     'perm_partialR_ww': {},
 }
 
-for i_str in range(num_targets):
-    target_str = targetStr_total[i_str]
+for i_str, target_str in enumerate(targetStr_total):
     print(f'\n[{i_str + 1}/{num_targets}] Processing target: {target_str}')
 
-    base_folder = os.path.join(ProjectFolder, target_str, 'V_hcppipeline', 'RegressCovariates_RandomCV')
+    base_folder = os.path.join(ProjectFolder, target_str, 'V_holdout', 'RegressCovariates_Holdout')
     permutation_folder = os.path.join(
         ProjectFolder,
         target_str,
-        'V_hcppipeline',
-        'RegressCovariates_RandomCV_Permutation',
+        'V_holdout',
+        'RegressCovariates_Holdout_Permutation',
     )
-
-    if not os.path.exists(base_folder):
-        warnings.warn(f'Base folder not found for {target_str}: {base_folder}. Skipping.')
-        continue
 
     actual_time_ids = list_time_ids(base_folder)
     if not actual_time_ids:
         warnings.warn(f'No Time_* folders found for {target_str}: {base_folder}. Skipping.')
         continue
 
-    print(f'  Found {len(actual_time_ids)} observed runs.')
+    print(f'  Found {len(actual_time_ids)} observed holdout runs.')
 
-    print('  Loading observed GGFC...')
     corr_actual_gg, mae_actual_gg = load_corr_mae_arrays(base_folder, 'GGFC', actual_time_ids)
-    print('  Loading observed GWFC...')
     corr_actual_gw, mae_actual_gw = load_corr_mae_arrays(base_folder, 'GWFC', actual_time_ids)
-    print('  Loading observed WWFC...')
     corr_actual_ww, mae_actual_ww = load_corr_mae_arrays(base_folder, 'WWFC', actual_time_ids)
 
     all_data['R_gg'][target_str] = {'Corr': corr_actual_gg, 'MAE': mae_actual_gg}
@@ -222,14 +221,7 @@ for i_str in range(num_targets):
     all_data['R_ww'][target_str] = {'Corr': corr_actual_ww, 'MAE': mae_actual_ww}
 
     print('  Calculating observed partial correlations...')
-    partial_r_gw_total, partial_r_ww_total = compute_partial_series(
-        base_folder,
-        actual_time_ids,
-        corr_actual_gg,
-        corr_actual_gw,
-        corr_actual_ww,
-        num_folds,
-    )
+    partial_r_gw_total, partial_r_ww_total = compute_partial_series(base_folder, actual_time_ids)
     all_data['partialR_gw'][target_str] = partial_r_gw_total
     all_data['partialR_ww'][target_str] = partial_r_ww_total
 
@@ -244,23 +236,13 @@ for i_str in range(num_targets):
 
     if os.path.exists(permutation_folder):
         permutation_time_ids = list_time_ids(permutation_folder)
-        print(f'  Found {len(permutation_time_ids)} permutation runs.')
+        print(f'  Found {len(permutation_time_ids)} permutation holdout runs.')
         if permutation_time_ids:
-            print('  Loading permutation GGFC...')
             corr_perm_gg, mae_perm_gg = load_corr_mae_arrays(permutation_folder, 'GGFC', permutation_time_ids)
-            print('  Loading permutation GWFC...')
             corr_perm_gw, mae_perm_gw = load_corr_mae_arrays(permutation_folder, 'GWFC', permutation_time_ids)
-            print('  Loading permutation WWFC...')
             corr_perm_ww, mae_perm_ww = load_corr_mae_arrays(permutation_folder, 'WWFC', permutation_time_ids)
             print('  Calculating permutation partial correlations...')
-            partial_perm_gw, partial_perm_ww = compute_partial_series(
-                permutation_folder,
-                permutation_time_ids,
-                corr_perm_gg,
-                corr_perm_gw,
-                corr_perm_ww,
-                num_folds,
-            )
+            partial_perm_gw, partial_perm_ww = compute_partial_series(permutation_folder, permutation_time_ids)
         else:
             warnings.warn(f'Permutation folder has no Time_* runs: {permutation_folder}')
     else:
@@ -278,20 +260,22 @@ for i_str in range(num_targets):
     partial_gw_summary = summarize_metric(partial_r_gw_total, partial_perm_gw)
     partial_ww_summary = summarize_metric(partial_r_ww_total, partial_perm_ww)
 
-    print(f"    GG median corr: {gg_summary['observed_median']:.4f}, p={gg_summary['empirical_p_right_tail']}")
-    print(f"    GW median corr: {gw_summary['observed_median']:.4f}, p={gw_summary['empirical_p_right_tail']}")
-    print(f"    WW median corr: {ww_summary['observed_median']:.4f}, p={ww_summary['empirical_p_right_tail']}")
-    print(f"    Median Partial GW: {partial_gw_summary['observed_median']:.4f}, p={partial_gw_summary['empirical_p_right_tail']}")
-    print(f"    Median Partial WW: {partial_ww_summary['observed_median']:.4f}, p={partial_ww_summary['empirical_p_right_tail']}")
+    print(f"    GG corr: {gg_summary['observed_value']:.4f}, p={gg_summary['empirical_p_right_tail']}")
+    print(f"    GW corr: {gw_summary['observed_value']:.4f}, p={gw_summary['empirical_p_right_tail']}")
+    print(f"    WW corr: {ww_summary['observed_value']:.4f}, p={ww_summary['empirical_p_right_tail']}")
+    print(f"    GW partial corr: {partial_gw_summary['observed_value']:.4f}, p={partial_gw_summary['empirical_p_right_tail']}")
+    print(f"    WW partial corr: {partial_ww_summary['observed_value']:.4f}, p={partial_ww_summary['empirical_p_right_tail']}")
 
     results_summary.append(
         {
             'targetStr': target_str,
-            'GG_median': gg_summary['observed_median'],
-            'GW_median': gw_summary['observed_median'],
-            'WW_median': ww_summary['observed_median'],
-            'GW_partial_median': partial_gw_summary['observed_median'],
-            'WW_partial_median': partial_ww_summary['observed_median'],
+            'n_observed_runs': gg_summary['n_observed'],
+            'n_permutation_runs': gg_summary['n_permutation'],
+            'GG_corr': gg_summary['observed_value'],
+            'GW_corr': gw_summary['observed_value'],
+            'WW_corr': ww_summary['observed_value'],
+            'GW_partial_corr': partial_gw_summary['observed_value'],
+            'WW_partial_corr': partial_ww_summary['observed_value'],
             'GG_perm_mean': gg_summary['permutation_mean'],
             'GW_perm_mean': gw_summary['permutation_mean'],
             'WW_perm_mean': ww_summary['permutation_mean'],
@@ -324,7 +308,7 @@ cell_R_gw = np.zeros((n_valid, 3), dtype=object)
 cell_R_ww = np.zeros((n_valid, 3), dtype=object)
 cell_partial_gw = np.zeros((n_valid, 2), dtype=object)
 cell_partial_ww = np.zeros((n_valid, 2), dtype=object)
-cell_median_results = np.zeros((n_valid, 6), dtype=object)
+cell_observed_results = np.zeros((n_valid, 6), dtype=object)
 cell_significance_results = np.zeros((n_valid, 11), dtype=object)
 
 for idx, res in enumerate(results_summary):
@@ -348,12 +332,12 @@ for idx, res in enumerate(results_summary):
     cell_partial_ww[idx, 0] = t_str
     cell_partial_ww[idx, 1] = all_data['partialR_ww'][t_str]
 
-    cell_median_results[idx, 0] = t_str
-    cell_median_results[idx, 1] = res['GG_median']
-    cell_median_results[idx, 2] = res['GW_median']
-    cell_median_results[idx, 3] = res['WW_median']
-    cell_median_results[idx, 4] = res['GW_partial_median']
-    cell_median_results[idx, 5] = res['WW_partial_median']
+    cell_observed_results[idx, 0] = t_str
+    cell_observed_results[idx, 1] = res['GG_corr']
+    cell_observed_results[idx, 2] = res['GW_corr']
+    cell_observed_results[idx, 3] = res['WW_corr']
+    cell_observed_results[idx, 4] = res['GW_partial_corr']
+    cell_observed_results[idx, 5] = res['WW_partial_corr']
 
     cell_significance_results[idx, 0] = t_str
     cell_significance_results[idx, 1] = res['GG_empirical_p']
@@ -370,10 +354,10 @@ for idx, res in enumerate(results_summary):
 df_results = pd.DataFrame(results_summary)
 print('\nFinal Results Table:')
 print(df_results)
-df_results.to_csv(os.path.join(ProjectFolder, 'V_hcp_partial_results_total_multi_targets.csv'), index=False)
+df_results.to_csv(os.path.join(ProjectFolder, 'V_holdout_partial_results_total_multi_targets.csv'), index=False)
 
-output_file = os.path.join(ProjectFolder, 'V_hcp_partial_results_total_multi_targets.mat')
-boxplot_file = os.path.join(ProjectFolder, 'V_hcp_partial_results_forBoxplot_multi_targets.mat')
+output_file = os.path.join(ProjectFolder, 'V_holdout_partial_results_total_multi_targets.mat')
+boxplot_file = os.path.join(ProjectFolder, 'V_holdout_partial_results_forBoxplot_multi_targets.mat')
 
 mat_dict = {
     'R_gg_totalStr': cell_R_gg,
@@ -381,8 +365,8 @@ mat_dict = {
     'R_ww_totalStr': cell_R_ww,
     'partialR_gw_totalStr': cell_partial_gw,
     'partialR_ww_totalStr': cell_partial_ww,
-    'medianResults_totalStr': cell_median_results,
-    'medianPermutationSignificance_totalStr': cell_significance_results,
+    'observedResults_totalStr': cell_observed_results,
+    'permutationSignificance_totalStr': cell_significance_results,
 }
 
 sio.savemat(output_file, mat_dict)

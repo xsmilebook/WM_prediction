@@ -80,6 +80,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── cleanup_hcp_stage_outputs.sh # 按 HCP 阶段和被试列表清理旧输出，供对应阶段重新运行前使用
 │   │   ├── extract_confounds_by_title.py # 从 HCP fMRIVolume 结果生成桥接 confounds 和 csf/global custom confounds
 │   │   ├── prepare_hcp_studyfolder_efny.py # 将 EFNY BIDS 数据整理为 HCP StudyFolder 结构并生成 manifest
+│   │   ├── submit_hcp_efny_chain.sh   # 在登录节点串行提交 prefreesurfer→freesurfer→postfreesurfer→fmrivolume，并用 afterok 依赖串联
 │   │   ├── xcpd_24p_csf_global.sh        # EFNY HCP 结果单被试桥接到最小 fMRIPrep 风格后运行 XCP-D
 │   │   ├── batch_xcpd.sh                 # 读取 EFNY 被试列表并逐个 sbatch 提交 XCP-D 作业
 │   │   └── submit_hcp_efny_stage.slurm.sh # Slurm array 入口，按 subject list 提交单阶段批处理
@@ -103,6 +104,8 @@ WM_prediction/src/                        # 当前仓库根目录
         └── rm_anova_all_children.py      # merged FC 与全部子 feature 的普通单因素 ANOVA 和箱线图
     ├── V_hcppipeline/                    # EFNY HCP pipeline 结果统计脚本
     │   └── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关，并汇总相对 permutation 的 median corr 显著性
+    ├── V_holdout/                        # ABCD holdout 结果统计脚本
+    │   └── compute_partial_corr.py       # 读取 Holdout_Score.mat，汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
     └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本
         ├── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关结果
         └── compute_permutation_significance.py # 基于 1000 次 permutation 计算 GG/GW/WW/GW/GG/WW/GG 的经验 p 值

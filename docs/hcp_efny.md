@@ -26,6 +26,7 @@
 - 单被试 XCP-D 入口：`preprocess/hcp_pipeline/xcpd_24p_csf_global.sh`
 - 批量提交 XCP-D：`preprocess/hcp_pipeline/batch_xcpd.sh`
 - Slurm 数组提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh`
+- Slurm 依赖链提交脚本：`preprocess/hcp_pipeline/submit_hcp_efny_chain.sh`
 
 ## 环境约定
 
@@ -248,6 +249,27 @@ sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-3 
 ```
 
 `submit_hcp_efny_stage.slurm.sh` 会读取 `SLURM_ARRAY_TASK_ID`，然后按阶段名调用对应的五个独立 batch 入口脚本之一。
+
+### 3. 单被试自动串行重跑
+
+若希望对一个被试重跑 `prefreesurfer -> freesurfer -> postfreesurfer -> fmrivolume`，并在上游阶段成功结束后自动提交下游阶段，可使用：
+
+```bash
+PREFREESURFER_SBATCH_ARGS="--cpus-per-task=2" \
+FREESURFER_SBATCH_ARGS="--cpus-per-task=4" \
+POSTFREESURFER_SBATCH_ARGS="--cpus-per-task=4" \
+FMRIVOLUME_SBATCH_ARGS="--cpus-per-task=4" \
+bash preprocess/hcp_pipeline/submit_hcp_efny_chain.sh \
+  /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/hcp_pipeline/reprocess.txt
+```
+
+说明：
+
+- `reprocess.txt` 只需保留待重跑的一个被试，每行一个 subject ID。
+- `submit_hcp_efny_chain.sh` 在登录节点一次性提交 4 个作业。
+- 下游阶段通过 `sbatch --dependency=afterok:<jobid>` 与上游阶段绑定，因此只有上游作业退出状态为成功时才会继续。
+- 脚本内部会自动根据 `subject_list` 的非空行数设置 `--array=1-N`，单被试列表会自动变成 `--array=1-1`。
+- 若不设置 `*_SBATCH_ARGS`，对应阶段只使用 `submit_hcp_efny_stage.slurm.sh` 里的默认 Slurm 配置。
 如果只测试单个被试，也建议准备一个只含一行 subject ID 的列表文件，并用 `--array=1-1` 提交为单个作业。
 
 其他阶段建议资源：

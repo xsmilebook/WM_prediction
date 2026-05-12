@@ -2,7 +2,7 @@
 #SBATCH --job-name=hcppipeline_fc
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=q_fat_c
-#SBATCH --array=1-522
+#SBATCH --array=1-1
 #SBATCH --output=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.out
 #SBATCH --error=/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/log/conn_matrix/hcppipeline_fc/hcppipeline_fc_%A_%a.err
 

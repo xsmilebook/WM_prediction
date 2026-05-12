@@ -149,6 +149,16 @@ for targetStr in targetStr_list:
     print("Holdout 划分: train/validation/test = 8:1:1")
     print(f"重复次数: {CVtimes}")
 
+    shared_randindex_file = os.path.join(outFolder, 'SharedRandIndex.mat')
+    PLSr1_CZ_Random_RegressCovariates.save_stratified_randindex(
+        OverallPsyFactor,
+        FoldQuantity,
+        shared_randindex_file,
+    )
+    print(f"固定 holdout 划分文件: {shared_randindex_file}")
+    observed_randindex_files = [shared_randindex_file]
+    permutation_randindex_files = [shared_randindex_file] * 1000
+
     # # Predict
     ResultantFolder = outFolder + '/RegressCovariates_Holdout'
     print(f"结果文件夹: {ResultantFolder}")
@@ -156,10 +166,10 @@ for targetStr in targetStr_list:
     # 确保输出目录存在
     os.makedirs(ResultantFolder, exist_ok=True)
 
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0, observed_randindex_files)
 
     # Permutation
     ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'
     print(f"结果文件夹: {ResultantFolder}")
     os.makedirs(ResultantFolder, exist_ok=True)
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1, permutation_randindex_files)

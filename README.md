@@ -45,6 +45,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `src/preprocess/hcp_pipeline/hcp_efny_env.sh` now creates a per-process Workbench wrapper directory under `${TMPDIR:-/tmp}` so concurrent `PostFreeSurfer` and `fMRIVolume` jobs do not delete each other’s `wb_command` wrapper.
 - Submit one HCP stage as a Slurm array for EFNY:
   - `sbatch --partition=q_cn --cpus-per-task=4 --mem=24G --time=48:00:00 --array=1-10 src/preprocess/hcp_pipeline/submit_hcp_efny_stage.slurm.sh prefreesurfer /path/to/efny_subjects.txt`
+- Submit one EFNY HCP rerun chain with Slurm dependencies:
+  - `PREFREESURFER_SBATCH_ARGS="--cpus-per-task=2" FREESURFER_SBATCH_ARGS="--cpus-per-task=4" POSTFREESURFER_SBATCH_ARGS="--cpus-per-task=4" FMRIVOLUME_SBATCH_ARGS="--cpus-per-task=4" bash src/preprocess/hcp_pipeline/submit_hcp_efny_chain.sh /path/to/reprocess.txt`
 - Remove old HCP stage outputs for a subject list before rerunning:
   - `bash src/preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh freesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt --dry-run`
   - `bash src/preprocess/hcp_pipeline/cleanup_hcp_stage_outputs.sh freesurfer /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/EFNY/table/sublist_test.txt`
@@ -83,6 +85,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run ABCD cognition/pfactor prediction with a single holdout split:
   - `python src/prediction/V_holdout/predict_cognition_RandomCV.py`
   - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py`
+- Summarize ABCD holdout correlations, partial correlations, and permutation significance:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/compute_partial_corr.py`
 - Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task cognition`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor`
@@ -158,12 +162,19 @@ The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a singl
 
 - The scripts keep the original file names for minimal diff, but the outer evaluation is no longer repeated random CV.
 - The outer split is generated from a stratified 10-way ordering of the target, then combined into `8` parts training, `1` part validation, and `1` part test.
+- Each target saves one shared `SharedRandIndex.mat`, and both the observed holdout run and all permutation runs reuse that same split.
 - Component selection is performed on the validation split.
 - After selecting the component number, the model is re-fit on the combined training+validation subjects and evaluated once on the held-out test split.
 - Results are written to:
   - `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
+  - `data/ABCD/prediction/<target>/V_holdout/SharedRandIndex.mat`
   - `Time_0/SplitIndex.mat` stores the train/validation/test indices
   - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
+- `src/results_vis/V_holdout/compute_partial_corr.py` summarizes the observed holdout `Corr`, computes one partial correlation per `Time_i`, and evaluates each metric against the permutation holdout null distribution.
+- Summary outputs are written to:
+  - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
+  - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat`
+  - `data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat`
 
 ## Key Results Overview
 Below we list representative metrics (e.g., correlations or effect sizes). `GG/GW/WW` denote GM-GM, GM-WM, WM-WM connectivity, and `GW/GG`, `WW/GG` are performance ratios relative to GG.
