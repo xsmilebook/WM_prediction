@@ -149,15 +149,23 @@ def compute_partial_series(base_folder, time_ids):
     return partial_r_gw_total, partial_r_ww_total
 
 
-def summarize_metric(observed_values, permutation_values):
+def summarize_holdout_metric(observed_values, permutation_values, metric_name, target_str):
     observed_values = np.asarray(observed_values, dtype=float)
     permutation_values = np.asarray(permutation_values, dtype=float)
 
     valid_observed = observed_values[~np.isnan(observed_values)]
     valid_permutation = permutation_values[~np.isnan(permutation_values)]
 
-    observed_value = float(valid_observed[0]) if valid_observed.size == 1 else np.nan
-    observed_median = float(np.nanmedian(valid_observed)) if valid_observed.size else np.nan
+    if valid_observed.size == 0:
+        observed_value = np.nan
+    else:
+        observed_value = float(valid_observed[0])
+        if valid_observed.size > 1:
+            warnings.warn(
+                f'{target_str} has {valid_observed.size} observed holdout values for {metric_name}; '
+                f'using the first valid half test-set result.'
+            )
+
     permutation_mean = float(np.mean(valid_permutation)) if valid_permutation.size else np.nan
     permutation_median = float(np.median(valid_permutation)) if valid_permutation.size else np.nan
     permutation_std = float(np.std(valid_permutation, ddof=1)) if valid_permutation.size > 1 else np.nan
@@ -165,7 +173,6 @@ def summarize_metric(observed_values, permutation_values):
 
     return {
         'observed_value': observed_value,
-        'observed_median': observed_median,
         'n_observed': int(valid_observed.size),
         'n_permutation': int(valid_permutation.size),
         'permutation_mean': permutation_mean,
@@ -254,11 +261,21 @@ for i_str, target_str in enumerate(targetStr_total):
     all_data['perm_partialR_gw'][target_str] = partial_perm_gw
     all_data['perm_partialR_ww'][target_str] = partial_perm_ww
 
-    gg_summary = summarize_metric(corr_actual_gg, corr_perm_gg)
-    gw_summary = summarize_metric(corr_actual_gw, corr_perm_gw)
-    ww_summary = summarize_metric(corr_actual_ww, corr_perm_ww)
-    partial_gw_summary = summarize_metric(partial_r_gw_total, partial_perm_gw)
-    partial_ww_summary = summarize_metric(partial_r_ww_total, partial_perm_ww)
+    gg_summary = summarize_holdout_metric(corr_actual_gg, corr_perm_gg, 'GG_corr', target_str)
+    gw_summary = summarize_holdout_metric(corr_actual_gw, corr_perm_gw, 'GW_corr', target_str)
+    ww_summary = summarize_holdout_metric(corr_actual_ww, corr_perm_ww, 'WW_corr', target_str)
+    partial_gw_summary = summarize_holdout_metric(
+        partial_r_gw_total,
+        partial_perm_gw,
+        'GW_partial_corr',
+        target_str,
+    )
+    partial_ww_summary = summarize_holdout_metric(
+        partial_r_ww_total,
+        partial_perm_ww,
+        'WW_partial_corr',
+        target_str,
+    )
 
     print(f"    GG corr: {gg_summary['observed_value']:.4f}, p={gg_summary['empirical_p_right_tail']}")
     print(f"    GW corr: {gw_summary['observed_value']:.4f}, p={gw_summary['empirical_p_right_tail']}")

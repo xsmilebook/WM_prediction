@@ -21,7 +21,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
   - `V_siblilngs/`: Re-run ABCD cognition and p-factor prediction after removing siblings/twins from the existing sublists while keeping the original PLS workflow unchanged.
-  - `V_holdout/`: Re-run ABCD cognition and p-factor prediction with a single stratified holdout split (`train/validation/test = 8:1:1`) while keeping the original PLS workflow as intact as possible.
+  - `V_holdout/`: Re-run ABCD cognition and p-factor prediction with a single family-aware holdout split (`train/test = 1:1`) while keeping the original PLS workflow as intact as possible.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
@@ -162,19 +162,20 @@ The `prediction/V_siblilngs/` workflow keeps the modeling code unchanged and onl
   - `results/V_siblings/ABCD_pfactor_permutation_significance.csv`
 
 ## Holdout ABCD Evaluation
-The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a single stratified holdout split for ABCD cognition and p-factor analyses.
+The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a single family-aware holdout split for ABCD cognition and p-factor analyses.
 
 - The scripts keep the original file names for minimal diff, but the outer evaluation is no longer repeated random CV.
-- The outer split is generated from a stratified 10-way ordering of the target, then combined into `8` parts training, `1` part validation, and `1` part test.
-- Each target saves one shared `SharedRandIndex.mat`, and both the observed holdout run and all permutation runs reuse that same split.
-- Component selection is performed on the validation split.
-- After selecting the component number, the model is re-fit on the combined training+validation subjects and evaluated once on the held-out test split.
+- The outer split is a fixed `1:1` half-split generated from baseline `rel_family_id`, so siblings stay on the same side of the split.
+- Each target saves one shared `SharedSplitIndex.mat`, and both the observed holdout run and all permutation runs reuse that same split.
+- Component selection is performed by `5-fold CV` inside the outer training half.
+- After selecting the component number, the model is re-fit on the full outer training half and evaluated once on the held-out outer test half.
+- Permutation matches the main analysis: only the outer training labels are shuffled, while the outer test labels remain real.
 - Results are written to:
   - `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
-  - `data/ABCD/prediction/<target>/V_holdout/SharedRandIndex.mat`
-  - `Time_0/SplitIndex.mat` stores the train/validation/test indices
+  - `data/ABCD/prediction/<target>/V_holdout/SharedSplitIndex.mat`
+  - `Time_0/SplitIndex.mat` stores the train/test indices
   - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
-- `src/results_vis/V_holdout/compute_partial_corr.py` summarizes the observed holdout `Corr`, computes one partial correlation per `Time_i`, and evaluates each metric against the permutation holdout null distribution.
+- `src/results_vis/V_holdout/compute_partial_corr.py` uses the single half test-set `Corr` from `Holdout_Score.mat` as the observed holdout metric, computes one partial correlation per `Time_i`, and evaluates each metric against the permutation holdout null distribution.
 - Summary outputs are written to:
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat`

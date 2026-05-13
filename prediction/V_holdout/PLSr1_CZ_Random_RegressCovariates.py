@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-import scipy.io as sio
+
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing
-from sklearn import cross_decomposition
+import scipy.io as sio
 from joblib import Parallel, delayed
+from sklearn import cross_decomposition
+from sklearn import preprocessing
+from sklearn.model_selection import StratifiedGroupKFold
 import statsmodels.formula.api as sm
 
 CodesPath = os.path.dirname(os.path.abspath(__file__))
@@ -24,51 +26,51 @@ def PLSr1_KFold_RandomCV_MultiTimes(
     RandIndex_File_List='',
 ):
     """
-    保持原有入口签名不变，但在 V_holdout 中改为单次 holdout。
-    当 Fold_Quantity=10 时，对应 train/validation/test = 8:1:1。
+    保持原有入口签名不变，但在 V_holdout 中改为：
+    1. family-aware 的固定 half-split 外层 train/test；
+    2. outer train 内部的 5-fold CV 选择最佳 component；
+    3. permutation 仅打乱 outer train 标签，outer test 标签保持真实。
     """
     if not os.path.exists(ResultantFolder):
         os.makedirs(ResultantFolder)
 
     conn_cate_list = ['GGFC', 'GWFC', 'WWFC']
-
-    Subjects_Data_Mat_Path_List = []
+    subjects_data_mat_path_list = []
     for i in np.arange(len(Subjects_Data_List)):
-        Subjects_Data_Mat = {'Subjects_Data': Subjects_Data_List[i]}
-        Subjects_Data_Mat_Path = ResultantFolder + '/' + conn_cate_list[i] + '_Subjects_Data.mat'
-        Subjects_Data_Mat_Path_List.append(Subjects_Data_Mat_Path)
-        sio.savemat(Subjects_Data_Mat_Path, Subjects_Data_Mat)
+        subjects_data_mat = {'Subjects_Data': Subjects_Data_List[i]}
+        subjects_data_mat_path = os.path.join(ResultantFolder, conn_cate_list[i] + '_Subjects_Data.mat')
+        subjects_data_mat_path_list.append(subjects_data_mat_path)
+        sio.savemat(subjects_data_mat_path, subjects_data_mat)
 
     for i in np.arange(CVRepeatTimes):
-        ResultantFolder_TimeI = ResultantFolder + '/Time_' + str(i)
-        if not os.path.exists(ResultantFolder_TimeI):
-            os.makedirs(ResultantFolder_TimeI)
+        resultantfolder_timei = os.path.join(ResultantFolder, 'Time_' + str(i))
+        if not os.path.exists(resultantfolder_timei):
+            os.makedirs(resultantfolder_timei)
 
         if RandIndex_File_List != '':
-            RandIndex_File = RandIndex_File_List[i]
+            randindex_file = RandIndex_File_List[i]
         else:
-            RandIndex_File = ''
+            randindex_file = ''
 
-        Configuration_Mat = {
-            'Subjects_Data_Mat_Path_List': Subjects_Data_Mat_Path_List,
+        configuration_mat = {
+            'Subjects_Data_Mat_Path_List': subjects_data_mat_path_list,
             'Subjects_Score': Subjects_Score,
             'Covariates': Covariates,
             'Fold_Quantity': Fold_Quantity,
             'ComponentNumber_Range': ComponentNumber_Range,
             'CVRepeatTimes': CVRepeatTimes,
-            'ResultantFolder_TimeI': ResultantFolder_TimeI,
+            'ResultantFolder_TimeI': resultantfolder_timei,
             'Parallel_Quantity': Parallel_Quantity,
             'Permutation_Flag': Permutation_Flag,
-            'RandIndex_File': RandIndex_File,
+            'RandIndex_File': randindex_file,
         }
-
-        sio.savemat(ResultantFolder_TimeI + '/Configuration.mat', Configuration_Mat)
+        sio.savemat(os.path.join(resultantfolder_timei, 'Configuration.mat'), configuration_mat)
 
         system_cmd = 'python3 -c ' + '\'import sys;\
             sys.path.append("' + CodesPath + '");\
             from PLSr1_CZ_Random_RegressCovariates import PLSr1_KFold_RandomCV_MultiTimes_Sub; \
             import scipy.io as sio;\
-            Configuration = sio.loadmat("' + ResultantFolder_TimeI + '/Configuration.mat");\
+            Configuration = sio.loadmat("' + resultantfolder_timei + '/Configuration.mat");\
             Subjects_Data_Mat_Path_List = Configuration["Subjects_Data_Mat_Path_List"];\
             Subjects_Score = Configuration["Subjects_Score"];\
             Covariates = Configuration["Covariates"];\
@@ -78,20 +80,21 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             Permutation_Flag = Configuration["Permutation_Flag"];\
             RandIndex_File = Configuration["RandIndex_File"];\
             Parallel_Quantity = Configuration["Parallel_Quantity"];\
-            PLSr1_KFold_RandomCV_MultiTimes_Sub(Subjects_Data_Mat_Path_List, Subjects_Score[0], Covariates, Fold_Quantity[0][0], ComponentNumber_Range[0], 1, ResultantFolder_TimeI[0], Parallel_Quantity[0][0], Permutation_Flag[0][0], RandIndex_File)\' '
-        system_cmd = system_cmd + ' > "' + ResultantFolder_TimeI + '/Time_' + str(i) + '.log" 2>&1\n'
+            PLSr1_KFold_RandomCV_MultiTimes_Sub(Subjects_Data_Mat_Path_List, Subjects_Score[0], Covariates, Fold_Quantity[0][0], ComponentNumber_Range[0], 20, ResultantFolder_TimeI[0], Parallel_Quantity[0][0], Permutation_Flag[0][0], RandIndex_File)\' '
+        system_cmd = system_cmd + ' > "' + os.path.join(resultantfolder_timei, 'Time_' + str(i) + '.log') + '" 2>&1\n'
 
-        script = open(ResultantFolder_TimeI + '/script.sh', 'w')
+        script_path = os.path.join(resultantfolder_timei, 'script.sh')
+        script = open(script_path, 'w')
         script.write('#!/bin/bash\n')
         script.write('#SBATCH --job-name=prediction' + str(i) + '\n')
-        script.write('#SBATCH --cpus-per-task=3\n')
-        script.write('#SBATCH -p q_cn\n')
-        script.write('#SBATCH -o ' + ResultantFolder_TimeI + '/job.%j.out\n')
-        script.write('#SBATCH -e ' + ResultantFolder_TimeI + '/job.%j.error.txt\n\n')
+        script.write('#SBATCH --cpus-per-task=1\n')
+        script.write('#SBATCH -p q_fat_c,q_fat,q_fat_l\n')
+        script.write('#SBATCH -o ' + os.path.join(resultantfolder_timei, 'job.%j.out') + '\n')
+        script.write('#SBATCH -e ' + os.path.join(resultantfolder_timei, 'job.%j.error.txt') + '\n\n')
         script.write(system_cmd)
         script.close()
-        os.system('chmod +x ' + ResultantFolder_TimeI + '/script.sh')
-        os.system('sbatch ' + ResultantFolder_TimeI + '/script.sh')
+        os.system('chmod +x ' + script_path)
+        os.system('sbatch ' + script_path)
 
 
 def PLSr1_KFold_RandomCV_MultiTimes_Sub(
@@ -106,30 +109,32 @@ def PLSr1_KFold_RandomCV_MultiTimes_Sub(
     Permutation_Flag,
     RandIndex_File='',
 ):
-    Subjects_Data_List = []
+    subjects_data_list = []
     for i in range(len(Subjects_Data_Mat_Path_List)):
         data = sio.loadmat(_unwrap_mat_value(Subjects_Data_Mat_Path_List[i]))
-        Subjects_Data_List.append(data['Subjects_Data'])
+        subjects_data_list.append(data['Subjects_Data'])
 
-    Subjects_Score = np.asarray(Subjects_Score).reshape(-1)
-    Covariates = np.asarray(Covariates)
-    Fold_Quantity = int(np.asarray(Fold_Quantity).reshape(-1)[0])
-    ComponentNumber_Range = np.asarray(ComponentNumber_Range).reshape(-1).astype(int)
-    ResultantFolder = _unwrap_mat_value(ResultantFolder)
-    Parallel_Quantity = int(np.asarray(Parallel_Quantity).reshape(-1)[0])
-    Permutation_Flag = int(np.asarray(Permutation_Flag).reshape(-1)[0])
-    RandIndex_File = _unwrap_mat_value(RandIndex_File)
+    subjects_score = np.asarray(Subjects_Score).reshape(-1)
+    covariates = np.asarray(Covariates)
+    fold_quantity = int(np.asarray(Fold_Quantity).reshape(-1)[0])
+    componentnumber_range = np.asarray(ComponentNumber_Range).reshape(-1).astype(int)
+    cvrepeattimes = int(np.asarray(CVRepeatTimes).reshape(-1)[0])
+    resultantfolder = _unwrap_mat_value(ResultantFolder)
+    parallel_quantity = int(np.asarray(Parallel_Quantity).reshape(-1)[0])
+    permutation_flag = int(np.asarray(Permutation_Flag).reshape(-1)[0])
+    splitindex_file = _unwrap_mat_value(RandIndex_File)
 
     PLSr1_Holdout_RandomCV(
-        Subjects_Data_List,
-        Subjects_Score,
-        Covariates,
-        Fold_Quantity,
-        ComponentNumber_Range,
-        ResultantFolder,
-        Parallel_Quantity,
-        Permutation_Flag,
-        RandIndex_File,
+        subjects_data_list,
+        subjects_score,
+        covariates,
+        fold_quantity,
+        componentnumber_range,
+        cvrepeattimes,
+        resultantfolder,
+        parallel_quantity,
+        permutation_flag,
+        splitindex_file,
     )
 
 
@@ -139,117 +144,73 @@ def PLSr1_Holdout_RandomCV(
     Covariates,
     Fold_Quantity,
     ComponentNumber_Range,
+    CVRepeatTimes_ForInner,
     ResultantFolder,
     Parallel_Quantity,
     Permutation_Flag,
-    RandIndex_File='',
+    SplitIndex_File='',
 ):
     conn_cate_list = ['GGFC', 'GWFC', 'WWFC']
-    ResultantFolder_List = []
+    resultantfolder_list = []
     for conn_cate in conn_cate_list:
-        ResultantFolder_FC = os.path.join(ResultantFolder, conn_cate)
-        if not os.path.exists(ResultantFolder_FC):
-            os.makedirs(ResultantFolder_FC)
-        ResultantFolder_List.append(ResultantFolder_FC)
+        resultantfolder_fc = os.path.join(ResultantFolder, conn_cate)
+        if not os.path.exists(resultantfolder_fc):
+            os.makedirs(resultantfolder_fc)
+        resultantfolder_list.append(resultantfolder_fc)
 
-    if Fold_Quantity < 3:
-        raise ValueError('Fold_Quantity must be at least 3 for train/validation/test holdout.')
-
-    Subjects_Quantity = len(Subjects_Score)
-    if len(RandIndex_File) == 0:
-        RandIndex = _generate_stratified_randindex(Subjects_Score, Fold_Quantity)
-    else:
-        tmpData = sio.loadmat(RandIndex_File)
-        RandIndex = np.asarray(tmpData['RandIndex']).reshape(-1).astype(int)
-
-    sio.savemat(ResultantFolder + '/RandIndex.mat', {'RandIndex': RandIndex})
-
-    split_indices = _build_split_indices(RandIndex, Subjects_Quantity, Fold_Quantity)
-    train_index = np.concatenate(split_indices[:-2]).astype(int)
-    validation_index = split_indices[-2].astype(int)
-    test_index = split_indices[-1].astype(int)
-
+    train_index, test_index = _load_half_split(SplitIndex_File, len(Subjects_Score))
     sio.savemat(
-        ResultantFolder + '/SplitIndex.mat',
+        os.path.join(ResultantFolder, 'SplitIndex.mat'),
         {
             'Train_Index': train_index,
-            'Validation_Index': validation_index,
             'Test_Index': test_index,
         },
     )
 
-    subjects_score_train = Subjects_Score[train_index]
-    subjects_score_validation = Subjects_Score[validation_index]
-    subjects_score_test = Subjects_Score[test_index]
-
+    subjects_score_train = Subjects_Score[train_index].copy()
+    subjects_score_test = Subjects_Score[test_index].copy()
     covariates_train = Covariates[train_index, :]
-    covariates_validation = Covariates[validation_index, :]
     covariates_test = Covariates[test_index, :]
 
     subjects_data_train_raw = [data[train_index, :].copy() for data in Subjects_Data_List]
-    subjects_data_validation_raw = [data[validation_index, :].copy() for data in Subjects_Data_List]
     subjects_data_test_raw = [data[test_index, :].copy() for data in Subjects_Data_List]
-
-    subjects_data_train_list, subjects_data_validation_list = _regress_covariates_from_train(
-        subjects_data_train_raw,
-        subjects_data_validation_raw,
-        covariates_train,
-        covariates_validation,
-        Covariates,
-    )
 
     permutation_index = {}
     if Permutation_Flag:
         train_permutation = np.arange(len(subjects_score_train))
         np.random.shuffle(train_permutation)
-        subjects_score_train_for_tuning = subjects_score_train[train_permutation]
+        subjects_score_train = subjects_score_train[train_permutation]
         permutation_index['Train'] = train_permutation
-    else:
-        subjects_score_train_for_tuning = subjects_score_train
 
-    subjects_data_train_list, subjects_data_validation_list = _scale_train_and_target(
-        subjects_data_train_list,
-        subjects_data_validation_list,
-    )
-
-    optimal_componentnumber_list, validation_corr_list, validation_mae_inv_list = PLSr1_OptimalComponentNumber_Validation(
-        subjects_data_train_list,
-        subjects_score_train_for_tuning,
-        subjects_data_validation_list,
-        subjects_score_validation,
-        ComponentNumber_Range,
-        ResultantFolder,
-        Parallel_Quantity,
-    )
-
-    development_index = np.concatenate((train_index, validation_index)).astype(int)
-    subjects_score_development = Subjects_Score[development_index]
-    covariates_development = Covariates[development_index, :]
-    subjects_data_development_raw = [data[development_index, :].copy() for data in Subjects_Data_List]
-
-    if Permutation_Flag:
-        development_permutation = np.arange(len(subjects_score_development))
-        np.random.shuffle(development_permutation)
-        subjects_score_development = subjects_score_development[development_permutation]
-        permutation_index['Development'] = development_permutation
-
-    subjects_data_development_list, subjects_data_test_list = _regress_covariates_from_train(
-        subjects_data_development_raw,
+    subjects_data_train_list, subjects_data_test_list = _regress_covariates_from_train(
+        subjects_data_train_raw,
         subjects_data_test_raw,
-        covariates_development,
+        covariates_train,
         covariates_test,
         Covariates,
     )
-    subjects_data_development_list, subjects_data_test_list = _scale_train_and_target(
-        subjects_data_development_list,
+    subjects_data_train_list, subjects_data_test_list = _scale_train_and_target(
+        subjects_data_train_list,
         subjects_data_test_list,
+    )
+
+    optimal_componentnumber_list, inner_corr_list, inner_mae_inv_list = PLSr1_OptimalComponentNumber_KFold(
+        subjects_data_train_list,
+        subjects_score_train,
+        Fold_Quantity,
+        ComponentNumber_Range,
+        CVRepeatTimes_ForInner,
+        ResultantFolder,
+        Parallel_Quantity,
     )
 
     holdout_corr_list = []
     holdout_mae_list = []
     for conn_index in np.arange(len(Subjects_Data_List)):
-        clf = cross_decomposition.PLSRegression(n_components=optimal_componentnumber_list[conn_index])
-        clf.fit(subjects_data_development_list[conn_index], subjects_score_development)
+        clf = cross_decomposition.PLSRegression(
+            n_components=optimal_componentnumber_list[conn_index]
+        )
+        clf.fit(subjects_data_train_list[conn_index], subjects_score_train)
         holdout_score = clf.predict(subjects_data_test_list[conn_index]).reshape(-1)
 
         holdout_corr = np.corrcoef(holdout_score, subjects_score_test)[0, 1]
@@ -259,46 +220,43 @@ def PLSr1_Holdout_RandomCV(
 
         weight = clf.coef_ / np.sqrt(np.sum(clf.coef_ ** 2))
         coef_vector = clf.coef_.flatten() if clf.coef_.ndim > 1 else clf.coef_
-        weight_haufe = np.dot(np.cov(np.transpose(subjects_data_development_list[conn_index])), coef_vector)
+        weight_haufe = np.dot(np.cov(np.transpose(subjects_data_train_list[conn_index])), coef_vector)
         weight_haufe = weight_haufe / np.sqrt(np.sum(weight_haufe ** 2))
 
         holdout_result = {
             'Train_Index': train_index,
-            'Validation_Index': validation_index,
             'Test_Index': test_index,
-            'Validation_Score': subjects_score_validation,
             'Test_Score': subjects_score_test,
             'Predict_Score': holdout_score,
             'Corr': holdout_corr,
             'MAE': holdout_mae,
             'ComponentNumber': optimal_componentnumber_list[conn_index],
-            'Validation_Corr': validation_corr_list[conn_index],
-            'Validation_MAE_inv': validation_mae_inv_list[conn_index],
+            'Inner_Corr': inner_corr_list[conn_index],
+            'Inner_MAE_inv': inner_mae_inv_list[conn_index],
             'w_Brain': weight,
             'w_Brain_Haufe': weight_haufe,
         }
         sio.savemat(
-            os.path.join(ResultantFolder, conn_cate_list[conn_index], 'Holdout_Score.mat'),
+            os.path.join(resultantfolder_list[conn_index], 'Holdout_Score.mat'),
             holdout_result,
         )
-
         sio.savemat(
-            os.path.join(ResultantFolder_List[conn_index], 'Res_NFold.mat'),
+            os.path.join(resultantfolder_list[conn_index], 'Res_NFold.mat'),
             {'Mean_Corr': holdout_corr, 'Mean_MAE': holdout_mae},
         )
 
     if Permutation_Flag:
-        sio.savemat(ResultantFolder + '/PermutationIndex.mat', permutation_index)
+        sio.savemat(os.path.join(ResultantFolder, 'PermutationIndex.mat'), permutation_index)
 
-    return (np.array(holdout_corr_list), np.array(holdout_mae_list))
+    return np.array(holdout_corr_list), np.array(holdout_mae_list)
 
 
-def PLSr1_OptimalComponentNumber_Validation(
+def PLSr1_OptimalComponentNumber_KFold(
     Training_Data_List,
     Training_Score,
-    Validation_Data_List,
-    Validation_Score,
+    Fold_Quantity,
     ComponentNumber_Range,
+    CVRepeatTimes,
     ResultantFolder,
     Parallel_Quantity,
 ):
@@ -306,61 +264,121 @@ def PLSr1_OptimalComponentNumber_Validation(
     if not os.path.exists(ResultantFolder):
         os.makedirs(ResultantFolder)
 
-    Parallel(n_jobs=Parallel_Quantity, backend="threading")(
-        delayed(PLSr1_SubComponentNumber)(
-            Training_Data_List,
-            Training_Score,
-            Validation_Data_List,
-            Validation_Score,
-            ComponentNumber_Range[l],
-            l,
-            ResultantFolder,
-        )
-        for l in np.arange(len(ComponentNumber_Range))
-    )
+    subjects_quantity = len(Training_Score)
+    inner_eachfold_size = int(np.fix(np.divide(subjects_quantity, Fold_Quantity)))
+    remain = np.mod(subjects_quantity, Fold_Quantity)
 
-    validation_corr_list = []
-    validation_mae_inv_list = []
+    inner_corr_list = []
+    inner_mae_inv_list = []
+    for _ in np.arange(len(Training_Data_List)):
+        inner_corr = np.zeros((CVRepeatTimes, Fold_Quantity, len(ComponentNumber_Range)))
+        inner_mae_inv = np.zeros((CVRepeatTimes, Fold_Quantity, len(ComponentNumber_Range)))
+        inner_corr_list.append(inner_corr)
+        inner_mae_inv_list.append(inner_mae_inv)
+
+    for i in np.arange(CVRepeatTimes):
+        randindex = np.arange(subjects_quantity)
+        np.random.shuffle(randindex)
+
+        for k in np.arange(Fold_Quantity):
+            inner_fold_k_index = randindex[inner_eachfold_size * k + np.arange(inner_eachfold_size)]
+            if remain > k:
+                inner_fold_k_index = np.insert(
+                    inner_fold_k_index,
+                    len(inner_fold_k_index),
+                    randindex[inner_eachfold_size * Fold_Quantity + k],
+                )
+
+            inner_fold_k_data_test_list = []
+            inner_fold_k_score_test = Training_Score[inner_fold_k_index]
+            inner_fold_k_data_train_list = []
+            inner_fold_k_score_train = np.delete(Training_Score, inner_fold_k_index)
+
+            for conn_index in np.arange(len(Training_Data_List)):
+                inner_fold_k_data_test = Training_Data_List[conn_index][inner_fold_k_index, :]
+                inner_fold_k_data_test_list.append(inner_fold_k_data_test)
+                inner_fold_k_data_train = np.delete(
+                    Training_Data_List[conn_index],
+                    inner_fold_k_index,
+                    axis=0,
+                )
+                inner_fold_k_data_train_list.append(inner_fold_k_data_train)
+
+            for conn_index in np.arange(len(Training_Data_List)):
+                scale = preprocessing.MinMaxScaler()
+                inner_fold_k_data_train_list[conn_index] = scale.fit_transform(
+                    inner_fold_k_data_train_list[conn_index]
+                )
+                inner_fold_k_data_test_list[conn_index] = scale.transform(
+                    inner_fold_k_data_test_list[conn_index]
+                )
+
+            Parallel(n_jobs=Parallel_Quantity, backend='threading')(
+                delayed(PLSr1_SubComponentNumber)(
+                    inner_fold_k_data_train_list,
+                    inner_fold_k_score_train,
+                    inner_fold_k_data_test_list,
+                    inner_fold_k_score_test,
+                    ComponentNumber_Range[l],
+                    l,
+                    ResultantFolder,
+                )
+                for l in np.arange(len(ComponentNumber_Range))
+            )
+
+            for conn_index in np.arange(len(Training_Data_List)):
+                for l in np.arange(len(ComponentNumber_Range)):
+                    componentnumber_l_mat_path = os.path.join(
+                        ResultantFolder,
+                        conn_cate_list[conn_index],
+                        'ComponentNumber_' + str(l) + '.mat',
+                    )
+                    componentnumber_l_mat = sio.loadmat(componentnumber_l_mat_path)
+                    inner_corr_list[conn_index][i, k, l] = np.asarray(
+                        componentnumber_l_mat['Corr']
+                    ).reshape(-1)[0]
+                    inner_mae_inv_list[conn_index][i, k, l] = np.asarray(
+                        componentnumber_l_mat['MAE_inv']
+                    ).reshape(-1)[0]
+                    os.remove(componentnumber_l_mat_path)
+                inner_corr_list[conn_index] = np.nan_to_num(inner_corr_list[conn_index])
+                inner_mae_inv_list[conn_index] = np.nan_to_num(inner_mae_inv_list[conn_index])
+
+    inner_corr_foldmean_list = []
+    inner_mae_inv_foldmean_list = []
     optimal_componentnumber_list = []
     for conn_index in np.arange(len(Training_Data_List)):
-        validation_corr = np.zeros(len(ComponentNumber_Range))
-        validation_mae_inv = np.zeros(len(ComponentNumber_Range))
-        for l in np.arange(len(ComponentNumber_Range)):
-            component_path = os.path.join(
-                ResultantFolder,
-                conn_cate_list[conn_index],
-                'ComponentNumber_' + str(l) + '.mat',
-            )
-            component_mat = sio.loadmat(component_path)
-            validation_corr[l] = np.asarray(component_mat['Corr']).reshape(-1)[0]
-            validation_mae_inv[l] = np.asarray(component_mat['MAE_inv']).reshape(-1)[0]
-            os.remove(component_path)
+        inner_corr = inner_corr_list[conn_index]
+        inner_mae_inv = inner_mae_inv_list[conn_index]
 
-        validation_corr = np.nan_to_num(validation_corr)
-        validation_mae_inv = np.nan_to_num(validation_mae_inv)
-        validation_corr_z = _zscore_or_zero(validation_corr)
-        validation_mae_inv_z = _zscore_or_zero(validation_mae_inv)
-        validation_evaluation = validation_corr_z + validation_mae_inv_z
+        inner_corr_cvmean = np.mean(inner_corr, axis=0)
+        inner_mae_inv_cvmean = np.mean(inner_mae_inv, axis=0)
+        inner_corr_foldmean = np.mean(inner_corr_cvmean, axis=0)
+        inner_mae_inv_foldmean = np.mean(inner_mae_inv_cvmean, axis=0)
+        inner_corr_foldmean = _zscore_or_zero(inner_corr_foldmean)
+        inner_mae_inv_foldmean = _zscore_or_zero(inner_mae_inv_foldmean)
+        inner_evaluation = inner_corr_foldmean + inner_mae_inv_foldmean
 
+        inner_corr_foldmean_list.append(inner_corr_foldmean)
+        inner_mae_inv_foldmean_list.append(inner_mae_inv_foldmean)
+
+        inner_evaluation_mat = {
+            'Inner_Corr_CVMean': inner_corr_cvmean,
+            'Inner_MAE_inv_CVMean': inner_mae_inv_cvmean,
+            'Inner_Corr_FoldMean': inner_corr_foldmean,
+            'Inner_MAE_inv_FoldMean': inner_mae_inv_foldmean,
+            'Inner_Evaluation': inner_evaluation,
+        }
         sio.savemat(
-            ResultantFolder + '/' + conn_cate_list[conn_index] + '/Validation_Evaluation.mat',
-            {
-                'Validation_Corr': validation_corr,
-                'Validation_MAE_inv': validation_mae_inv,
-                'Validation_Corr_Z': validation_corr_z,
-                'Validation_MAE_inv_Z': validation_mae_inv_z,
-                'Validation_Evaluation': validation_evaluation,
-            },
+            os.path.join(ResultantFolder, conn_cate_list[conn_index], 'Inner_Evaluation.mat'),
+            inner_evaluation_mat,
         )
 
-        optimal_componentnumber_index = np.argmax(validation_evaluation)
+        optimal_componentnumber_index = np.argmax(inner_evaluation)
         optimal_componentnumber = ComponentNumber_Range[optimal_componentnumber_index]
-
-        validation_corr_list.append(validation_corr)
-        validation_mae_inv_list.append(validation_mae_inv)
         optimal_componentnumber_list.append(optimal_componentnumber)
 
-    return (optimal_componentnumber_list, validation_corr_list, validation_mae_inv_list)
+    return optimal_componentnumber_list, inner_corr_list, inner_mae_inv_list
 
 
 def PLSr1_SubComponentNumber(
@@ -376,16 +394,16 @@ def PLSr1_SubComponentNumber(
     for conn_index in np.arange(len(Training_Data_List)):
         clf = cross_decomposition.PLSRegression(n_components=ComponentNumber)
         clf.fit(Training_Data_List[conn_index], Training_Score)
-        Predict_Score = clf.predict(Testing_Data_List[conn_index]).reshape(-1)
-        Corr = np.corrcoef(Predict_Score, Testing_Score)[0, 1]
-        MAE_inv = np.divide(1, np.mean(np.abs(Predict_Score - Testing_Score)))
+        predict_score = clf.predict(Testing_Data_List[conn_index]).reshape(-1)
+        corr = np.corrcoef(predict_score, Testing_Score)[0, 1]
+        mae_inv = np.divide(1, np.mean(np.abs(predict_score - Testing_Score)))
         sio.savemat(
             os.path.join(
                 ResultantFolder,
                 conn_cate_list[conn_index],
                 'ComponentNumber_' + str(ComponentNumber_ID) + '.mat',
             ),
-            {'Corr': Corr, 'MAE_inv': MAE_inv},
+            {'Corr': corr, 'MAE_inv': mae_inv},
         )
 
 
@@ -399,57 +417,63 @@ def _unwrap_mat_value(value):
     return str(value)
 
 
-def _generate_stratified_randindex(subjects_score, split_quantity):
-    sorted_indices_desc = np.argsort(subjects_score)[::-1]
-    sample_quantity = len(sorted_indices_desc)
-    remain = sample_quantity % split_quantity
-    num_bins = (sample_quantity + split_quantity - 1) // split_quantity
+def _load_half_split(splitindex_file, subjects_quantity):
+    if not splitindex_file:
+        raise ValueError('SplitIndex_File is required for V_holdout half-split evaluation.')
 
-    bins = [
-        sorted_indices_desc[i * split_quantity: (i + 1) * split_quantity]
-        for i in range(num_bins)
-    ]
-    shuffled_bins = [np.random.permutation(bin_i) for bin_i in bins]
-    randindex = np.zeros(sample_quantity)
-    if remain == 0:
-        for j in range(num_bins):
-            for i in range(split_quantity):
-                randindex[i * num_bins + j] = shuffled_bins[j][i]
-    else:
-        for j in range(num_bins - 1):
-            for i in range(split_quantity):
-                if i * (num_bins - 1) + j >= sample_quantity:
-                    continue
-                randindex[i * (num_bins - 1) + j] = shuffled_bins[j][i]
-        for k in range(len(shuffled_bins[-1])):
-            randindex[(num_bins - 1) * split_quantity + k] = shuffled_bins[-1][k]
+    split_mat = sio.loadmat(splitindex_file)
+    train_index = np.asarray(split_mat['Train_Index']).reshape(-1).astype(int)
+    test_index = np.asarray(split_mat['Test_Index']).reshape(-1).astype(int)
 
-    return randindex.astype(int)
+    if np.intersect1d(train_index, test_index).size > 0:
+        raise ValueError('Train_Index and Test_Index overlap in split file.')
+    if len(train_index) + len(test_index) != subjects_quantity:
+        raise ValueError('Train_Index and Test_Index do not cover all subjects.')
+
+    return train_index, test_index
 
 
-def save_stratified_randindex(subjects_score, split_quantity, output_file):
-    randindex = _generate_stratified_randindex(subjects_score, split_quantity)
+def _build_group_stratification_labels(subjects_score, n_splits):
+    subjects_score = np.asarray(subjects_score).reshape(-1)
+    max_bins = min(10, len(np.unique(subjects_score)))
+    for bin_count in range(max_bins, 1, -1):
+        labels = pd.qcut(subjects_score, q=bin_count, labels=False, duplicates='drop')
+        labels = np.asarray(labels, dtype=int)
+        bincount = np.bincount(labels)
+        if bincount.size >= 2 and np.min(bincount) >= n_splits:
+            return labels
+    raise ValueError('Unable to create stratification labels for grouped half-split.')
+
+
+def save_grouped_half_split(subjects_score, family_ids, output_file, random_state=0):
+    subjects_score = np.asarray(subjects_score).reshape(-1)
+    family_ids = np.asarray(family_ids).reshape(-1)
+    if len(subjects_score) != len(family_ids):
+        raise ValueError('subjects_score and family_ids must have the same length.')
+
+    stratification_labels = _build_group_stratification_labels(subjects_score, n_splits=2)
+    splitter = StratifiedGroupKFold(n_splits=2, shuffle=True, random_state=random_state)
+    train_index, test_index = next(
+        splitter.split(
+            np.zeros((len(subjects_score), 1)),
+            stratification_labels,
+            groups=family_ids,
+        )
+    )
+
     output_dir = os.path.dirname(output_file)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
-    sio.savemat(output_file, {'RandIndex': randindex})
-    return randindex
 
-
-def _build_split_indices(randindex, subjects_quantity, split_quantity):
-    each_split_size = int(np.fix(np.divide(subjects_quantity, split_quantity)))
-    remain = np.mod(subjects_quantity, split_quantity)
-    split_indices = []
-    for split_index in np.arange(split_quantity):
-        current_index = randindex[each_split_size * split_index + np.arange(each_split_size)]
-        if remain > split_index:
-            current_index = np.insert(
-                current_index,
-                len(current_index),
-                randindex[each_split_size * split_quantity + split_index],
-            )
-        split_indices.append(current_index.astype(int))
-    return split_indices
+    sio.savemat(
+        output_file,
+        {
+            'Train_Index': train_index.astype(int),
+            'Test_Index': test_index.astype(int),
+            'Family_ID': family_ids.astype(int),
+        },
+    )
+    return train_index.astype(int), test_index.astype(int)
 
 
 def _build_covariate_formula(covariates):
@@ -461,6 +485,7 @@ def _build_covariate_formula(covariates):
             term = f'C(Covariate_{k}, levels={all_levels})'
         else:
             term = f'Covariate_{k}'
+
         if k == 0:
             formula += f' ~ {term}'
         else:
@@ -470,10 +495,7 @@ def _build_covariate_formula(covariates):
 
 def _build_covariate_dataframe(covariates):
     return pd.DataFrame(
-        {
-            'Covariate_' + str(k): covariates[:, k]
-            for k in np.arange(covariates.shape[1])
-        }
+        {'Covariate_' + str(k): covariates[:, k] for k in np.arange(covariates.shape[1])}
     )
 
 
@@ -503,7 +525,9 @@ def _regress_covariates_from_train(
 
             linmodel_res = sm.ols(formula=formula, data=train_df).fit()
             train_data[:, feature_index] = linmodel_res.resid
-            target_data[:, feature_index] = target_data[:, feature_index] - linmodel_res.predict(target_df)
+            target_data[:, feature_index] = (
+                target_data[:, feature_index] - linmodel_res.predict(target_df)
+            )
 
         train_regressed_list.append(train_data)
         target_regressed_list.append(target_data)

@@ -11,6 +11,24 @@ sys.path.append(script_dir)
 
 import PLSr1_CZ_Random_RegressCovariates
 
+
+def load_family_ids(family_table_path, target_subids):
+    family_df = pd.read_csv(
+        family_table_path,
+        usecols=['subid', 'rel_family_id'],
+        low_memory=False,
+    )
+    family_df = family_df.drop_duplicates(subset='subid', keep='first')
+    family_series = family_df.set_index('subid')['rel_family_id']
+    missing = [subid for subid in target_subids if subid not in family_series.index]
+    if missing:
+        raise KeyError(f'{len(missing)} subjects missing rel_family_id, first few: {missing[:5]}')
+    family_ids = family_series.loc[target_subids].to_numpy()
+    if pd.isna(family_ids).any():
+        missing = [target_subids[i] for i, value in enumerate(family_ids) if pd.isna(value)]
+        raise ValueError(f'{len(missing)} subjects have missing rel_family_id, first few: {missing[:5]}')
+    return family_ids.astype(int)
+
 dataset = 'ABCD'  # 可以修改为 'ABCD' 或其他数据集
 targetStr_list = ["nihtbx_cryst_uncorrected", "nihtbx_fluidcomp_uncorrected", "nihtbx_totalcomp_uncorrected"]
 sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}/table/cognition_sublist.txt'
@@ -138,7 +156,7 @@ for targetStr in targetStr_list:
     # subID,age,sex,meanFD
     # Range of parameters
     ComponentNumber_Range = np.arange(10) + 1
-    FoldQuantity = 10
+    FoldQuantity = 5
     Parallel_Quantity = 1
     CVtimes = 1
 
@@ -147,18 +165,22 @@ for targetStr in targetStr_list:
     print(f"数据路径: {base_path}")
     print(f"输出路径: {outFolder}")
     print(f"组件数量范围: {ComponentNumber_Range}")
-    print("Holdout 划分: train/validation/test = 8:1:1")
+    print("Holdout 划分: family-aware half-split train/test = 1:1")
+    print("超参数选择: outer train half 内部 5-fold CV")
     print(f"重复次数: {CVtimes}")
 
-    shared_randindex_file = os.path.join(outFolder, 'SharedRandIndex.mat')
-    PLSr1_CZ_Random_RegressCovariates.save_stratified_randindex(
+    family_table_path = f'{base_path}/table/abcd_y_lt_baseline.csv'
+    family_ids = load_family_ids(family_table_path, target_subids)
+
+    shared_split_file = os.path.join(outFolder, 'SharedSplitIndex.mat')
+    PLSr1_CZ_Random_RegressCovariates.save_grouped_half_split(
         OverallPsyFactor,
-        FoldQuantity,
-        shared_randindex_file,
+        family_ids,
+        shared_split_file,
     )
-    print(f"固定 holdout 划分文件: {shared_randindex_file}")
-    observed_randindex_files = [shared_randindex_file]
-    permutation_randindex_files = [shared_randindex_file] * 1000
+    print(f"固定 holdout 划分文件: {shared_split_file}")
+    observed_split_files = [shared_split_file]
+    permutation_split_files = [shared_split_file] * 1000
 
     # # Predict
     ResultantFolder = outFolder + '/RegressCovariates_Holdout'
@@ -167,8 +189,8 @@ for targetStr in targetStr_list:
     # 确保输出目录存在
     os.makedirs(ResultantFolder, exist_ok=True)
 
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0, observed_randindex_files)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0, observed_split_files)
 
     # Permutation
     ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1, permutation_randindex_files)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1, permutation_split_files)

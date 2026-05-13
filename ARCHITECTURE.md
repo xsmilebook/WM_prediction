@@ -10,7 +10,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── architecture_update.md            # 本次架构文档同步说明
 │   ├── efny_hcppipeline_similarity.md    # EFNY HCP pipeline FC 与旧 EFNY / HCPD 的相似性分析
 │   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
-│   ├── v_holdout.md                      # ABCD 单次 holdout（8:1:1）复现脚本说明
+│   ├── v_holdout.md                      # ABCD 单次 family-aware half-split holdout 复现脚本说明
 │   ├── v_siblings.md                     # ABCD siblings/twins 控制后的 family-wise sublist 与预测说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
@@ -50,7 +50,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── predict_cognition_RandomCV.py # 使用 family-wise cognition 子样本运行随机 CV 预测
 │   │   └── predict_pfactor_RandomCV.py   # 使用 family-wise pfactor 子样本运行随机 CV / permutation 预测
 │   ├── V_holdout/                        # ABCD holdout 复现脚本
-│   │   ├── PLSr1_CZ_Random_RegressCovariates.py # 单次 holdout PLS 管线，按 8:1:1 划分 train/validation/test
+│   │   ├── PLSr1_CZ_Random_RegressCovariates.py # 单次 holdout PLS 管线，使用 family-aware 的 1:1 half-split，并在训练半集内部做 5-fold CV 选参
 │   │   ├── predict_cognition_RandomCV.py # 使用 ABCD cognition 子样本运行单次 holdout 预测
 │   │   └── predict_pfactor_RandomCV.py   # 使用 ABCD pfactor 子样本运行单次 holdout 预测
 │   └── V_feature_merge/                  # merged FC 组合预测脚本
@@ -107,7 +107,7 @@ WM_prediction/src/                        # 当前仓库根目录
     ├── V_hcppipeline/                    # EFNY HCP pipeline 结果统计脚本
     │   └── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关，并汇总相对 permutation 的 median corr 显著性
     ├── V_holdout/                        # ABCD holdout 结果统计脚本
-    │   └── compute_partial_corr.py       # 读取 Holdout_Score.mat，汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
+    │   └── compute_partial_corr.py       # 读取 Holdout_Score.mat，使用 half test set corr 汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
     └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本
         ├── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关结果
         └── compute_permutation_significance.py # 基于 1000 次 permutation 计算 GG/GW/WW/GW/GG/WW/GG 的经验 p 值
