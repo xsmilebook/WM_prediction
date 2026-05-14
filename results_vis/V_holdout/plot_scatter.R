@@ -133,18 +133,28 @@ build_annotation_exprs <- function(summary_row, fc_config) {
   list(mean_line = mean_line, partial_line = partial_line)
 }
 
-get_single_axis_spec <- function(values, inner_padding_frac = 0.08, outer_padding_frac = 0.35) {
+get_single_axis_spec <- function(values) {
   value_range <- range(values, na.rm = TRUE)
   span <- diff(value_range)
   if (!is.finite(span) || span == 0) {
     span <- 1
   }
-  inner_padding <- span * inner_padding_frac
-  breaks <- pretty(c(value_range[1] - inner_padding, value_range[2] + inner_padding), n = 5)
+  breaks <- pretty(value_range, n = 5)
+  if (!length(breaks)) {
+    breaks <- pretty(c(value_range[1] - 0.5, value_range[2] + 0.5), n = 5)
+  }
   break_step <- if (length(breaks) > 1) min(diff(breaks)) else span
-  outer_padding <- break_step * outer_padding_frac
+  limits <- c(
+    value_range[1] - 0.5 * break_step,
+    value_range[2] + 0.5 * break_step
+  )
+  tol <- span * 1e-8
+  breaks <- breaks[breaks >= (limits[1] - tol) & breaks <= (limits[2] + tol)]
+  if (!length(breaks)) {
+    breaks <- pretty(value_range, n = 5)
+  }
   list(
-    limits = c(min(breaks) - outer_padding, max(breaks) + outer_padding),
+    limits = limits,
     breaks = breaks
   )
 }
@@ -165,11 +175,7 @@ for (target_idx in seq_len(nrow(target_configs))) {
     fc_config <- fc_configs[fc_idx, ]
     holdout_res <- load_observed_holdout(target_id, fc_config$fc_type)
     plot_data <- holdout_res$data
-    x_axis_spec <- get_single_axis_spec(
-      plot_data$Actual,
-      inner_padding_frac = 0.03,
-      outer_padding_frac = 0.12
-    )
+    x_axis_spec <- get_single_axis_spec(plot_data$Actual)
     y_axis_spec <- get_single_axis_spec(plot_data$Predicted)
     annotation_exprs <- build_annotation_exprs(summary_row, fc_config)
 
@@ -209,8 +215,8 @@ for (target_idx in seq_len(nrow(target_configs))) {
         legend.position = "none"
       ) +
       labs(
-        x = paste("Actual", target_label),
-        y = paste("Predicted", target_label)
+        x = paste("Actual", target_label, "Score"),
+        y = paste("Predicted", target_label, "Score")
       ) +
       scale_x_continuous(
         breaks = x_axis_spec$breaks

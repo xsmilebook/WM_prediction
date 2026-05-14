@@ -139,8 +139,8 @@ data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat
 - 对 `GW` 和 `WW`，第二行额外显示控制 `GG` 预测后的偏相关及其 permutation 经验 p 值：
   - `Partial r = 0.XX, Pperm = 0.XXX`
 - 横轴范围仅根据 `Actual` 数值确定；纵轴范围仅根据 `Predicted` 数值确定，不再强制使用相同坐标范围。
-- `x` 轴使用更小的自适应 padding，以避免两端尤其右端出现过多留白。
-- 两个坐标轴都会在最外侧刻度之外额外留白，避免最大刻度贴边或超出图框。
+- `x` 轴和 `y` 轴都先基于真实数据生成 `pretty` 刻度，再在数据范围外额外保留半个刻度区间。
+- 刻度会过滤到当前显示范围内，因此整体仍保持紧致，但不会过于贴边。
 - 注释统一放在左下角，即坐标原点的右上方。
 - 图中不显示标题；注释中的 `r` 使用斜体，`Pperm` 显示为斜体 `P` 加正常字体 `perm`，不使用下标。
 - 图注文字显式使用 `Arial` 字体，并与坐标文本保持一致。
