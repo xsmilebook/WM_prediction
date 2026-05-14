@@ -445,7 +445,7 @@ def _build_group_stratification_labels(subjects_score, n_splits):
     raise ValueError('Unable to create stratification labels for grouped half-split.')
 
 
-def save_grouped_half_split(subjects_score, family_ids, output_file, random_state=0):
+def save_grouped_half_split(subjects_score, family_ids, output_file, random_state=1234):
     subjects_score = np.asarray(subjects_score).reshape(-1)
     family_ids = np.asarray(family_ids).reshape(-1)
     if len(subjects_score) != len(family_ids):

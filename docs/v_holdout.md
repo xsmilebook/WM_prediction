@@ -115,3 +115,53 @@ data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat
 - `GW_partial_corr`、`WW_partial_corr`
 - `GG_empirical_p`、`GW_empirical_p`、`WW_empirical_p`
 - `GW_partial_empirical_p`、`WW_partial_empirical_p`
+
+## holdout 散点图脚本
+
+`results_vis/V_holdout/plot_scatter.R` 用于将单次 observed holdout 的真实 half test set 结果画成散点图。
+
+- 脚本固定处理 6 个目标：
+  - `nihtbx_totalcomp_uncorrected`
+  - `nihtbx_cryst_uncorrected`
+  - `nihtbx_fluidcomp_uncorrected`
+  - `General`
+  - `Ext`
+  - `ADHD`
+- 每个目标分别绘制 `GGFC`、`GWFC`、`WWFC` 3 张图，总计 `6 × 3 = 18` 张。
+- 散点本身直接读取 observed 目录 `V_holdout/RegressCovariates_Holdout/Time_*/<GGFC|GWFC|WWFC>/Holdout_Score.mat` 中的：
+  - `Test_Score`
+  - `Predict_Score`
+- 注释文字读取：
+  - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
+- 第一行统一显示 observed holdout 的相关及其 permutation 经验 p 值：
+  - `Mean r = ... , Pperm < 0.001`
+  - 或 `Mean r = ... , Pperm = 0.XXX`
+- 对 `GW` 和 `WW`，第二行额外显示控制 `GG` 预测后的偏相关及其 permutation 经验 p 值：
+  - `Partial r = 0.XX, Pperm = 0.XXX`
+- 横轴范围仅根据 `Actual` 数值确定；纵轴范围仅根据 `Predicted` 数值确定，不再强制使用相同坐标范围。
+- `x` 轴使用更小的自适应 padding，以避免两端尤其右端出现过多留白。
+- 两个坐标轴都会在最外侧刻度之外额外留白，避免最大刻度贴边或超出图框。
+- 注释统一放在左下角，即坐标原点的右上方。
+- 图中不显示标题；注释中的 `r` 使用斜体，`Pperm` 显示为斜体 `P` 加正常字体 `perm`，不使用下标。
+- 图注文字显式使用 `Arial` 字体，并与坐标文本保持一致。
+- 对 `GW` 和 `WW`，`Mean` 与 `Partial` 两行注释分别独立绘制，并共享同一左边界，以保证两行左对齐。
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate scdevelopment
+Rscript /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_scatter.R
+```
+
+输出文件写入：
+
+```text
+/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/results/V_holdout/
+```
+
+文件名格式为：
+
+- `<target>_GG_holdout_scatter.(tif|svg|pdf)`
+- `<target>_GW_holdout_scatter.(tif|svg|pdf)`
+- `<target>_WW_holdout_scatter.(tif|svg|pdf)`
