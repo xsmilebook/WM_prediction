@@ -88,7 +88,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`
 - Run ABCD cognition/pfactor prediction with a single holdout split:
   - `python src/prediction/V_holdout/predict_cognition_RandomCV.py`
-  - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py`
+  - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py --seed 42`
 - Summarize ABCD holdout correlations, partial correlations, and permutation significance:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/compute_partial_corr.py`
 - Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
@@ -170,9 +170,12 @@ The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a singl
 - Component selection is performed by `5-fold CV` inside the outer training half.
 - After selecting the component number, the model is re-fit on the full outer training half and evaluated once on the held-out outer test half.
 - Permutation matches the main analysis: only the outer training labels are shuffled, while the outer test labels remain real.
+- The p-factor holdout entry script accepts `--seed`; the seed controls the outer split, permutation label shuffles, and inner `5-fold CV`, and writes outputs to `data/ABCD/prediction/<target>/V_holdout_<seed>/`.
 - Results are written to:
-  - `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
-  - `data/ABCD/prediction/<target>/V_holdout/SharedSplitIndex.mat`
+  - cognition: `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
+  - cognition: `data/ABCD/prediction/<target>/V_holdout/SharedSplitIndex.mat`
+  - p-factor with `--seed`: `data/ABCD/prediction/<target>/V_holdout_<seed>/RegressCovariates_Holdout`
+  - p-factor with `--seed`: `data/ABCD/prediction/<target>/V_holdout_<seed>/SharedSplitIndex.mat`
   - `Time_0/SplitIndex.mat` stores the train/test indices
   - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
 - `src/results_vis/V_holdout/compute_partial_corr.py` uses the single half test-set `Corr` from `Holdout_Score.mat` as the observed holdout metric, computes one partial correlation per `Time_i`, and evaluates each metric against the permutation holdout null distribution.

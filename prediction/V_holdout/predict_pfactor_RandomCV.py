@@ -1,4 +1,5 @@
 #coding: utf-8
+import argparse
 import scipy.io as sio
 import numpy as np
 import pandas as pd
@@ -33,10 +34,30 @@ dataset = 'ABCD'
 targetStr_list = ['General','Ext','ADHD']
 sublist_file = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}/table/pfactor_sublist.txt'
 
+parser = argparse.ArgumentParser(
+    description='Run ABCD p-factor family-aware holdout prediction with a reproducible seed.'
+)
+parser.add_argument(
+    '--seed',
+    type=int,
+    default=42,
+    help='Seed controlling the outer holdout split, permutation order, and inner CV shuffles.',
+)
+args = parser.parse_args()
+seed = args.seed
+
+seed_sequence = np.random.SeedSequence(seed)
+child_sequences = seed_sequence.spawn(1001)
+observed_random_seeds = [int(child_sequences[0].generate_state(1, dtype=np.uint32)[0])]
+permutation_random_seeds = [
+    int(child_sequence.generate_state(1, dtype=np.uint32)[0])
+    for child_sequence in child_sequences[1:]
+]
+
 for targetStr in targetStr_list:
     # 基础路径配置
     base_path = f'/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/{dataset}'
-    outFolder = f'{base_path}/prediction/{targetStr}/V_holdout'
+    outFolder = f'{base_path}/prediction/{targetStr}/V_holdout_{seed}'
     os.makedirs(outFolder, exist_ok=True)
     # Import data
     # 1. atlas loading
@@ -163,6 +184,7 @@ for targetStr in targetStr_list:
     print(f"目标变量: {targetStr}")
     print(f"数据路径: {base_path}")
     print(f"输出路径: {outFolder}")
+    print(f"随机种子: {seed}")
     print(f"组件数量范围: {ComponentNumber_Range}")
     print("Holdout 划分: family-aware half-split train/test = 1:1")
     print("超参数选择: outer train half 内部 5-fold CV")
@@ -176,6 +198,7 @@ for targetStr in targetStr_list:
         OverallPsyFactor,
         family_ids,
         shared_split_file,
+        random_state=seed,
     )
     print(f"固定 holdout 划分文件: {shared_split_file}")
     observed_split_files = [shared_split_file]
@@ -188,10 +211,34 @@ for targetStr in targetStr_list:
     # 确保输出目录存在
     os.makedirs(ResultantFolder, exist_ok=True)
 
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, CVtimes, ResultantFolder, Parallel_Quantity, 0, observed_split_files)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        SubjectsData,
+        OverallPsyFactor,
+        Covariates,
+        FoldQuantity,
+        ComponentNumber_Range,
+        CVtimes,
+        ResultantFolder,
+        Parallel_Quantity,
+        0,
+        observed_split_files,
+        observed_random_seeds,
+    )
 
     # Permutation
     ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'
     print(f"结果文件夹: {ResultantFolder}")
     os.makedirs(ResultantFolder, exist_ok=True)
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(SubjectsData, OverallPsyFactor, Covariates, FoldQuantity, ComponentNumber_Range, 1000, ResultantFolder, Parallel_Quantity, 1, permutation_split_files)
+    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+        SubjectsData,
+        OverallPsyFactor,
+        Covariates,
+        FoldQuantity,
+        ComponentNumber_Range,
+        1000,
+        ResultantFolder,
+        Parallel_Quantity,
+        1,
+        permutation_split_files,
+        permutation_random_seeds,
+    )

@@ -38,6 +38,11 @@ data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout/
 
 其中：
 
+- cognition 入口脚本默认写入 `data/ABCD/prediction/<target>/V_holdout/`
+- p-factor 入口脚本在传入 `--seed <seed>` 时写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+
+其中：
+
 - `SharedSplitIndex.mat` 保存该 target 的固定 outer half-split，供 observed 与 permutation 共同复用。
 - `Time_0/SplitIndex.mat` 保存训练集、测试集索引。
 - `Time_0/GGFC/Holdout_Score.mat`
@@ -71,7 +76,7 @@ p-factor 预测：
 ```bash
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
-python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_pfactor_RandomCV.py
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_pfactor_RandomCV.py --seed 42
 ```
 
 这两个入口脚本会先生成共享的 `SharedSplitIndex.mat`，然后：
@@ -80,6 +85,16 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 - permutation 默认提交 `1000` 个 Slurm 作业。
 
 因此默认输出为单次 holdout observed 结果及其固定 split 下的 permutation null。
+
+其中 p-factor 入口脚本额外支持 `--seed`：
+
+- 输出目录写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+- `seed` 会同时控制：
+  - outer family-aware holdout split 的 `random_state`
+  - observed run 的 inner 5-fold CV 随机划分
+  - permutation 的训练标签打乱顺序
+  - permutation run 内部的 inner 5-fold CV 随机划分
+- 因此不同 `seed` 会写到不同目录，且对应不同且可复现的 holdout / permutation 结果。
 
 ## 结果汇总脚本
 

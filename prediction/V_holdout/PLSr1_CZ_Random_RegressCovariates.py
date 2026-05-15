@@ -24,6 +24,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(
     Parallel_Quantity,
     Permutation_Flag,
     RandIndex_File_List='',
+    RandomSeed_List='',
 ):
     """
     保持原有入口签名不变，但在 V_holdout 中改为：
@@ -52,6 +53,11 @@ def PLSr1_KFold_RandomCV_MultiTimes(
         else:
             randindex_file = ''
 
+        if RandomSeed_List != '':
+            random_seed = int(RandomSeed_List[i])
+        else:
+            random_seed = -1
+
         configuration_mat = {
             'Subjects_Data_Mat_Path_List': subjects_data_mat_path_list,
             'Subjects_Score': Subjects_Score,
@@ -63,6 +69,7 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             'Parallel_Quantity': Parallel_Quantity,
             'Permutation_Flag': Permutation_Flag,
             'RandIndex_File': randindex_file,
+            'Random_Seed': random_seed,
         }
         sio.savemat(os.path.join(resultantfolder_timei, 'Configuration.mat'), configuration_mat)
 
@@ -80,7 +87,8 @@ def PLSr1_KFold_RandomCV_MultiTimes(
             Permutation_Flag = Configuration["Permutation_Flag"];\
             RandIndex_File = Configuration["RandIndex_File"];\
             Parallel_Quantity = Configuration["Parallel_Quantity"];\
-            PLSr1_KFold_RandomCV_MultiTimes_Sub(Subjects_Data_Mat_Path_List, Subjects_Score[0], Covariates, Fold_Quantity[0][0], ComponentNumber_Range[0], 20, ResultantFolder_TimeI[0], Parallel_Quantity[0][0], Permutation_Flag[0][0], RandIndex_File)\' '
+            Random_Seed = Configuration["Random_Seed"];\
+            PLSr1_KFold_RandomCV_MultiTimes_Sub(Subjects_Data_Mat_Path_List, Subjects_Score[0], Covariates, Fold_Quantity[0][0], ComponentNumber_Range[0], 20, ResultantFolder_TimeI[0], Parallel_Quantity[0][0], Permutation_Flag[0][0], RandIndex_File, Random_Seed[0][0])\' '
         system_cmd = system_cmd + ' > "' + os.path.join(resultantfolder_timei, 'Time_' + str(i) + '.log') + '" 2>&1\n'
 
         script_path = os.path.join(resultantfolder_timei, 'script.sh')
@@ -108,6 +116,7 @@ def PLSr1_KFold_RandomCV_MultiTimes_Sub(
     Parallel_Quantity,
     Permutation_Flag,
     RandIndex_File='',
+    Random_Seed=-1,
 ):
     subjects_data_list = []
     for i in range(len(Subjects_Data_Mat_Path_List)):
@@ -123,6 +132,7 @@ def PLSr1_KFold_RandomCV_MultiTimes_Sub(
     parallel_quantity = int(np.asarray(Parallel_Quantity).reshape(-1)[0])
     permutation_flag = int(np.asarray(Permutation_Flag).reshape(-1)[0])
     splitindex_file = _unwrap_mat_value(RandIndex_File)
+    random_seed = int(np.asarray(Random_Seed).reshape(-1)[0])
 
     PLSr1_Holdout_RandomCV(
         subjects_data_list,
@@ -135,6 +145,7 @@ def PLSr1_KFold_RandomCV_MultiTimes_Sub(
         parallel_quantity,
         permutation_flag,
         splitindex_file,
+        random_seed,
     )
 
 
@@ -149,6 +160,7 @@ def PLSr1_Holdout_RandomCV(
     Parallel_Quantity,
     Permutation_Flag,
     SplitIndex_File='',
+    Random_Seed=-1,
 ):
     conn_cate_list = ['GGFC', 'GWFC', 'WWFC']
     resultantfolder_list = []
@@ -174,11 +186,12 @@ def PLSr1_Holdout_RandomCV(
 
     subjects_data_train_raw = [data[train_index, :].copy() for data in Subjects_Data_List]
     subjects_data_test_raw = [data[test_index, :].copy() for data in Subjects_Data_List]
+    rng_seed = None if Random_Seed is None or int(Random_Seed) < 0 else int(Random_Seed)
+    rng = np.random.default_rng(rng_seed)
 
     permutation_index = {}
     if Permutation_Flag:
-        train_permutation = np.arange(len(subjects_score_train))
-        np.random.shuffle(train_permutation)
+        train_permutation = rng.permutation(len(subjects_score_train))
         subjects_score_train = subjects_score_train[train_permutation]
         permutation_index['Train'] = train_permutation
 
@@ -202,6 +215,7 @@ def PLSr1_Holdout_RandomCV(
         CVRepeatTimes_ForInner,
         ResultantFolder,
         Parallel_Quantity,
+        None if rng_seed is None else rng_seed + 1,
     )
 
     holdout_corr_list = []
@@ -259,6 +273,7 @@ def PLSr1_OptimalComponentNumber_KFold(
     CVRepeatTimes,
     ResultantFolder,
     Parallel_Quantity,
+    Random_Seed=None,
 ):
     conn_cate_list = ['GGFC', 'GWFC', 'WWFC']
     if not os.path.exists(ResultantFolder):
@@ -275,10 +290,10 @@ def PLSr1_OptimalComponentNumber_KFold(
         inner_mae_inv = np.zeros((CVRepeatTimes, Fold_Quantity, len(ComponentNumber_Range)))
         inner_corr_list.append(inner_corr)
         inner_mae_inv_list.append(inner_mae_inv)
+    rng = np.random.default_rng(Random_Seed)
 
     for i in np.arange(CVRepeatTimes):
-        randindex = np.arange(subjects_quantity)
-        np.random.shuffle(randindex)
+        randindex = rng.permutation(subjects_quantity)
 
         for k in np.arange(Fold_Quantity):
             inner_fold_k_index = randindex[inner_eachfold_size * k + np.arange(inner_eachfold_size)]
