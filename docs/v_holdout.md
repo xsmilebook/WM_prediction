@@ -39,6 +39,7 @@ data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout/
 其中：
 
 - cognition 入口脚本默认写入 `data/ABCD/prediction/<target>/V_holdout/`
+- cognition 入口脚本在传入 `--seed <seed>` 时写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 - p-factor 入口脚本在传入 `--seed <seed>` 时写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 
 其中：
@@ -71,6 +72,14 @@ conda activate ML
 python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_cognition_RandomCV.py
 ```
 
+若需要固定可复现 seed：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_cognition_RandomCV.py --seed 42
+```
+
 p-factor 预测：
 
 ```bash
@@ -86,9 +95,10 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 
 因此默认输出为单次 holdout observed 结果及其固定 split 下的 permutation null。
 
-其中 p-factor 入口脚本额外支持 `--seed`：
+其中 cognition 与 p-factor 入口脚本都支持 `--seed`：
 
-- 输出目录写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+- cognition：默认写入 `data/ABCD/prediction/<target>/V_holdout/`；若传入 `--seed`，则写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+- p-factor：写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 - `seed` 会同时控制：
   - outer family-aware holdout split 的 `random_state`
   - observed run 的 inner 5-fold CV 随机划分
