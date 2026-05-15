@@ -131,6 +131,54 @@ data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat
 - `GG_empirical_p`、`GW_empirical_p`、`WW_empirical_p`
 - `GW_partial_empirical_p`、`WW_partial_empirical_p`
 
+## pfactor 单独导出脚本
+
+新增脚本 `results_vis/V_holdout/export_pfactor_summary.py`，用于只导出 `pfactor` 的 `General`、`Ext`、`ADHD` 三个 target 的相关性及 permutation 显著性结果。
+
+- 统计口径与 `compute_partial_corr.py` 保持一致：
+  - observed 直接读取 `Holdout_Score.mat` 中单次 half test set 的 `Corr`
+  - `GW_partial_corr`、`WW_partial_corr` 仍按同一 `Time_i` 内测试集预测计算
+  - permutation 显著性仍使用右尾经验分布
+- 脚本默认读取：
+  - `data/ABCD/prediction/<target>/V_holdout/`
+- 若指定 `--seed`，则自动读取：
+  - `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+- 也可以直接用 `--holdout_dir_name` 指定目录名，例如 `V_holdout_42`
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/export_pfactor_summary.py --seed 42
+```
+
+可选参数：
+
+- `--targets`：默认 `General Ext ADHD`
+- `--prediction_root`：默认 `data/ABCD/prediction`
+- `--output_root`：默认与 `prediction_root` 相同
+- `--output_prefix`：默认 `<holdout_dir_name>_pfactor`
+
+输出文件写入：
+
+```text
+data/ABCD/prediction/<holdout_dir_name>_pfactor_summary.csv
+data/ABCD/prediction/<holdout_dir_name>_pfactor_summary.mat
+```
+
+其中：
+
+- CSV 按 target 导出 `GG/GW/WW`、`GW/GG`、`WW/GG` 的 observed 相关性、permutation 均值、经验 `p` 值和显著性标签
+- MAT 导出与 CSV 对应的 pfactor 专用 cell 数组，变量名包括：
+  - `R_gg_pfactor`
+  - `R_gw_pfactor`
+  - `R_ww_pfactor`
+  - `partialR_gw_pfactor`
+  - `partialR_ww_pfactor`
+  - `observedResults_pfactor`
+  - `permutationSignificance_pfactor`
+
 ## holdout 散点图脚本
 
 `results_vis/V_holdout/plot_scatter.R` 用于将单次 observed holdout 的真实 half test set 结果画成散点图。
