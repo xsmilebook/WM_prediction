@@ -92,8 +92,12 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py --seed 42`
 - Summarize ABCD holdout correlations, partial correlations, and permutation significance:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/compute_partial_corr.py`
+- Export cognition-only holdout correlation and permutation significance summaries:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_cognition_summary.py --seed 42`
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_cognition_summary.py --seed 42 --skip_permutation`
 - Export pfactor-only holdout correlation and permutation significance summaries for a specific seed:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_pfactor_summary.py --seed 42`
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_pfactor_summary.py --seed 42 --skip_permutation`
 - Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task cognition`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor`
@@ -184,12 +188,17 @@ The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a singl
   - p-factor with `--seed`: `data/ABCD/prediction/<target>/V_holdout_<seed>/SharedSplitIndex.mat`
   - `Time_0/SplitIndex.mat` stores the train/test indices
   - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
-- `src/results_vis/V_holdout/compute_partial_corr.py` uses the single half test-set `Corr` from `Holdout_Score.mat` as the observed holdout metric, computes one partial correlation per `Time_i`, and evaluates each metric against the permutation holdout null distribution.
+- `src/results_vis/V_holdout/compute_partial_corr.py` uses the single half test-set `Corr` from `Holdout_Score.mat` as the observed holdout metric, ranks `GG/GW/WW` holdout runs separately by `Corr`, computes `GW_partial` / `WW_partial` from matched ranks after within-run index alignment, and evaluates each metric against the permutation holdout null distribution.
+- `src/results_vis/V_holdout/export_cognition_summary.py` summarizes only the three cognition targets under `V_holdout` or `V_holdout_<seed>` and can skip permutation loading via `--skip_permutation`.
 - `src/results_vis/V_holdout/export_pfactor_summary.py` summarizes only `General`, `Ext`, and `ADHD` under `V_holdout` or `V_holdout_<seed>` and exports seed-specific correlation/significance summaries.
+- `src/results_vis/V_holdout/export_pfactor_summary.py` also supports `--skip_permutation` when only observed holdout metrics are needed.
+- In both export scripts, empirical `p` values are now computed as `count(null >= observed) / n_perm`, so the minimum possible `p` is `0`, and BH-FDR `q` values are computed across all `15` tests within each export.
 - Summary outputs are written to:
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat`
   - `data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat`
+  - `data/ABCD/prediction/<V_holdout_dir>_cognition_summary.csv`
+  - `data/ABCD/prediction/<V_holdout_dir>_cognition_summary.mat`
   - `data/ABCD/prediction/<V_holdout_dir>_pfactor_summary.csv`
   - `data/ABCD/prediction/<V_holdout_dir>_pfactor_summary.mat`
 

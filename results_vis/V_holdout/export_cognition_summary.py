@@ -9,7 +9,11 @@ from scipy import stats
 
 
 DEFAULT_PREDICTION_ROOT = '/ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/data/ABCD/prediction'
-DEFAULT_TARGETS = ['General', 'Ext', 'ADHD']
+DEFAULT_TARGETS = [
+    'nihtbx_cryst_uncorrected',
+    'nihtbx_fluidcomp_uncorrected',
+    'nihtbx_totalcomp_uncorrected',
+]
 P_METRIC_KEYS = [
     'GG_empirical_p',
     'GW_empirical_p',
@@ -35,18 +39,18 @@ Q_SIGNIFICANCE_KEYS = [
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Export ABCD pfactor holdout correlations and permutation significance results.'
+        description='Export ABCD cognition holdout correlations and permutation significance results.'
     )
     parser.add_argument(
         '--prediction_root',
         default=DEFAULT_PREDICTION_ROOT,
-        help='ABCD prediction root containing pfactor target folders.',
+        help='ABCD prediction root containing cognition target folders.',
     )
     parser.add_argument(
         '--targets',
         nargs='*',
         default=DEFAULT_TARGETS,
-        help='pfactor targets to summarize. Default: General Ext ADHD.',
+        help='cognition targets to summarize. Default: nihtbx_cryst_uncorrected nihtbx_fluidcomp_uncorrected nihtbx_totalcomp_uncorrected.',
     )
     parser.add_argument(
         '--seed',
@@ -67,7 +71,7 @@ def parse_args():
     parser.add_argument(
         '--output_prefix',
         default=None,
-        help='Optional output file prefix. Default: <holdout_dir_name>_pfactor.',
+        help='Optional output file prefix. Default: <holdout_dir_name>_cognition.',
     )
     parser.add_argument(
         '--skip_permutation',
@@ -377,13 +381,13 @@ def build_mat_cells(results_summary, all_data):
         cell_significance_results[idx, 20] = res['WW_partial_fdr_significance']
 
     return {
-        'R_gg_pfactor': cell_r_gg,
-        'R_gw_pfactor': cell_r_gw,
-        'R_ww_pfactor': cell_r_ww,
-        'partialR_gw_pfactor': cell_partial_gw,
-        'partialR_ww_pfactor': cell_partial_ww,
-        'observedResults_pfactor': cell_observed_results,
-        'permutationSignificance_pfactor': cell_significance_results,
+        'R_gg_cognition': cell_r_gg,
+        'R_gw_cognition': cell_r_gw,
+        'R_ww_cognition': cell_r_ww,
+        'partialR_gw_cognition': cell_partial_gw,
+        'partialR_ww_cognition': cell_partial_ww,
+        'observedResults_cognition': cell_observed_results,
+        'permutationSignificance_cognition': cell_significance_results,
     }
 
 
@@ -391,7 +395,7 @@ def main():
     args = parse_args()
     holdout_dir_name = resolve_holdout_dir_name(args)
     output_root = ensure_dir(args.output_root or args.prediction_root)
-    output_prefix = args.output_prefix or '{}_pfactor'.format(holdout_dir_name)
+    output_prefix = args.output_prefix or '{}_cognition'.format(holdout_dir_name)
 
     results_summary = []
     all_data = {
@@ -540,7 +544,7 @@ def main():
         )
 
     if not results_summary:
-        raise SystemExit('No valid pfactor targets were processed.')
+        raise SystemExit('No valid cognition targets were processed.')
 
     apply_fdr_to_results(results_summary)
     result_df = pd.DataFrame(results_summary)
@@ -553,7 +557,7 @@ def main():
     sio.savemat(output_mat, mat_dict)
 
     print(result_df.to_string(index=False))
-    print('\nSaved pfactor holdout summary to:\n  {}\n  {}'.format(output_csv, output_mat))
+    print('\nSaved cognition holdout summary to:\n  {}\n  {}'.format(output_csv, output_mat))
 
 
 if __name__ == '__main__':

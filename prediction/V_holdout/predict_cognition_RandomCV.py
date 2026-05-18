@@ -221,39 +221,39 @@ for targetStr in targetStr_list:
     permutation_split_files = [shared_split_file] * 1000
 
     # # Predict
-    ResultantFolder = outFolder + '/RegressCovariates_Holdout'
-    print(f"结果文件夹: {ResultantFolder}")
+    # ResultantFolder = outFolder + '/RegressCovariates_Holdout'
+    # print(f"结果文件夹: {ResultantFolder}")
 
-    # 确保输出目录存在
-    os.makedirs(ResultantFolder, exist_ok=True)
+    # # 确保输出目录存在
+    # os.makedirs(ResultantFolder, exist_ok=True)
 
-    if seed is None:
-        PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-            SubjectsData,
-            OverallPsyFactor,
-            Covariates,
-            FoldQuantity,
-            ComponentNumber_Range,
-            CVtimes,
-            ResultantFolder,
-            Parallel_Quantity,
-            0,
-            observed_split_files,
-        )
-    else:
-        PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-            SubjectsData,
-            OverallPsyFactor,
-            Covariates,
-            FoldQuantity,
-            ComponentNumber_Range,
-            CVtimes,
-            ResultantFolder,
-            Parallel_Quantity,
-            0,
-            observed_split_files,
-            observed_random_seeds,
-        )
+    # if seed is None:
+    #     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+    #         SubjectsData,
+    #         OverallPsyFactor,
+    #         Covariates,
+    #         FoldQuantity,
+    #         ComponentNumber_Range,
+    #         CVtimes,
+    #         ResultantFolder,
+    #         Parallel_Quantity,
+    #         0,
+    #         observed_split_files,
+    #     )
+    # else:
+    #     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+    #         SubjectsData,
+    #         OverallPsyFactor,
+    #         Covariates,
+    #         FoldQuantity,
+    #         ComponentNumber_Range,
+    #         CVtimes,
+    #         ResultantFolder,
+    #         Parallel_Quantity,
+    #         0,
+    #         observed_split_files,
+    #         observed_random_seeds,
+    #     )
 
     # Permutation
     ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'

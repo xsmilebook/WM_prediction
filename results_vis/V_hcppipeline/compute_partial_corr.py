@@ -94,21 +94,35 @@ def load_corr_mae_arrays(base_folder, fc_type, time_ids):
     return corr_values, mae_values
 
 
+def get_rank_order(corr_values):
+    corr_values = np.asarray(corr_values, dtype=float)
+    temp_values = corr_values.copy()
+    temp_values[np.isnan(temp_values)] = -np.inf
+    return np.argsort(-temp_values)
+
+
 def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw, corr_actual_ww, num_folds):
     partial_r_gw_total = np.full(len(time_ids), np.nan)
     partial_r_ww_total = np.full(len(time_ids), np.nan)
+    rank_gg = get_rank_order(corr_actual_gg)
+    rank_gw = get_rank_order(corr_actual_gw)
+    rank_ww = get_rank_order(corr_actual_ww)
 
-    for rank_idx, run_id in enumerate(time_ids):
+    for rank_idx in range(len(time_ids)):
+        gg_run_idx = rank_gg[rank_idx]
+        gw_run_idx = rank_gw[rank_idx]
+        ww_run_idx = rank_ww[rank_idx]
+
         if (
-            np.isnan(corr_actual_gg[rank_idx])
-            or np.isnan(corr_actual_gw[rank_idx])
-            or np.isnan(corr_actual_ww[rank_idx])
+            np.isnan(corr_actual_gg[gg_run_idx])
+            or np.isnan(corr_actual_gw[gw_run_idx])
+            or np.isnan(corr_actual_ww[ww_run_idx])
         ):
             continue
 
-        gg_idx, gg_pred, _ = load_all_folds(base_folder, run_id, 'GGFC', num_folds)
-        gw_idx, gw_pred, gw_test = load_all_folds(base_folder, run_id, 'GWFC', num_folds)
-        ww_idx, ww_pred, ww_test = load_all_folds(base_folder, run_id, 'WWFC', num_folds)
+        gg_idx, gg_pred, _ = load_all_folds(base_folder, time_ids[gg_run_idx], 'GGFC', num_folds)
+        gw_idx, gw_pred, gw_test = load_all_folds(base_folder, time_ids[gw_run_idx], 'GWFC', num_folds)
+        ww_idx, ww_pred, ww_test = load_all_folds(base_folder, time_ids[ww_run_idx], 'WWFC', num_folds)
 
         if gg_idx is None or gw_idx is None or ww_idx is None:
             continue
@@ -121,7 +135,14 @@ def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw
             np.array_equal(gg_idx[sort_gg], gw_idx[sort_gw])
             and np.array_equal(gg_idx[sort_gg], ww_idx[sort_ww])
         ):
-            warnings.warn(f'Index mismatch at Time_{run_id}. Skipping.')
+            warnings.warn(
+                'Index mismatch at rank {} (GG=Time_{}, GW=Time_{}, WW=Time_{}). Skipping.'.format(
+                    rank_idx,
+                    time_ids[gg_run_idx],
+                    time_ids[gw_run_idx],
+                    time_ids[ww_run_idx],
+                )
+            )
             continue
 
         try:

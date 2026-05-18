@@ -109,14 +109,35 @@ def load_corr_mae_arrays(base_folder, fc_type, time_ids):
     return corr_values, mae_values
 
 
-def compute_partial_series(base_folder, time_ids):
+def get_rank_order(corr_values):
+    corr_values = np.asarray(corr_values, dtype=float)
+    temp_values = corr_values.copy()
+    temp_values[np.isnan(temp_values)] = -np.inf
+    return np.argsort(-temp_values)
+
+
+def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw, corr_actual_ww):
     partial_r_gw_total = np.full(len(time_ids), np.nan)
     partial_r_ww_total = np.full(len(time_ids), np.nan)
+    rank_gg = get_rank_order(corr_actual_gg)
+    rank_gw = get_rank_order(corr_actual_gw)
+    rank_ww = get_rank_order(corr_actual_ww)
 
-    for run_idx, run_id in enumerate(time_ids):
-        gg_score = load_holdout_score(base_folder, run_id, 'GGFC')
-        gw_score = load_holdout_score(base_folder, run_id, 'GWFC')
-        ww_score = load_holdout_score(base_folder, run_id, 'WWFC')
+    for rank_idx in range(len(time_ids)):
+        gg_run_idx = rank_gg[rank_idx]
+        gw_run_idx = rank_gw[rank_idx]
+        ww_run_idx = rank_ww[rank_idx]
+
+        if (
+            np.isnan(corr_actual_gg[gg_run_idx])
+            or np.isnan(corr_actual_gw[gw_run_idx])
+            or np.isnan(corr_actual_ww[ww_run_idx])
+        ):
+            continue
+
+        gg_score = load_holdout_score(base_folder, time_ids[gg_run_idx], 'GGFC')
+        gw_score = load_holdout_score(base_folder, time_ids[gw_run_idx], 'GWFC')
+        ww_score = load_holdout_score(base_folder, time_ids[ww_run_idx], 'WWFC')
 
         if gg_score is None or gw_score is None or ww_score is None:
             continue
@@ -129,16 +150,23 @@ def compute_partial_series(base_folder, time_ids):
             np.array_equal(gg_score['index'][sort_gg], gw_score['index'][sort_gw])
             and np.array_equal(gg_score['index'][sort_gg], ww_score['index'][sort_ww])
         ):
-            warnings.warn(f'Test index mismatch at Time_{run_id}. Skipping.')
+            warnings.warn(
+                'Test index mismatch at rank {} (GG=Time_{}, GW=Time_{}, WW=Time_{}). Skipping.'.format(
+                    rank_idx,
+                    time_ids[gg_run_idx],
+                    time_ids[gw_run_idx],
+                    time_ids[ww_run_idx],
+                )
+            )
             continue
 
         try:
-            partial_r_gw_total[run_idx] = partial_corr(
+            partial_r_gw_total[rank_idx] = partial_corr(
                 gw_score['predict'][sort_gw],
                 gw_score['test'][sort_gw],
                 gg_score['predict'][sort_gg],
             )
-            partial_r_ww_total[run_idx] = partial_corr(
+            partial_r_ww_total[rank_idx] = partial_corr(
                 ww_score['predict'][sort_ww],
                 ww_score['test'][sort_ww],
                 gg_score['predict'][sort_gg],
@@ -228,7 +256,13 @@ for i_str, target_str in enumerate(targetStr_total):
     all_data['R_ww'][target_str] = {'Corr': corr_actual_ww, 'MAE': mae_actual_ww}
 
     print('  Calculating observed partial correlations...')
-    partial_r_gw_total, partial_r_ww_total = compute_partial_series(base_folder, actual_time_ids)
+    partial_r_gw_total, partial_r_ww_total = compute_partial_series(
+        base_folder,
+        actual_time_ids,
+        corr_actual_gg,
+        corr_actual_gw,
+        corr_actual_ww,
+    )
     all_data['partialR_gw'][target_str] = partial_r_gw_total
     all_data['partialR_ww'][target_str] = partial_r_ww_total
 
@@ -249,7 +283,13 @@ for i_str, target_str in enumerate(targetStr_total):
             corr_perm_gw, mae_perm_gw = load_corr_mae_arrays(permutation_folder, 'GWFC', permutation_time_ids)
             corr_perm_ww, mae_perm_ww = load_corr_mae_arrays(permutation_folder, 'WWFC', permutation_time_ids)
             print('  Calculating permutation partial correlations...')
-            partial_perm_gw, partial_perm_ww = compute_partial_series(permutation_folder, permutation_time_ids)
+            partial_perm_gw, partial_perm_ww = compute_partial_series(
+                permutation_folder,
+                permutation_time_ids,
+                corr_perm_gg,
+                corr_perm_gw,
+                corr_perm_ww,
+            )
         else:
             warnings.warn(f'Permutation folder has no Time_* runs: {permutation_folder}')
     else:

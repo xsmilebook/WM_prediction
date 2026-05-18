@@ -108,6 +108,7 @@ WM_prediction/src/                        # 当前仓库根目录
     │   └── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关，并汇总相对 permutation 的 median corr 显著性
     ├── V_holdout/                        # ABCD holdout 结果统计脚本
     │   ├── compute_partial_corr.py       # 读取 Holdout_Score.mat，使用 half test set corr 汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
+    │   ├── export_cognition_summary.py   # 仅汇总 cognition 的三个 target 的 holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 和跳过 permutation
     │   ├── export_pfactor_summary.py     # 仅汇总 pfactor 的 General/Ext/ADHD holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 目录
     │   └── plot_scatter.R                # 绘制单次 observed holdout 的真实值-预测值散点图，并叠加相关性与 permutation 显著性注释
     └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本

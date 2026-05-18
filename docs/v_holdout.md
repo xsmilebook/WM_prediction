@@ -112,7 +112,7 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 
 - 脚本会自动扫描 `data/ABCD/prediction/` 下实际存在 `V_holdout/RegressCovariates_Holdout` 的 target。
 - observed 部分直接读取 `Time_*/<GGFC|GWFC|WWFC>/Holdout_Score.mat` 中的 `Corr`、`MAE`、`Test_Index`、`Predict_Score` 与 `Test_Score`，并将单次 half test set 的 `Corr` 作为 holdout 评估指标。
-- `GW_partial_corr` 和 `WW_partial_corr` 按同一个 `Time_i` 内的测试集预测计算，而不是跨 `Time_i` 重新配对。
+- `GW_partial_corr` 和 `WW_partial_corr` 先分别对 `GG/GW/WW` 的 holdout `Corr` 做降序排序，再使用同一 rank 的 `GG/GW/WW` 结果配对计算；每组内部仍按 `Test_Index` 排序，仅用于保证同一批被试一一对齐。
 - 由于 permutation 复用 `SharedSplitIndex.mat`，因此 null 分布只反映训练标签置换带来的变化，不再混入额外的 holdout split 变化。
 - 如果 observed 目录下存在多个 `Time_i`，脚本会使用第一个有效的 half test set 结果，并给出 warning。
 - permutation 部分读取 `V_holdout/RegressCovariates_Holdout_Permutation` 下所有 `Time_i`，并以右尾经验分布计算显著性：
@@ -147,7 +147,7 @@ data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat
 
 - 统计口径与 `compute_partial_corr.py` 保持一致：
   - observed 直接读取 `Holdout_Score.mat` 中单次 half test set 的 `Corr`
-  - `GW_partial_corr`、`WW_partial_corr` 仍按同一 `Time_i` 内测试集预测计算
+  - `GW_partial_corr`、`WW_partial_corr` 先分别对 `GG/GW/WW` 的 holdout `Corr` 做降序排序，再使用同一 rank 的 `GG/GW/WW` 结果配对计算
   - permutation 显著性仍使用右尾经验分布
 - 脚本默认读取：
   - `data/ABCD/prediction/<target>/V_holdout/`
@@ -169,6 +169,9 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdo
 - `--prediction_root`：默认 `data/ABCD/prediction`
 - `--output_root`：默认与 `prediction_root` 相同
 - `--output_prefix`：默认 `<holdout_dir_name>_pfactor`
+- `--skip_permutation`：跳过 permutation 目录读取，仅导出 observed holdout 指标；此时 permutation 相关列为 `NaN`
+- 经验 `p` 值按 `count(null >= observed) / n_perm` 计算，不再做 `+1` 平滑，因此最小可能值为 `0`
+- 脚本会对 `3 × 5 = 15` 个检验统一执行 BH-FDR 校正，并额外导出 `q` 值及其显著性标签
 
 输出文件写入：
 
@@ -180,6 +183,7 @@ data/ABCD/prediction/<holdout_dir_name>_pfactor_summary.mat
 其中：
 
 - CSV 按 target 导出 `GG/GW/WW`、`GW/GG`、`WW/GG` 的 observed 相关性、permutation 均值、经验 `p` 值和显著性标签
+- CSV 同时保留 `GG_fdr_q`、`GW_fdr_q`、`WW_fdr_q`、`GW_partial_fdr_q`、`WW_partial_fdr_q` 以及对应的 FDR 显著性标签
 - MAT 导出与 CSV 对应的 pfactor 专用 cell 数组，变量名包括：
   - `R_gg_pfactor`
   - `R_gw_pfactor`
@@ -188,6 +192,66 @@ data/ABCD/prediction/<holdout_dir_name>_pfactor_summary.mat
   - `partialR_ww_pfactor`
   - `observedResults_pfactor`
   - `permutationSignificance_pfactor`
+
+## cognition 单独导出脚本
+
+新增脚本 `results_vis/V_holdout/export_cognition_summary.py`，用于只导出 cognition 的 `nihtbx_cryst_uncorrected`、`nihtbx_fluidcomp_uncorrected`、`nihtbx_totalcomp_uncorrected` 三个 target 的相关性及 permutation 显著性结果。
+
+- 统计口径与 `compute_partial_corr.py` 保持一致：
+  - observed 直接读取 `Holdout_Score.mat` 中单次 half test set 的 `Corr`
+  - `GW_partial_corr`、`WW_partial_corr` 先分别对 `GG/GW/WW` 的 holdout `Corr` 做降序排序，再使用同一 rank 的 `GG/GW/WW` 结果配对计算
+  - permutation 显著性仍使用右尾经验分布
+- 默认读取：
+  - `data/ABCD/prediction/<target>/V_holdout/`
+- 若指定 `--seed`，则读取：
+  - `data/ABCD/prediction/<target>/V_holdout_<seed>/`
+- 若指定 `--skip_permutation`，则跳过 permutation 目录读取，仅导出 observed holdout 指标
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/export_cognition_summary.py --seed 42
+```
+
+若只想快速导出 observed：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/export_cognition_summary.py --seed 42 --skip_permutation
+```
+
+可选参数：
+
+- `--targets`：默认 `nihtbx_cryst_uncorrected nihtbx_fluidcomp_uncorrected nihtbx_totalcomp_uncorrected`
+- `--prediction_root`：默认 `data/ABCD/prediction`
+- `--output_root`：默认与 `prediction_root` 相同
+- `--output_prefix`：默认 `<holdout_dir_name>_cognition`
+- `--skip_permutation`：跳过 permutation 目录读取，仅导出 observed holdout 指标；此时 permutation 相关列为 `NaN`
+- 经验 `p` 值按 `count(null >= observed) / n_perm` 计算，不再做 `+1` 平滑，因此最小可能值为 `0`
+- 脚本会对 `3 × 5 = 15` 个检验统一执行 BH-FDR 校正，并额外导出 `q` 值及其显著性标签
+
+输出文件写入：
+
+```text
+data/ABCD/prediction/<holdout_dir_name>_cognition_summary.csv
+data/ABCD/prediction/<holdout_dir_name>_cognition_summary.mat
+```
+
+其中：
+
+- CSV 按 target 导出 `GG/GW/WW`、`GW/GG`、`WW/GG` 的 observed 相关性、permutation 均值、经验 `p` 值和显著性标签
+- CSV 同时保留 `GG_fdr_q`、`GW_fdr_q`、`WW_fdr_q`、`GW_partial_fdr_q`、`WW_partial_fdr_q` 以及对应的 FDR 显著性标签
+- MAT 导出与 CSV 对应的 cognition 专用 cell 数组，变量名包括：
+  - `R_gg_cognition`
+  - `R_gw_cognition`
+  - `R_ww_cognition`
+  - `partialR_gw_cognition`
+  - `partialR_ww_cognition`
+  - `observedResults_cognition`
+  - `permutationSignificance_cognition`
 
 ## holdout 散点图脚本
 
