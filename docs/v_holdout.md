@@ -302,3 +302,32 @@ Rscript /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_hold
 - `<target>_GG_holdout_scatter.(tif|svg|pdf)`
 - `<target>_GW_holdout_scatter.(tif|svg|pdf)`
 - `<target>_WW_holdout_scatter.(tif|svg|pdf)`
+
+## prediction_acc FDR 校正脚本
+
+`results_vis/V_holdout/fdr_correct_prediction_acc_csv.py` 用于对 `results/V_holdout/prediction_acc/` 下的 holdout 汇总 CSV 回填 FDR 校正结果。
+
+- 脚本默认扫描：
+  - `results/V_holdout/prediction_acc/*.csv`
+- 每个 CSV 必须包含 `3 × 5 = 15` 个经验 `p` 值，对应：
+  - `GG_empirical_p`
+  - `GW_empirical_p`
+  - `WW_empirical_p`
+  - `GW_partial_empirical_p`
+  - `WW_partial_empirical_p`
+- 脚本会在每个文件内部对这 15 个 `p` 值统一执行 BH-FDR 校正，并原地写回：
+  - `GG_fdr_q`
+  - `GW_fdr_q`
+  - `WW_fdr_q`
+  - `GW_partial_fdr_q`
+  - `WW_partial_fdr_q`
+  - 以及对应的 `*_fdr_significance`
+- 若文件中的有效 `p` 值数量不是 15，脚本会直接报错，避免混入不完整结果。
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/fdr_correct_prediction_acc_csv.py
+```

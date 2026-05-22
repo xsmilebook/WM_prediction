@@ -98,6 +98,8 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Export pfactor-only holdout correlation and permutation significance summaries for a specific seed:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_pfactor_summary.py --seed 42`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_pfactor_summary.py --seed 42 --skip_permutation`
+- Fill BH-FDR q-values into `results/V_holdout/prediction_acc/*.csv`:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/fdr_correct_prediction_acc_csv.py`
 - Evaluate ABCD siblings/twins-controlled metrics against 1000 permutations:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task cognition`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_siblings/compute_permutation_significance.py --task pfactor`
@@ -193,6 +195,7 @@ The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a singl
 - `src/results_vis/V_holdout/export_pfactor_summary.py` summarizes only `General`, `Ext`, and `ADHD` under `V_holdout` or `V_holdout_<seed>` and exports seed-specific correlation/significance summaries.
 - `src/results_vis/V_holdout/export_pfactor_summary.py` also supports `--skip_permutation` when only observed holdout metrics are needed.
 - In both export scripts, empirical `p` values are now computed as `count(null >= observed) / n_perm`, so the minimum possible `p` is `0`, and BH-FDR `q` values are computed across all `15` tests within each export.
+- `src/results_vis/V_holdout/fdr_correct_prediction_acc_csv.py` applies the same BH-FDR correction to the CSV files under `results/V_holdout/prediction_acc/`, using the `15` empirical `p` values within each file and writing the updated `*_fdr_q` and `*_fdr_significance` columns back in place.
 - Summary outputs are written to:
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat`

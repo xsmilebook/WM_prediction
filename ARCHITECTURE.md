@@ -109,6 +109,7 @@ WM_prediction/src/                        # 当前仓库根目录
     ├── V_holdout/                        # ABCD holdout 结果统计脚本
     │   ├── compute_partial_corr.py       # 读取 Holdout_Score.mat，使用 half test set corr 汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
     │   ├── export_cognition_summary.py   # 仅汇总 cognition 的三个 target 的 holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 和跳过 permutation
+    │   ├── fdr_correct_prediction_acc_csv.py # 对 results/V_holdout/prediction_acc 下的 summary CSV 按每个文件 15 个经验 p 值执行 BH-FDR 校正，并回填 q 值列
     │   ├── export_pfactor_summary.py     # 仅汇总 pfactor 的 General/Ext/ADHD holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 目录
     │   └── plot_scatter.R                # 绘制单次 observed holdout 的真实值-预测值散点图，并叠加相关性与 permutation 显著性注释
     └── V_siblings/                       # ABCD siblings/twins 控制结果的统计脚本

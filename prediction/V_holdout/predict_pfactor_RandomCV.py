@@ -204,7 +204,7 @@ for targetStr in targetStr_list:
     observed_split_files = [shared_split_file]
     permutation_split_files = [shared_split_file] * 1000
 
-    # # Predict
+    # Predict
     # ResultantFolder = outFolder + '/RegressCovariates_Holdout'
     # print(f"结果文件夹: {ResultantFolder}")
 
