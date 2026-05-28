@@ -95,6 +95,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `python src/prediction/V_holdout/predict_pfactor_RandomCV.py --seed 42`
 - Summarize ABCD holdout correlations, partial correlations, and permutation significance:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/compute_partial_corr.py`
+- Export age holdout correlation and permutation significance summaries across datasets:
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_age_summary.py --seed 42`
+  - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_age_summary.py --datasets EFNY HCPD --skip_permutation`
 - Export cognition-only holdout correlation and permutation significance summaries:
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_cognition_summary.py --seed 42`
   - `source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate && conda activate ML && python src/results_vis/V_holdout/export_cognition_summary.py --seed 42 --skip_permutation`
@@ -200,12 +203,15 @@ The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a singl
   - `Time_0/SplitIndex.mat` stores the train/test indices
   - `Time_0/<GGFC|GWFC|WWFC>/Holdout_Score.mat` stores the single test-set prediction result
 - `src/results_vis/V_holdout/compute_partial_corr.py` uses the single half test-set `Corr` from `Holdout_Score.mat` as the observed holdout metric, ranks `GG/GW/WW` holdout runs separately by `Corr`, computes `GW_partial` / `WW_partial` from matched ranks after within-run index alignment, and evaluates each metric against the permutation holdout null distribution.
+- `src/results_vis/V_holdout/export_age_summary.py` summarizes age holdout results for `EFNY`, `HCPD`, `CCNP`, and `PNC` under `data/<dataset>/prediction/age/<V_holdout_dir>/`, supports `--datasets`, and can skip permutation loading via `--skip_permutation`.
 - `src/results_vis/V_holdout/export_cognition_summary.py` summarizes only the three cognition targets under `V_holdout` or `V_holdout_<seed>` and can skip permutation loading via `--skip_permutation`.
 - `src/results_vis/V_holdout/export_pfactor_summary.py` summarizes only `General`, `Ext`, and `ADHD` under `V_holdout` or `V_holdout_<seed>` and exports seed-specific correlation/significance summaries.
 - `src/results_vis/V_holdout/export_pfactor_summary.py` also supports `--skip_permutation` when only observed holdout metrics are needed.
-- In both export scripts, empirical `p` values are now computed as `count(null >= observed) / n_perm`, so the minimum possible `p` is `0`, and BH-FDR `q` values are computed across all `15` tests within each export.
+- In the export scripts, empirical `p` values are computed as `count(null >= observed) / n_perm`, so the minimum possible `p` is `0`, and BH-FDR `q` values are computed across all tests within each export.
 - `src/results_vis/V_holdout/fdr_correct_prediction_acc_csv.py` applies the same BH-FDR correction to the CSV files under `results/V_holdout/prediction_acc/`, using the `15` empirical `p` values within each file and writing the updated `*_fdr_q` and `*_fdr_significance` columns back in place.
 - Summary outputs are written to:
+  - `data/<V_holdout_dir>_age_summary.csv`
+  - `data/<V_holdout_dir>_age_summary.mat`
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.csv`
   - `data/ABCD/prediction/V_holdout_partial_results_total_multi_targets.mat`
   - `data/ABCD/prediction/V_holdout_partial_results_forBoxplot_multi_targets.mat`

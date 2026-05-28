@@ -142,7 +142,117 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 
 ## 结果汇总脚本
 
-以下 `results_vis/V_holdout/` 脚本当前仍只服务于 `ABCD cognition / p-factor` 结果汇总，不读取上面的非 `ABCD` age holdout 输出。
+`results_vis/V_holdout/` 下的汇总脚本目前分为两类：
+
+- `export_age_summary.py`：读取 `EFNY`、`HCPD`、`CCNP`、`PNC` 的 age holdout 输出
+- 其余脚本：主要读取 `ABCD cognition / p-factor` holdout 输出
+
+## age 单独导出脚本
+
+新增脚本 `results_vis/V_holdout/export_age_summary.py`，用于导出 `EFNY`、`HCPD`、`CCNP`、`PNC` 的 age holdout 相关性及 permutation 显著性结果。
+
+- 统计口径与 `export_cognition_summary.py` / `export_pfactor_summary.py` 一致：
+  - observed 直接读取 `Holdout_Score.mat` 中单次 half test set 的 `Corr`
+  - `GW_partial_corr`、`WW_partial_corr` 先分别对 `GG/GW/WW` 的 holdout `Corr` 做降序排序，再使用同一 rank 的 `GG/GW/WW` 结果配对计算
+  - permutation 显著性仍使用右尾经验分布
+- 默认读取：
+  - `data/<dataset>/prediction/age/V_holdout/`
+- 若指定 `--seed`，则读取：
+  - `data/<dataset>/prediction/age/V_holdout_<seed>/`
+- 若指定 `--skip_permutation`，则跳过 permutation 目录读取，仅导出 observed holdout 指标
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/export_age_summary.py --seed 42
+```
+
+若只汇总部分数据集且不读取 permutation：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/export_age_summary.py --datasets EFNY HCPD --skip_permutation
+```
+
+可选参数：
+
+- `--data_root`：默认 `data/`
+- `--datasets`：默认 `EFNY HCPD CCNP PNC`
+- `--output_root`：默认与 `data_root` 相同
+- `--output_prefix`：默认 `<holdout_dir_name>_age`
+- `--skip_permutation`：跳过 permutation 目录读取，仅导出 observed holdout 指标；此时 permutation 相关列为 `NaN`
+- 经验 `p` 值按 `count(null >= observed) / n_perm` 计算，不再做 `+1` 平滑，因此最小可能值为 `0`
+- 脚本会对 `len(datasets) × 5` 个检验统一执行 BH-FDR 校正，并额外导出 `q` 值及其显著性标签
+
+输出文件写入：
+
+```text
+data/<holdout_dir_name>_age_summary.csv
+data/<holdout_dir_name>_age_summary.mat
+```
+
+其中：
+
+- CSV 按 dataset 导出 `GG/GW/WW`、`GW/GG`、`WW/GG` 的 observed 相关性、permutation 均值、经验 `p` 值和显著性标签
+- CSV 同时保留 `GG_fdr_q`、`GW_fdr_q`、`WW_fdr_q`、`GW_partial_fdr_q`、`WW_partial_fdr_q` 以及对应的 FDR 显著性标签
+- MAT 导出与 CSV 对应的 age 专用 cell 数组，变量名包括：
+  - `R_gg_age`
+  - `R_gw_age`
+  - `R_ww_age`
+  - `partialR_gw_age`
+  - `partialR_ww_age`
+  - `observedResults_age`
+  - `permutationSignificance_age`
+
+## age permutation 分布图
+
+新增脚本 `results_vis/V_holdout/plot_age_permutation_distributions.py`，用于直接读取 age holdout observed 与 permutation 目录，绘制四个数据集的 permutation 分布图，并叠加 observed 竖线。
+
+- 默认数据集为 `EFNY`、`HCPD`、`CCNP`、`PNC`
+- 默认绘制 5 组指标：
+  - `GG_corr`
+  - `GW_corr`
+  - `WW_corr`
+  - `GW_partial_corr`
+  - `WW_partial_corr`
+- `GG/GW/WW` 直接读取各自 `Holdout_Score.mat` 中的 `Corr`
+- `GW_partial_corr` 与 `WW_partial_corr` 默认沿用当前 age 汇总脚本的 sorted 口径
+- 若需要比较“不按 holdout Corr 排序、直接按同一 Time_i 配对”的 partial 分布，可传入 `--pairing_mode same_time`
+
+运行方式：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_age_permutation_distributions.py --seed 42
+```
+
+若需要绘制 same-time 配对版本：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_age_permutation_distributions.py --seed 42 --pairing_mode same_time
+```
+
+默认输出文件写入：
+
+```text
+results/V_holdout/age/<holdout_dir_name>_age_permutation_<pairing_mode>.tiff
+results/V_holdout/age/<holdout_dir_name>_age_permutation_<pairing_mode>_summary.csv
+```
+
+其中：
+
+- TIFF 为 `4 × 5` 面板图，行对应数据集，列对应 5 组指标
+- 柱形图为 permutation 分布
+- 红色实线为 observed 值
+- 虚线为 permutation 中位数
+- 每个面板右上角会标注 `obs` 与经验右尾比例 `p`
+- CSV 导出每个数据集、每个指标的 observed、permutation 均值、标准差、分位数和 `perm >= observed` 的比例
 
 `results_vis/V_holdout/compute_partial_corr.py` 用于汇总已经完成的 holdout 与 permutation 结果。
 

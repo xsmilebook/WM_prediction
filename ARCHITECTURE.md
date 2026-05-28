@@ -10,7 +10,7 @@ WM_prediction/src/                        # 当前仓库根目录
 │   ├── architecture_update.md            # 本次架构文档同步说明
 │   ├── efny_hcppipeline_similarity.md    # EFNY HCP pipeline FC 与旧 EFNY / HCPD 的相似性分析
 │   ├── hcp_efny.md                       # EFNY 数据集 HCP 预处理的 staging、单被试测试与批量提交说明
-│   ├── v_holdout.md                      # ABCD 单次 family-aware half-split holdout 复现脚本说明
+│   ├── v_holdout.md                      # age 与 ABCD cognition/pfactor 的 holdout 复现与结果导出说明
 │   ├── v_siblings.md                     # ABCD siblings/twins 控制后的 family-wise sublist 与预测说明
 │   └── v_feature_merge.md                # merged FC 预测流程与结果汇总说明
 │
@@ -107,8 +107,9 @@ WM_prediction/src/                        # 当前仓库根目录
         └── rm_anova_all_children.py      # merged FC 与全部子 feature 的普通单因素 ANOVA 和箱线图
     ├── V_hcppipeline/                    # EFNY HCP pipeline 结果统计脚本
     │   └── compute_partial_corr.py       # 计算 GG/GW/WW 与控制 GG 后的 GW/GG、WW/GG 偏相关，并汇总相对 permutation 的 median corr 显著性
-    ├── V_holdout/                        # ABCD holdout 结果统计脚本
+    ├── V_holdout/                        # holdout 结果统计脚本
     │   ├── compute_partial_corr.py       # 读取 Holdout_Score.mat，使用 half test set corr 汇总单次 holdout 的 GG/GW/WW 与 partial corr，并计算相对 permutation 的经验 p 值
+    │   ├── export_age_summary.py         # 汇总 EFNY/HCPD/CCNP/PNC 的 age holdout 相关性、partial corr 与 permutation 显著性
     │   ├── export_cognition_summary.py   # 仅汇总 cognition 的三个 target 的 holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 和跳过 permutation
     │   ├── fdr_correct_prediction_acc_csv.py # 对 results/V_holdout/prediction_acc 下的 summary CSV 按每个文件 15 个经验 p 值执行 BH-FDR 校正，并回填 q 值列
     │   ├── export_pfactor_summary.py     # 仅汇总 pfactor 的 General/Ext/ADHD holdout 相关性与 permutation 显著性，支持指定 V_holdout_<seed> 目录
