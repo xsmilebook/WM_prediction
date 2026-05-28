@@ -49,8 +49,9 @@ WM_prediction/src/                        # 当前仓库根目录
 │   │   ├── PLSr1_CZ_Random_RegressCovariates.py # siblings/twins 控制版沿用的本地 PLS 管线
 │   │   ├── predict_cognition_RandomCV.py # 使用 family-wise cognition 子样本运行随机 CV 预测
 │   │   └── predict_pfactor_RandomCV.py   # 使用 family-wise pfactor 子样本运行随机 CV / permutation 预测
-│   ├── V_holdout/                        # ABCD holdout 复现脚本
+│   ├── V_holdout/                        # holdout 复现脚本
 │   │   ├── PLSr1_CZ_Random_RegressCovariates.py # 单次 holdout PLS 管线，使用 family-aware 的 1:1 half-split，并在训练半集内部做 5-fold CV 选参
+│   │   ├── predict_age_RandomCV.py       # 使用 EFNY/HCPD/CCNP/PNC 的 FC 与年龄协变量表运行单次 age holdout 预测
 │   │   ├── predict_cognition_RandomCV.py # 使用 ABCD cognition 子样本运行单次 holdout 预测
 │   │   └── predict_pfactor_RandomCV.py   # 使用 ABCD pfactor 子样本运行单次 holdout 预测
 │   └── V_feature_merge/                  # merged FC 组合预测脚本

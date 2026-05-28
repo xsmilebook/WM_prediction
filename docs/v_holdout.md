@@ -1,19 +1,22 @@
 # V_holdout 使用说明
 
-`prediction/V_holdout/` 用于回应审稿人关于大样本数据集应采用 holdout 评估的意见，在 ABCD cognition 与 p-factor 任务上提供单次 holdout 复现。
+`prediction/V_holdout/` 用于回应审稿人关于大样本数据集应采用 holdout 评估的意见，目前包含两类单次 holdout 复现：
+
+- `predict_age_RandomCV.py`：面向 `EFNY`、`HCPD`、`CCNP`、`PNC` 的年龄预测
+- `predict_cognition_RandomCV.py`、`predict_pfactor_RandomCV.py`：面向 `ABCD` 的 cognition 与 p-factor 预测
 
 ## 设计原则
 
 - 尽量少改动原始 `prediction/` 管线，只在 `V_holdout/` 本地副本中修改外层评估方式。
 - 保留原有协变量回归、MinMax 归一化和 PLS 组件数搜索逻辑。
-- 将原先的 repeated random 5-fold CV 改为单次 family-aware holdout。
+- 将原先的 repeated random 5-fold CV 改为单次 holdout。
 
 ## 划分方式
 
 - 外层划分固定为 `train/test = 1:1` 的单次 half-split。
-- 该 outer split 使用 `data/ABCD/table/abcd_y_lt_baseline.csv` 中的 baseline `rel_family_id` 作为 group，确保 siblings 落在训练集或测试集的同一侧。
-- 为了让两侧目标变量分布尽量接近，脚本会先对连续标签做分位数分箱，再使用 `StratifiedGroupKFold(n_splits=2, shuffle=True, random_state=0)` 生成 split。
-- 每个 target 会先在 `V_holdout/SharedSplitIndex.mat` 中生成并保存一份固定的 half-split，observed 与全部 permutation 共用这同一份 split。
+- age 入口脚本针对连续年龄做分位数分箱，再使用 `StratifiedKFold(n_splits=2, shuffle=True, random_state=<seed or 1234>)` 生成分层 half-split。
+- cognition / p-factor 入口脚本使用 `data/ABCD/table/abcd_y_lt_baseline.csv` 中的 baseline `rel_family_id` 作为 group，确保 siblings 落在训练集或测试集的同一侧，并通过 `StratifiedGroupKFold` 保持两侧目标分布接近。
+- 每个 target 会先在对应输出目录下生成并保存一份固定的 `SharedSplitIndex.mat`，供同一脚本内后续 observed / permutation 复用。
 
 ## 建模流程
 
@@ -21,6 +24,15 @@
 2. 在 outer train half 上进行 MinMax 归一化，并应用到 outer test half。
 3. 在 outer train half 内部执行与主分析一致的 `5-fold CV`，用 `corr + inverse MAE` 选择最佳 PLS component 数。
 4. 选定 component 后，在整个 outer train half 上重新拟合 PLS，并在固定的 outer test half 上进行一次最终评估。
+
+其中 age 入口与 cognition / p-factor 的主要差别为：
+
+- age 支持 `EFNY`、`HCPD`、`CCNP`、`PNC` 四个数据集，通过 `--dataset` 指定
+- age 统一读取 `data/<dataset>/fc_vector/<dataset>_<GG|GW|WW>_vectors.npy`
+- age 统一使用 `data/<dataset>/table/sublist.txt` 对齐标签、协变量和 FC 向量
+- age 的标签列来自各数据集年龄协变量表中的 `age`
+- age 对 `EFNY`、`CCNP`、`PNC` 回归 `sex + motion`；对 `HCPD` 回归 `sex + motion + site`
+- age 当前默认运行 observed holdout；permutation 代码保留在脚本中，但默认注释
 
 ## permutation 口径
 
@@ -33,11 +45,13 @@
 每个 target 的 holdout 结果写入：
 
 ```text
-data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout/
+data/<dataset>/prediction/<target>/V_holdout/RegressCovariates_Holdout/
 ```
 
 其中：
 
+- age 入口脚本默认写入 `data/<dataset>/prediction/age/V_holdout/`
+- age 入口脚本在传入 `--seed <seed>` 时写入 `data/<dataset>/prediction/age/V_holdout_<seed>/`
 - cognition 入口脚本默认写入 `data/ABCD/prediction/<target>/V_holdout/`
 - cognition 入口脚本在传入 `--seed <seed>` 时写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 - p-factor 入口脚本在传入 `--seed <seed>` 时写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
@@ -64,6 +78,22 @@ data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout/
 
 ## 运行方式
 
+年龄预测：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_age_RandomCV.py --dataset EFNY
+```
+
+若需要固定可复现 seed：
+
+```bash
+source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
+conda activate ML
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_age_RandomCV.py --dataset HCPD --seed 42
+```
+
 认知预测：
 
 ```bash
@@ -88,25 +118,31 @@ conda activate ML
 python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_pfactor_RandomCV.py --seed 42
 ```
 
-这两个入口脚本会先生成共享的 `SharedSplitIndex.mat`，然后：
+这三个入口脚本都会先生成共享的 `SharedSplitIndex.mat`。
 
-- observed 提交 `1` 个 Slurm 作业；
-- permutation 默认提交 `1000` 个 Slurm 作业。
+- age 入口脚本默认直接运行 `1` 次 observed holdout。
+- cognition / p-factor 入口脚本当前保留 observed 代码，但默认运行 `1000` 次 permutation。
 
-因此默认输出为单次 holdout observed 结果及其固定 split 下的 permutation null。
+因此不同入口脚本的默认输出并不相同：
 
-其中 cognition 与 p-factor 入口脚本都支持 `--seed`：
+- age：默认输出单次 observed holdout 结果
+- cognition / p-factor：默认输出固定 split 下的 permutation null
 
+其中 age、cognition 与 p-factor 入口脚本都支持 `--seed`：
+
+- age：默认写入 `data/<dataset>/prediction/age/V_holdout/`；若传入 `--seed`，则写入 `data/<dataset>/prediction/age/V_holdout_<seed>/`
 - cognition：默认写入 `data/ABCD/prediction/<target>/V_holdout/`；若传入 `--seed`，则写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 - p-factor：写入 `data/ABCD/prediction/<target>/V_holdout_<seed>/`
 - `seed` 会同时控制：
-  - outer family-aware holdout split 的 `random_state`
+  - outer holdout split 的 `random_state`
   - observed run 的 inner 5-fold CV 随机划分
   - permutation 的训练标签打乱顺序
   - permutation run 内部的 inner 5-fold CV 随机划分
 - 因此不同 `seed` 会写到不同目录，且对应不同且可复现的 holdout / permutation 结果。
 
 ## 结果汇总脚本
+
+以下 `results_vis/V_holdout/` 脚本当前仍只服务于 `ABCD cognition / p-factor` 结果汇总，不读取上面的非 `ABCD` age holdout 输出。
 
 `results_vis/V_holdout/compute_partial_corr.py` 用于汇总已经完成的 holdout 与 permutation 结果。
 

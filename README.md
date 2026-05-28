@@ -21,7 +21,7 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
   - `predict_*_RandomCV.py`, `PLSr1_CZ_Random_RegressCovariates.py`: Predict age, cognition, and p-factor with random cross-validation and covariate regression.
   - `V_hcppipeline/`: Run the age-prediction workflow on EFNY HCP-pipeline FC matrices using `sublist_xcpd_ready505.txt`.
   - `V_siblilngs/`: Re-run ABCD cognition and p-factor prediction after removing siblings/twins from the existing sublists while keeping the original PLS workflow unchanged.
-  - `V_holdout/`: Re-run ABCD cognition and p-factor prediction with a single family-aware holdout split (`train/test = 1:1`) while keeping the original PLS workflow as intact as possible.
+  - `V_holdout/`: Re-run non-ABCD age prediction and ABCD cognition/p-factor prediction with a single holdout split (`train/test = 1:1`) while keeping the original PLS workflow as intact as possible.
   - `V_feature_merge/`: Re-run the same prediction workflow on concatenated GG/GW/WW feature sets while reusing the original `RandIndex.mat` splits.
 - `results_vis/`
   - `compute_haufe_median.py`, `compute_partial_corr.py`, `compare_feature_merge_performance.py`: Model interpretability, statistical analysis, and merged-feature performance summaries.
@@ -86,6 +86,9 @@ This directory provides the end-to-end pipeline from fMRI preprocessing outputs 
 - Run ABCD cognition/pfactor prediction after siblings/twins control:
   - `python src/prediction/V_siblilngs/predict_cognition_RandomCV.py`
   - `python src/prediction/V_siblilngs/predict_pfactor_RandomCV.py`
+- Run EFNY/HCPD/CCNP/PNC age prediction with a single holdout split:
+  - `python src/prediction/V_holdout/predict_age_RandomCV.py --dataset EFNY`
+  - `python src/prediction/V_holdout/predict_age_RandomCV.py --dataset HCPD --seed 42`
 - Run ABCD cognition/pfactor prediction with a single holdout split:
   - `python src/prediction/V_holdout/predict_cognition_RandomCV.py`
   - `python src/prediction/V_holdout/predict_cognition_RandomCV.py --seed 42`
@@ -170,18 +173,24 @@ The `prediction/V_siblilngs/` workflow keeps the modeling code unchanged and onl
   - `results/V_siblings/ABCD_cognition_permutation_significance.csv`
   - `results/V_siblings/ABCD_pfactor_permutation_significance.csv`
 
-## Holdout ABCD Evaluation
-The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a single family-aware holdout split for ABCD cognition and p-factor analyses.
+## Holdout Evaluation
+The `prediction/V_holdout/` workflow adapts the existing PLS pipeline to a single holdout split. The age entry script is for `EFNY`, `HCPD`, `CCNP`, and `PNC`, while the cognition/p-factor entry scripts remain specific to ABCD.
 
 - The scripts keep the original file names for minimal diff, but the outer evaluation is no longer repeated random CV.
-- The outer split is a fixed `1:1` half-split generated from baseline `rel_family_id`, so siblings stay on the same side of the split.
+- For age, the outer split is a stratified `1:1` half-split based on the target distribution and does not use family grouping.
+- For ABCD cognition and p-factor, the outer split is a fixed `1:1` family-aware half-split generated from baseline `rel_family_id`, so siblings stay on the same side of the split.
 - Each target saves one shared `SharedSplitIndex.mat`, and both the observed holdout run and all permutation runs reuse that same split.
 - Component selection is performed by `5-fold CV` inside the outer training half.
 - After selecting the component number, the model is re-fit on the full outer training half and evaluated once on the held-out outer test half.
 - Permutation matches the main analysis: only the outer training labels are shuffled, while the outer test labels remain real.
+- The age holdout entry script accepts `--dataset {EFNY,HCPD,CCNP,PNC}`; it uses each dataset's `fc_vector/` outputs together with `table/sublist.txt`, regresses `sex + motion` for `EFNY/CCNP/PNC` and `sex + motion + site` for `HCPD`, keeps the original `V_holdout/` output by default, and writes to `data/<dataset>/prediction/age/V_holdout_<seed>/` when `--seed` is provided.
 - The cognition holdout entry script keeps the original `V_holdout/` output by default; when `--seed` is provided, it writes to `data/ABCD/prediction/<target>/V_holdout_<seed>/`.
 - The p-factor holdout entry script accepts `--seed`; the seed controls the outer split, permutation label shuffles, and inner `5-fold CV`, and writes outputs to `data/ABCD/prediction/<target>/V_holdout_<seed>/`.
 - Results are written to:
+  - age: `data/<dataset>/prediction/age/V_holdout/RegressCovariates_Holdout`
+  - age: `data/<dataset>/prediction/age/V_holdout/SharedSplitIndex.mat`
+  - age with `--seed`: `data/<dataset>/prediction/age/V_holdout_<seed>/RegressCovariates_Holdout`
+  - age with `--seed`: `data/<dataset>/prediction/age/V_holdout_<seed>/SharedSplitIndex.mat`
   - cognition: `data/ABCD/prediction/<target>/V_holdout/RegressCovariates_Holdout`
   - cognition: `data/ABCD/prediction/<target>/V_holdout/SharedSplitIndex.mat`
   - cognition with `--seed`: `data/ABCD/prediction/<target>/V_holdout_<seed>/RegressCovariates_Holdout`
