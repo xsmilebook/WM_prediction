@@ -211,25 +211,18 @@ def get_rank_order(corr_values):
 def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw, corr_actual_ww):
     partial_r_gw_total = np.full(len(time_ids), np.nan)
     partial_r_ww_total = np.full(len(time_ids), np.nan)
-    rank_gg = get_rank_order(corr_actual_gg)
-    rank_gw = get_rank_order(corr_actual_gw)
-    rank_ww = get_rank_order(corr_actual_ww)
 
-    for rank_idx in range(len(time_ids)):
-        gg_run_idx = rank_gg[rank_idx]
-        gw_run_idx = rank_gw[rank_idx]
-        ww_run_idx = rank_ww[rank_idx]
-
+    for idx, run_id in enumerate(time_ids):
         if (
-            np.isnan(corr_actual_gg[gg_run_idx])
-            or np.isnan(corr_actual_gw[gw_run_idx])
-            or np.isnan(corr_actual_ww[ww_run_idx])
+            np.isnan(corr_actual_gg[idx])
+            or np.isnan(corr_actual_gw[idx])
+            or np.isnan(corr_actual_ww[idx])
         ):
             continue
 
-        gg_score = load_holdout_score(base_folder, time_ids[gg_run_idx], 'GGFC')
-        gw_score = load_holdout_score(base_folder, time_ids[gw_run_idx], 'GWFC')
-        ww_score = load_holdout_score(base_folder, time_ids[ww_run_idx], 'WWFC')
+        gg_score = load_holdout_score(base_folder, run_id, 'GGFC')
+        gw_score = load_holdout_score(base_folder, run_id, 'GWFC')
+        ww_score = load_holdout_score(base_folder, run_id, 'WWFC')
 
         if gg_score is None or gw_score is None or ww_score is None:
             continue
@@ -243,21 +236,18 @@ def compute_partial_series(base_folder, time_ids, corr_actual_gg, corr_actual_gw
             and np.array_equal(gg_score['index'][sort_gg], ww_score['index'][sort_ww])
         ):
             warnings.warn(
-                'Test index mismatch at rank {} (GG=Time_{}, GW=Time_{}, WW=Time_{}). Skipping.'.format(
-                    rank_idx,
-                    time_ids[gg_run_idx],
-                    time_ids[gw_run_idx],
-                    time_ids[ww_run_idx],
+                'Test index mismatch at Time_{} for GG/GW/WW. Skipping.'.format(
+                    run_id,
                 )
             )
             continue
 
-        partial_r_gw_total[rank_idx] = partial_corr(
+        partial_r_gw_total[idx] = partial_corr(
             gw_score['predict'][sort_gw],
             gw_score['test'][sort_gw],
             gg_score['predict'][sort_gg],
         )
-        partial_r_ww_total[rank_idx] = partial_corr(
+        partial_r_ww_total[idx] = partial_corr(
             ww_score['predict'][sort_ww],
             ww_score['test'][sort_ww],
             gg_score['predict'][sort_gg],

@@ -247,33 +247,33 @@ ResultantFolder = outFolder + '/RegressCovariates_Holdout'
 print(f"结果文件夹: {ResultantFolder}")
 os.makedirs(ResultantFolder, exist_ok=True)
 
-if seed is None:
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-        SubjectsData,
-        OverallPsyFactor,
-        Covariates,
-        FoldQuantity,
-        ComponentNumber_Range,
-        CVtimes,
-        ResultantFolder,
-        Parallel_Quantity,
-        0,
-        observed_split_files,
-    )
-else:
-    PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
-        SubjectsData,
-        OverallPsyFactor,
-        Covariates,
-        FoldQuantity,
-        ComponentNumber_Range,
-        CVtimes,
-        ResultantFolder,
-        Parallel_Quantity,
-        0,
-        observed_split_files,
-        observed_random_seeds,
-    )
+# if seed is None:
+#     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+#         SubjectsData,
+#         OverallPsyFactor,
+#         Covariates,
+#         FoldQuantity,
+#         ComponentNumber_Range,
+#         CVtimes,
+#         ResultantFolder,
+#         Parallel_Quantity,
+#         0,
+#         observed_split_files,
+#     )
+# else:
+#     PLSr1_CZ_Random_RegressCovariates.PLSr1_KFold_RandomCV_MultiTimes(
+#         SubjectsData,
+#         OverallPsyFactor,
+#         Covariates,
+#         FoldQuantity,
+#         ComponentNumber_Range,
+#         CVtimes,
+#         ResultantFolder,
+#         Parallel_Quantity,
+#         0,
+#         observed_split_files,
+#         observed_random_seeds,
+#     )
 
 # Permutation
 ResultantFolder = outFolder + '/RegressCovariates_Holdout_Permutation'

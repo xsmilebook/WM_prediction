@@ -11,7 +11,6 @@ from export_age_summary import (
     DEFAULT_DATA_ROOT,
     DEFAULT_DATASETS,
     compute_partial_series,
-    get_rank_order,
     list_time_ids,
     load_corr_mae_arrays,
     load_holdout_score,
@@ -58,8 +57,8 @@ def parse_args():
     parser.add_argument(
         '--pairing_mode',
         choices=['sorted', 'same_time'],
-        default='sorted',
-        help='Partial-correlation pairing mode. Default: sorted.',
+        default='same_time',
+        help='Partial-correlation pairing mode. Default: same_time.',
     )
     parser.add_argument(
         '--output_root',
@@ -91,14 +90,37 @@ def ensure_dir(path):
     return path
 
 
-def compute_partial_series_same_time(base_folder, time_ids):
+def get_rank_order(corr_values):
+    corr_values = np.asarray(corr_values, dtype=float)
+    temp_values = corr_values.copy()
+    temp_values[np.isnan(temp_values)] = -np.inf
+    return np.argsort(-temp_values)
+
+
+def compute_partial_series_sorted(base_folder, time_ids, corr_actual_gg, corr_actual_gw, corr_actual_ww):
+    from export_age_summary import partial_corr
+
     partial_r_gw_total = np.full(len(time_ids), np.nan)
     partial_r_ww_total = np.full(len(time_ids), np.nan)
+    rank_gg = get_rank_order(corr_actual_gg)
+    rank_gw = get_rank_order(corr_actual_gw)
+    rank_ww = get_rank_order(corr_actual_ww)
 
-    for idx, run_id in enumerate(time_ids):
-        gg_score = load_holdout_score(base_folder, run_id, 'GGFC')
-        gw_score = load_holdout_score(base_folder, run_id, 'GWFC')
-        ww_score = load_holdout_score(base_folder, run_id, 'WWFC')
+    for rank_idx in range(len(time_ids)):
+        gg_run_idx = rank_gg[rank_idx]
+        gw_run_idx = rank_gw[rank_idx]
+        ww_run_idx = rank_ww[rank_idx]
+
+        if (
+            np.isnan(corr_actual_gg[gg_run_idx])
+            or np.isnan(corr_actual_gw[gw_run_idx])
+            or np.isnan(corr_actual_ww[ww_run_idx])
+        ):
+            continue
+
+        gg_score = load_holdout_score(base_folder, time_ids[gg_run_idx], 'GGFC')
+        gw_score = load_holdout_score(base_folder, time_ids[gw_run_idx], 'GWFC')
+        ww_score = load_holdout_score(base_folder, time_ids[ww_run_idx], 'WWFC')
 
         if gg_score is None or gw_score is None or ww_score is None:
             continue
@@ -113,14 +135,12 @@ def compute_partial_series_same_time(base_folder, time_ids):
         ):
             continue
 
-        from export_age_summary import partial_corr
-
-        partial_r_gw_total[idx] = partial_corr(
+        partial_r_gw_total[rank_idx] = partial_corr(
             gw_score['predict'][sort_gw],
             gw_score['test'][sort_gw],
             gg_score['predict'][sort_gg],
         )
-        partial_r_ww_total[idx] = partial_corr(
+        partial_r_ww_total[rank_idx] = partial_corr(
             ww_score['predict'][sort_ww],
             ww_score['test'][sort_ww],
             gg_score['predict'][sort_gg],
@@ -141,6 +161,21 @@ def load_dataset_metrics(base_folder, permutation_folder, pairing_mode):
     corr_perm_ww, _ = load_corr_mae_arrays(permutation_folder, 'WWFC', permutation_time_ids)
 
     if pairing_mode == 'sorted':
+        partial_obs_gw, partial_obs_ww = compute_partial_series_sorted(
+            base_folder,
+            observed_time_ids,
+            corr_actual_gg,
+            corr_actual_gw,
+            corr_actual_ww,
+        )
+        partial_perm_gw, partial_perm_ww = compute_partial_series_sorted(
+            permutation_folder,
+            permutation_time_ids,
+            corr_perm_gg,
+            corr_perm_gw,
+            corr_perm_ww,
+        )
+    else:
         partial_obs_gw, partial_obs_ww = compute_partial_series(
             base_folder,
             observed_time_ids,
@@ -154,15 +189,6 @@ def load_dataset_metrics(base_folder, permutation_folder, pairing_mode):
             corr_perm_gg,
             corr_perm_gw,
             corr_perm_ww,
-        )
-    else:
-        partial_obs_gw, partial_obs_ww = compute_partial_series_same_time(
-            base_folder,
-            observed_time_ids,
-        )
-        partial_perm_gw, partial_perm_ww = compute_partial_series_same_time(
-            permutation_folder,
-            permutation_time_ids,
         )
 
     observed = {

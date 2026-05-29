@@ -94,6 +94,26 @@ conda activate ML
 python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/predict_age_RandomCV.py --dataset HCPD --seed 42
 ```
 
+若需要批量提交多个 dataset × 多个 seed 的 age holdout，可使用：
+
+```bash
+bash /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdout/submit_age_all_dataset.sh
+```
+
+该脚本默认行为为：
+
+- dataset：`EFNY HCPD CCNP PNC`
+- seed：固定 50 个
+  - `42 50 73 101 118 137 149 163 177 191`
+  - `211 223 239 257 271 283 307 331 347 359`
+  - `373 389 401 419 433 449 463 479 491 503`
+  - `521 547 563 587 601 617 631 653 677 691`
+  - `709 733 751 769 787 811 829 853 877 907`
+- 总计依次执行 `4 × 50 = 200` 次 python 命令
+- 每个作业实际执行的核心命令均为：
+  `python prediction/V_holdout/predict_age_RandomCV.py --dataset <dataset> --seed <seed>`
+- 若需要调整 dataset 或 seed，只需直接修改脚本顶部的 `DATASETS` 与 `SEEDS` 数组，不需要额外传参
+
 认知预测：
 
 ```bash
@@ -153,7 +173,7 @@ python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/prediction/V_holdou
 
 - 统计口径与 `export_cognition_summary.py` / `export_pfactor_summary.py` 一致：
   - observed 直接读取 `Holdout_Score.mat` 中单次 half test set 的 `Corr`
-  - `GW_partial_corr`、`WW_partial_corr` 先分别对 `GG/GW/WW` 的 holdout `Corr` 做降序排序，再使用同一 rank 的 `GG/GW/WW` 结果配对计算
+  - `GW_partial_corr`、`WW_partial_corr` 直接按同一 `Time_i` 配对 `GG/GW/WW` 的 holdout 结果计算，不再对 `Corr` 做降序排序
   - permutation 显著性仍使用右尾经验分布
 - 默认读取：
   - `data/<dataset>/prediction/age/V_holdout/`
@@ -219,8 +239,8 @@ data/<holdout_dir_name>_age_summary.mat
   - `GW_partial_corr`
   - `WW_partial_corr`
 - `GG/GW/WW` 直接读取各自 `Holdout_Score.mat` 中的 `Corr`
-- `GW_partial_corr` 与 `WW_partial_corr` 默认沿用当前 age 汇总脚本的 sorted 口径
-- 若需要比较“不按 holdout Corr 排序、直接按同一 Time_i 配对”的 partial 分布，可传入 `--pairing_mode same_time`
+- `GW_partial_corr` 与 `WW_partial_corr` 默认沿用当前 age 汇总脚本的 same-time 口径，即直接按同一 `Time_i` 配对
+- 若需要与旧的 sorted 口径比较，可显式传入 `--pairing_mode sorted`
 
 运行方式：
 
@@ -230,12 +250,12 @@ conda activate ML
 python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_age_permutation_distributions.py --seed 42
 ```
 
-若需要绘制 same-time 配对版本：
+若需要绘制旧的 sorted 配对版本：
 
 ```bash
 source /GPFS/cuizaixu_lab_permanent/xuhaoshu/miniconda3/bin/activate
 conda activate ML
-python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_age_permutation_distributions.py --seed 42 --pairing_mode same_time
+python /ibmgpfs/cuizaixu_lab/xuhaoshu/code/WM_prediction/src/results_vis/V_holdout/plot_age_permutation_distributions.py --seed 42 --pairing_mode sorted
 ```
 
 默认输出文件写入：
